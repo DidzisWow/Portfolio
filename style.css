@@ -1,0 +1,431 @@
+*{ box-sizing: border-box; }
+
+html, body{
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #008080;
+  font-family: Tahoma, "Segoe UI", Verdana, sans-serif;
+  font-size: 12px;
+  color: #000;
+}
+
+button{ font-family: inherit; }
+
+/* ============================================================
+   BOOT SEQUENCE
+   ============================================================ */
+#bootScreen{
+  position: fixed; inset: 0; z-index: 9999;
+  background: #000;
+  color: #c0c0c0;
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  line-height: 1.4;
+  padding: 28px;
+  cursor: pointer;
+  overflow: hidden;
+}
+#bootScreen.hidden{ display: none; }
+#biosText{ white-space: pre-wrap; }
+#bootScreen .skip-hint{
+  position: absolute; bottom: 18px; right: 26px;
+  font-size: 15px; opacity: .55;
+}
+
+#win95Splash{
+  position: fixed; inset: 0; z-index: 9998;
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 35%, #4fa8d8 0%, #1d6fa5 45%, #0d3b66 100%);
+  color: #fff;
+  cursor: pointer;
+}
+#win95Splash.show{ display: flex; }
+
+.win95-logo{ display:flex; align-items:center; gap: 18px; margin-bottom: 60px; }
+.win95-flag{
+  width: 46px; height: 46px;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  gap: 3px;
+  transform: skewX(-6deg);
+}
+.win95-flag span:nth-child(1){ background:#f65314; }
+.win95-flag span:nth-child(2){ background:#7cbb00; }
+.win95-flag span:nth-child(3){ background:#00a1f1; }
+.win95-flag span:nth-child(4){ background:#ffbb00; }
+
+.win95-wordmark{
+  font-family: Arial, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -1px;
+}
+.win95-wordmark span{ font-weight: 400; margin-left: 4px; }
+
+.win95-progress{ width: 220px; height: 16px; border: 2px solid #fff; padding: 2px; }
+.win95-progress__bar{
+  height: 100%; width: 0%;
+  background: repeating-linear-gradient(90deg, #fff 0 8px, transparent 8px 12px);
+  animation: win95fill 2.2s ease-in forwards;
+}
+@keyframes win95fill{ to{ width: 100%; } }
+
+.win95-copyright{ margin-top: 22px; font-family: "VT323", monospace; font-size: 18px; opacity: .85; }
+
+/* ============================================================
+   DESKTOP
+   ============================================================ */
+#desktop{
+  position: relative;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+  display: none;
+  background: #0a0b0f;
+}
+#desktop.visible{ display: block; }
+
+/* --- Aurora wallpaper --- */
+.wallpaper{ position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #050505; }
+.wallpaper::before{
+  content: "";
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 15% 10%, rgba(60,65,75,.5), transparent 55%);
+}
+.ray{
+  position: absolute;
+  width: 46%; height: 300%;
+  right: 0%; bottom: -90%;
+  filter: blur(1.5px);
+  mix-blend-mode: screen;
+}
+.ray1{ background: linear-gradient(102deg, transparent 46%, rgba(20,180,255,.9) 49.5%, rgba(20,180,255,.9) 50.5%, transparent 54%); transform: rotate(-28deg); }
+.ray2{ background: linear-gradient(102deg, transparent 46%, rgba(60,255,160,.85) 49.5%, rgba(60,255,160,.85) 50.5%, transparent 54%); transform: rotate(-25deg) translateX(90px); }
+.ray3{ background: linear-gradient(102deg, transparent 47%, rgba(20,120,255,.7) 49.5%, rgba(20,120,255,.7) 50.5%, transparent 53%); transform: rotate(-32deg) translateX(-160px); width: 30%; }
+.ray4{ background: linear-gradient(102deg, transparent 47%, rgba(140,255,210,.6) 49.5%, rgba(140,255,210,.6) 50.5%, transparent 53%); transform: rotate(-22deg) translateX(280px); width: 24%; }
+
+.desktop-icons{
+  position: absolute;
+  top: 18px; left: 18px;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 76px);
+  gap: 14px 8px;
+}
+.icon{
+  width: 76px;
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer; user-select: none;
+  padding: 5px 2px;
+  border-radius: 4px;
+}
+.icon__img{
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,.85));
+  background: none;
+  box-shadow: none;
+}
+.icon__label{
+  margin-top: 5px;
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 2px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.9), 0 0 3px rgba(0,0,0,.7);
+}
+.icon.selected{ background: rgba(60,120,220,.3); outline: 1px dotted rgba(255,255,255,.5); }
+.icon.selected .icon__label{ background: rgba(0,60,150,.7); border-radius: 2px; }
+
+.icon--terminal{
+  width: 44px; height: 44px;
+  background: #05140a;
+  color: #4dff88;
+  font-family: "VT323", monospace;
+  font-size: 20px;
+  border: 1px solid rgba(77,255,136,.5);
+  border-radius: 4px;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,.85));
+}
+
+/* ============================================================
+   WINDOWS
+   ============================================================ */
+#windowsLayer{ position: absolute; inset: 0; z-index: 1; }
+
+.win{
+  position: absolute;
+  min-width: 300px;
+  background: rgba(255,255,255,.92);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15);
+  display: flex; flex-direction: column;
+  color: #1c2430;
+}
+.win.hidden{ display: none; }
+
+.win__titlebar{
+  height: 34px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #6fb6ff 0%, #2d7ee0 55%, #1c63c2 100%);
+  color: #fff;
+  display: flex; align-items: center;
+  padding: 0 8px 0 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: move;
+  position: relative;
+}
+.win__titlebar::after{
+  content: "";
+  position: absolute; left: 0; right: 0; top: 0; height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+  pointer-events: none;
+}
+.win__icon{ margin-right: 7px; font-size: 14px; }
+.win__title{ flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win__buttons{ display: flex; gap: 5px; position: relative; z-index: 1; }
+.win__btn{
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.25);
+  border: 1px solid rgba(255,255,255,.5);
+  color: #fff;
+  font-size: 11px; line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+}
+.win__btn:hover{ background: rgba(255,255,255,.4); }
+.win__close{ background: rgba(255,90,90,.85); border-color: rgba(255,255,255,.5); }
+.win__close:hover{ background: rgba(255,60,60,1); }
+
+.win__body{
+  padding: 16px;
+  overflow: auto;
+  flex: 1;
+  background: rgba(255,255,255,.5);
+}
+
+/* --- Content inside windows --- */
+.win-about__photo{
+  width: 84px; height: 84px;
+  float: left;
+  margin: 0 14px 8px 0;
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,.15);
+  object-fit: cover;
+  background: #fff;
+}
+.win-about h2{ margin: 0 0 2px; font-size: 15px; color: #14233d; }
+.win-about .role{ margin: 0 0 8px; font-size: 11px; color: #4a5b73; font-style: italic; }
+.win-about p{ margin: 0; line-height: 1.5; }
+
+.skills-list{ list-style: none; margin: 0; padding: 0; }
+.skills-list li{
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 6px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  font-size: 12px;
+}
+.skills-list li:before{ content: "🔧"; }
+
+.projects-grid{
+  display: flex; flex-wrap: wrap; gap: 18px;
+}
+.project-icon{
+  width: 84px;
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer; user-select: none;
+  text-align: center;
+}
+.project-icon__img{ font-size: 34px; }
+.project-icon__label{ margin-top: 4px; font-size: 11px; }
+
+.win-project__media{
+  width: 100%; max-width: 320px;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,.12);
+  object-fit: cover;
+  display: block;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.win-project h2{ margin: 0 0 8px; font-size: 15px; color: #14233d; }
+.win-project p{ margin: 0 0 10px; line-height: 1.5; }
+.win-project__tags{ list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; padding: 0; }
+.win-project__tags li{
+  font-size: 10px;
+  background: rgba(45,126,224,.12);
+  color: #1c63c2;
+  border-radius: 10px;
+  padding: 3px 9px;
+}
+.win-project__links{ display: flex; gap: 8px; }
+
+.win95-btn{
+  background: linear-gradient(180deg, #6fb6ff, #2d7ee0);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,.25);
+}
+.win95-btn:active{ filter: brightness(.9); }
+
+.contact-table{ width: 100%; border-collapse: collapse; }
+.contact-table td{ padding: 6px 4px; vertical-align: middle; }
+.contact-table td.label{ font-weight: bold; width: 90px; color: #14233d; }
+.contact-table input{
+  width: 100%;
+  border: 1px solid rgba(0,0,0,.15);
+  border-radius: 5px;
+  background: #fff;
+  padding: 5px 8px;
+  font-family: inherit; font-size: 12px;
+}
+
+/* --- Terminal window --- */
+.win-terminal{
+  background: #05140a;
+  color: #4dff88;
+  font-family: "VT323", monospace;
+  font-size: 18px;
+  line-height: 1.4;
+  margin: -16px;
+  padding: 14px;
+  min-height: 220px;
+  white-space: pre-wrap;
+}
+
+/* ============================================================
+   START MENU
+   ============================================================ */
+.start-menu{
+  position: fixed; left: 8px; bottom: 46px;
+  width: 220px;
+  background: rgba(20,26,38,.85);
+  backdrop-filter: blur(16px);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  display: none;
+  z-index: 10001;
+  box-shadow: 0 10px 24px rgba(0,0,0,.55);
+  overflow: hidden;
+}
+.start-menu.open{ display: flex; }
+.start-menu__side{
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  background: linear-gradient(180deg, #1c63c2, #2d7ee0);
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 6px;
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+.start-menu ul{ list-style: none; margin: 0; padding: 6px; flex: 1; }
+.start-menu li{
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+}
+.start-menu li span{ font-size: 14px; }
+.start-menu li:hover{ background: rgba(255,255,255,.14); }
+.start-menu li.divider{
+  height: 1px; padding: 0; margin: 6px 4px;
+  background: rgba(255,255,255,.18);
+  cursor: default;
+}
+.start-menu li.divider:hover{ background: rgba(255,255,255,.18); }
+
+/* ============================================================
+   TASKBAR
+   ============================================================ */
+.taskbar{
+  position: fixed; left: 0; right: 0; bottom: 0;
+  height: 42px;
+  background: linear-gradient(180deg, rgba(70,90,120,.55), rgba(12,16,24,.8));
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255,255,255,.2);
+  display: flex; align-items: center;
+  padding: 4px 8px;
+  gap: 8px;
+  z-index: 10000;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.4);
+}
+.start-btn{
+  display: flex; align-items: center; gap: 7px;
+  font-weight: 600;
+  padding: 5px 12px 5px 5px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+}
+.start-btn:hover, .start-btn.active{ background: rgba(255,255,255,.18); }
+.start-btn__orb{
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #a6ff8f, #24a832 65%, #14701f 100%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.25), inset 0 1px 1px rgba(255,255,255,.6);
+}
+.taskbar__windows{ flex: 1; display: flex; gap: 6px; overflow: hidden; }
+.taskbar__win-btn{
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+  max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer;
+}
+.taskbar__win-btn.active{ background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.35); }
+.taskbar__clock{
+  padding: 5px 12px;
+  color: #fff;
+  font-size: 12px;
+}
+
+/* ============================================================
+   SHUTDOWN SCREEN
+   ============================================================ */
+#shutdownScreen{
+  position: fixed; inset: 0; z-index: 10002;
+  background: #000; color: #fff;
+  display: none;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 18px;
+  font-family: Tahoma, sans-serif; font-size: 16px;
+}
+#shutdownScreen.show{ display: flex; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 720px){
+  .desktop-icons{ gap: 16px; }
+  .icon{ width: 68px; }
+  .icon__img{ font-size: 28px; }
+  .win{
+    position: fixed !important;
+    left: 3vw !important; right: 3vw !important; top: 50px !important;
+    width: 94vw !important; max-height: 72vh;
+  }
+  .win__titlebar{ cursor: default; }
+}

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- BOOT SEQUENCE -->
+  <div id="bootScreen">
+    <div id="biosText"></div>
+    <div class="skip-hint">click anywhere to skip</div>
+  </div>
+
+  <div id="win95Splash">
+    <div class="win95-logo">
+      <div class="win95-flag"><span></span><span></span><span></span><span></span></div>
+      <div class="win95-wordmark">Windows<span>95</span></div>
+    </div>
+    <div class="win95-progress"><div class="win95-progress__bar"></div></div>
+    <div class="win95-copyright">Starting Windows&hellip;</div>
+  </div>
+
+  <!-- DESKTOP -->
+  <div id="desktop">
+    <div class="wallpaper">
+      <div class="ray ray1"></div>
+      <div class="ray ray2"></div>
+      <div class="ray ray3"></div>
+      <div class="ray ray4"></div>
+    </div>
+
+    <div class="desktop-icons">
+      <div class="icon" data-window="about">
+        <div class="icon__img icon--about">🌐</div><div class="icon__label">About</div>
+      </div>
+      <div class="icon" data-window="skills">
+        <div class="icon__img icon--skills">🛠️</div><div class="icon__label">Skills</div>
+      </div>
+      <div class="icon" data-window="projects">
+        <div class="icon__img icon--projects">🗂️</div><div class="icon__label">Projects</div>
+      </div>
+      <div class="icon" data-window="contact">
+        <div class="icon__img icon--contact">✉️</div><div class="icon__label">Contact</div>
+      </div>
+      <div class="icon" data-social="chrome">
+        <div class="icon__img icon--chrome">🌍</div><div class="icon__label">Chrome</div>
+      </div>
+      <div class="icon" data-social="youtube">
+        <div class="icon__img icon--youtube">▶️</div><div class="icon__label">YouTube</div>
+      </div>
+      <div class="icon" data-social="discord">
+        <div class="icon__img icon--discord">💬</div><div class="icon__label">Discord</div>
+      </div>
+      <div class="icon" data-social="github">
+        <div class="icon__img icon--github">🐙</div><div class="icon__label">GitHub</div>
+      </div>
+      <div class="icon" data-window="terminal">
+        <div class="icon__img icon--terminal">&gt;_</div><div class="icon__label">Terminal</div>
+      </div>
+      <div class="icon" id="binIcon">
+        <div class="icon__img icon--bin">🗑️</div><div class="icon__label">Recycle Bin</div>
+      </div>
+    </div>
+
+    <!-- Windows get created in here by script.js -->
+    <div id="windowsLayer"></div>
+
+    <!-- START MENU -->
+    <div class="start-menu" id="startMenu">
+      <div class="start-menu__side">PORTFOLIO 95</div>
+      <ul>
+        <li data-window="about"><span>🧑‍💻</span> About Me</li>
+        <li data-window="skills"><span>🛠️</span> Skills</li>
+        <li data-window="projects"><span>🗂️</span> Projects</li>
+        <li data-window="contact"><span>✉️</span> Contact</li>
+        <li data-window="terminal"><span>&gt;_</span> Terminal</li>
+        <li class="divider"></li>
+        <li id="shutdownBtn"><span>⏻</span> Shut Down...</li>
+      </ul>
+    </div>
+
+    <!-- TASKBAR -->
+    <div class="taskbar">
+      <button class="start-btn" id="startBtn"><span class="start-btn__orb"></span>Start</button>
+      <div class="taskbar__windows" id="taskbarWindows"></div>
+      <div class="taskbar__clock" id="clock"></div>
+    </div>
+
+  </div>
+
+  <!-- SHUTDOWN EASTER EGG -->
+  <div id="shutdownScreen">
+    <p>It's now safe to turn off your computer.</p>
+    <button id="restartBtn" class="win95-btn">Restart</button>
+  </div>
+
+  <script src="content.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+ 
