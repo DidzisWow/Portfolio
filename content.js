@@ -1,31 +1,18 @@
-/*
-  ============================================================
-   ŠEIT RAKSTI SAVU INFORMĀCIJU
-   (This is the ONLY file you need to edit to change text)
-  ============================================================
 
-  - Aizvieto tekstu pēdiņās ar savu informāciju.
-  - Nekas šeit nav HTML kods, tāpēc droši raksti garus teikumus.
-  - Attēliem: ieliec bilžu failus mapē "images/" un šeit norādi
-    failu nosaukumu, piem. "images/mana-bilde.jpg"
-  - Ja tev vēl nav attēla, atstāj tukšas pēdiņas "" — parādīsies
-    vietturis ar taviem iniciāļiem.
-*/
 
 const CONTENT = {
 
-  // ------- Vispārīga info (redzama augšā, hero sadaļā) -------
-  name: "Vārds Uzvārds",
-  role: "Programmēšanas skolēns / audzēknis",          // piem. "Front-end izstrādātājs"
-  tagline: "Īss teikums par to, kas tevi interesē programmēšanā un ko tu meklē (piem. praksi).",
-  heroImage: "images/portrait.jpg",   // tava bilde, vai atstāj "" ja nav
+  // ------- General info (shown in the About window) -------
+  name: "Didzis Baltājs",
+  role: "Computer Science Student",           // e.g. "Front-End Developer"
+  tagline: "I like too program, play video games, watch movies and enjoy life.",
+  heroImage: "images/portrait.jpg", 
 
-  // ------- Par mani -------
-  about: `Uzraksti 2–4 teikumus par sevi: kas tevi interesē, ko tu mācies,
-  kāpēc programmē, un ko tu meklē (piemēram, prakses vietu).`,
+  // ------- About -------
+  about: `I am a very like minded person, i like playing games talking to people, i work hard 
+  i like learning new things everydayn and i feel good`,
 
-  // ------- Prasmes -------
-  // Pievieno vai izdzēs rindas pēc vajadzības
+
   skills: [
     "HTML",
     "CSS",
@@ -34,43 +21,61 @@ const CONTENT = {
     "Git / GitHub",
   ],
 
-  // ------- Projekti (vismaz 2) -------
+  // ------- Projects (at least 2) -------
   projects: [
     {
-      title: "Projekta nosaukums #1",
-      description: "Īss apraksts: ko šis projekts dara, kādas tehnoloģijas izmantoji un ko tu no tā iemācījies.",
-      image: "images/project1.jpg",   // projekta ekrānšāviņš, vai ""
-      github: "https://github.com/tavs-lietotajvards/projekts-1",
-      demo: "https://tavs-projekts-1.vercel.app",   // ja nav dzīvas versijas, atstāj ""
+      title: "Project Name #1",
+      description: "Short description: what this project does, what technologies you used, and what you learned from it.",
+      image: "images/project1.jpg",   // project screenshot, or ""
+      github: "https://github.com/your-username/project-1",
+      demo: "https://your-project-1.vercel.app",   // leave "" if there's no live version
       tags: ["HTML", "CSS", "JavaScript"],
     },
     {
-      title: "Projekta nosaukums #2",
-      description: "Īss apraksts: ko šis projekts dara, kādas tehnoloģijas izmantoji un ko tu no tā iemācījies.",
+      title: "Project Name #2",
+      description: "Short description: what this project does, what technologies you used, and what you learned from it.",
       image: "images/project2.jpg",
-      github: "https://github.com/tavs-lietotajvards/projekts-2",
+      github: "https://github.com/your-username/project-2",
       demo: "",
       tags: ["React", "JavaScript"],
     },
-    // vari pievienot vēl projektus, kopējot augšējo bloku no { līdz },
+    // you can add more projects by copying the block above from { to },
   ],
 
-  // ------- Kontakti -------
-  contactIntro: "Vislabāk mani var sasniegt šeit:",
+  // ------- Contact -------
+  contactIntro: "The best way to reach me:",
   contact: [
-    { label: "E-pasts", value: "tavs.epasts@example.com", href: "mailto:tavs.epasts@example.com" },
-    { label: "GitHub", value: "github.com/tavs-lietotajvards", href: "https://github.com/tavs-lietotajvards" },
-    { label: "LinkedIn", value: "linkedin.com/in/tavs-profils", href: "https://linkedin.com/in/tavs-profils" },
+    { label: "Email", value: "didzisbaltkajs@gmail.com", href: "didzisbaltkajs@gmail.com" },
+    { label: "GitHub", value: "github.com/DidzisWow", href: "https://github.com/DidzisWow" },
   ],
 
-  footerText: "© 2026 Vārds Uzvārds",
+  footerText: "© 2026 Your Name",
 
-  // ------- Papildu ikonas darbvirsmā (Chrome, YouTube, Discord, GitHub) -------
-  // Šīs ikonas, kad uz tām dubultklikšķini, atver saiti jaunā cilnē.
+  // ------- Extra desktop icons (Chrome, YouTube, Discord, GitHub) -------
+  // These are decorative only — double-clicking them does nothing.
+  // Feel free to change the URLs if you re-enable them later.
   social: {
     chrome: "https://www.google.com",
     youtube: "https://www.youtube.com",
-    discord: "https://discord.com/users/tavs-id",   // nomaini uz savu Discord saiti
-    github: "https://github.com/tavs-lietotajvards", // nomaini uz savu GitHub profilu
+    discord: "https://discord.com/users/your-id",
+    github: "https://github.com/your-username",
+  },
+
+  // ------- Desktop icon pictures -------
+  // Put your icon images directly in the "images/" folder and point to
+  // them here. If a path is empty "" or the file doesn't exist yet,
+  // you'll see a blank placeholder with a "+" instead.
+  // Recommended size: ~64x64 or 128x128 px.
+  icons: {
+    about: "images/about.svg",
+    skills: "images/skills.svg",
+    projects: "images/projects.svg",
+    contact: "images/contact.svg",
+    chrome: "images/chrome.svg",       // official Google Chrome logo (CC0, via Simple Icons)
+    youtube: "images/youtube.svg",     // official YouTube logo (CC0, via Simple Icons)
+    discord: "images/discord.svg",     // official Discord logo (CC0, via Simple Icons)
+    github: "images/github.svg",       // official GitHub logo (CC0, via Simple Icons)
+    terminal: "images/terminal.svg",
+    bin: "images/bin.svg",
   },
 };

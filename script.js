@@ -41,7 +41,7 @@ function runBootSequence(onDone) {
     "",
     "Press DEL to enter SETUP, ESC to skip memory test",
     "",
-    "Starting Windows 95...",
+    "Starting Windows 96...",
   ];
 
   let finished = false;
@@ -213,7 +213,9 @@ function windowBodyFor(id, c) {
   if (id === "projects") {
     const icons = c.projects.map((p, i) => `
       <div class="project-icon" data-project="${i}">
-        <div class="project-icon__img">📁</div>
+        <div class="project-icon__img">
+          ${p.image ? `<img src="${p.image}" alt="${p.title}">` : `<span class="icon__plus">+</span>`}
+        </div>
         <div class="project-icon__label">${p.title}</div>
       </div>`).join("");
     return `<div class="projects-grid">${icons}</div>`;
@@ -233,35 +235,67 @@ function windowBodyFor(id, c) {
       </div>`;
   }
 
-  return "";
-}
-
-function terminalLines(c) {
-  return [
-    "C:\\Users\\Guest> whoami",
-    c.name,
-    "",
-    "C:\\Users\\Guest> cat about.txt",
-    c.about,
-    "",
-    "C:\\Users\\Guest> dir skills",
-    c.skills.join("   "),
-    "",
-    "C:\\Users\\Guest> _",
-  ];
-}
-
-function typeLines(container, lines, lineDelay = 220) {
-  let i = 0;
-  function next() {
-    if (i >= lines.length) return;
-    const div = document.createElement("div");
-    div.textContent = lines[i];
-    container.appendChild(div);
-    i++;
-    setTimeout(next, lines[i - 1] === "" ? 100 : lineDelay);
+  if (id === "chrome") {
+    const slug = c.name.trim().toLowerCase().replace(/\s+/g, "");
+    return `
+      <div class="browser">
+        <div class="browser-toolbar">
+          <button class="browser-btn" disabled>&#8592; Back</button>
+          <button class="browser-btn" disabled>Forward &#8594;</button>
+          <button class="browser-btn" disabled>&#8635; Reload</button>
+          <button class="browser-btn" disabled>&#8962; Home</button>
+        </div>
+        <div class="browser-address">
+          <span>Address</span>
+          <input type="text" readonly value="http://www.geocities.com/SiliconValley/Lab/1998/~${slug}/index.html">
+          <button class="browser-btn">Go</button>
+        </div>
+        <div class="browser-page">
+          <marquee class="browser-marquee" scrollamount="4">&#128679; WELCOME TO MY HOMEPAGE &#128679; THANKS FOR STOPPING BY &#128679; SIGN MY GUESTBOOK &#128679;</marquee>
+          <h1 class="browser-page__title">${c.name}'s Homepage</h1>
+          <p class="browser-page__blink">&#9733; Under Construction &#9733;</p>
+          <nav class="browser-nav">
+            <a href="#" onclick="return false;">Home</a> |
+            <a href="#" onclick="return false;">About Me</a> |
+            <a href="#" onclick="return false;">Guestbook</a> |
+            <a href="#" onclick="return false;">Webring</a>
+          </nav>
+          <hr>
+          <p>${c.tagline}</p>
+          <div class="browser-counter">You are visitor number: <span>004217</span></div>
+          <p class="browser-footer">Best viewed in Netscape Navigator&trade; at 800&times;600 &mdash; <a href="#" onclick="return false;">Get Internet Explorer!</a></p>
+        </div>
+        <div class="browser-status"><span>Done</span></div>
+      </div>`;
   }
-  next();
+
+  if (id === "youtube") {
+    // A few confirmed real CoryxKenshin video IDs (sourced from his
+    // Wikipedia page citations) — one is picked at random each time
+    // this window opens, and embedded via YouTube's own embed player.
+    const CORYXKENSHIN_VIDEOS = [
+      { id: "GsxdZ-3n0GQ", title: "Ectodermal Dysplasia (We need to talk.)" },
+      { id: "t44TtAswYug", title: "Chasing My Dream. (The 'Big' Announcement)" },
+      { id: "4wZ5Sd2LbfA", title: "2020 is the worst year of my life" },
+    ];
+    const pick = CORYXKENSHIN_VIDEOS[Math.floor(Math.random() * CORYXKENSHIN_VIDEOS.length)];
+    return `
+      <div class="win-video">
+        <div class="win-video__frame">
+          <iframe
+            src="https://www.youtube.com/embed/${pick.id}?autoplay=1"
+            title="${pick.title}"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+        <p class="win-video__title">${pick.title}</p>
+        <p class="win-video__channel">CoryxKenshin</p>
+      </div>`;
+  }
+
+  return "";
 }
 
 function projectWindowBody(p) {
@@ -286,23 +320,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const c = CONTENT;
   document.title = c.name + " — Portfolio";
 
-  const ICONS = { about: "🌐", skills: "🛠️", projects: "🗂️", contact: "✉️", terminal: "⌨️" };
-  const TITLES = { about: "About Me", skills: "Skills.txt", projects: "Projects", contact: "Contact.exe", terminal: "Terminal" };
+  const ICONS = { about: "🌐", skills: "🛠️", projects: "🗂️", contact: "✉️", chrome: "🌐", youtube: "▶️" };
+  const TITLES = { about: "About Me", skills: "Skills.txt", projects: "Projects", contact: "Contact.exe", chrome: "Chrome - 1998 Edition", youtube: "YouTube" };
+  const WIDTHS = { about: 420, chrome: 520, youtube: 480 };
 
   function openProgram(id) {
-    if (id === "terminal") {
-      const win = WM.open("terminal", "Terminal", "⌨️", '<div class="win-terminal" id="terminalBody"></div>', { width: 420 });
-      const body = win.querySelector("#terminalBody");
-      if (!body.dataset.typed) {
-        body.dataset.typed = "1";
-        typeLines(body, terminalLines(c));
-      }
-      return;
-    }
-    const win = WM.open(id, TITLES[id], ICONS[id], windowBodyFor(id, c), { width: id === "about" ? 420 : 380 });
+    const win = WM.open(id, TITLES[id], ICONS[id], windowBodyFor(id, c), { width: WIDTHS[id] || 380 });
     if (id === "projects") {
       win.querySelectorAll(".project-icon").forEach(el => {
-        el.addEventListener("dblclick", () => {
+        el.addEventListener("click", () => {
           const p = c.projects[Number(el.dataset.project)];
           WM.open("project-" + el.dataset.project, p.title, "📄", projectWindowBody(p), { width: 380 });
         });
@@ -310,26 +336,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Desktop icons — double click to open (apps) or open link in new tab (social)
+  // Only About / Skills / Projects / Contact are actually openable.
+  // Chrome, YouTube, Discord, GitHub, Terminal and the Recycle Bin are
+  // decorative (class "icon--static") — no click behavior attached.
+  // A single click opens the window directly (and shows the selection highlight).
   document.querySelectorAll(".icon[data-window]").forEach(el => {
-    el.addEventListener("dblclick", () => openProgram(el.dataset.window));
-  });
-  document.querySelectorAll(".icon[data-social]").forEach(el => {
-    el.addEventListener("dblclick", () => {
-      const url = c.social && c.social[el.dataset.social];
-      if (url) window.open(url, "_blank", "noopener");
-    });
-  });
-  document.querySelectorAll(".icon").forEach(el => {
     el.addEventListener("click", () => {
-      document.querySelectorAll(".icon").forEach(i => i.classList.remove("selected"));
+      document.querySelectorAll(".icon[data-window]").forEach(i => i.classList.remove("selected"));
       el.classList.add("selected");
+      openProgram(el.dataset.window);
     });
   });
 
-  // Recycle bin — just a fun dead-end
-  document.getElementById("binIcon").addEventListener("dblclick", () => {
-    WM.open("bin", "Recycle Bin", "🗑️", "<p>The Recycle Bin is empty.</p>", { width: 260 });
+  // Load each desktop icon's picture from CONTENT.icons.
+  // If the file is missing (or the path is left blank), the dashed
+  // placeholder with a "+" just stays visible.
+  document.querySelectorAll(".icon__img[data-icon-key]").forEach(slot => {
+    const key = slot.dataset.iconKey;
+    const path = c.icons && c.icons[key];
+    if (!path) return;
+    const img = slot.querySelector("img");
+    img.src = path;
+    img.onload = () => { img.style.display = "block"; slot.classList.add("has-image"); };
+    img.onerror = () => { img.style.display = "none"; slot.classList.remove("has-image"); };
   });
 
   // Start menu
@@ -373,9 +402,9 @@ document.addEventListener("DOMContentLoaded", () => {
   updateClock();
   setInterval(updateClock, 1000 * 15);
 
-  // Boot, then reveal the desktop and auto-open the About window
+  // Boot, then just reveal the empty desktop — no window auto-opens,
+  // so it never sits on top of the icon grid and blocks clicks.
   runBootSequence(() => {
     document.getElementById("desktop").classList.add("visible");
-    openProgram("about");
   });
 });
