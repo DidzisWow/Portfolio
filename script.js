@@ -1447,6 +1447,7 @@ function openYouTube(o = {}) {
       const grid = list => list.length ? `<div class="yt2__grid">${list.map(i => card(VIDEOS[i], i)).join("")}</div>` : "";
       const subBtn = ch => { const on = subs().includes(ch); return `<button type="button" class="yt2__sub${on ? " is-on" : ""}" data-sub="${esc(ch)}">${on ? "Subscribed" : "Subscribe"}</button>`; };
       let all = VIDEOS.map((_, i) => i);
+      const cmts = id => (store.get("ytComments", {})[id] || []);
 
       const views = {
         home(s) {
@@ -1482,19 +1483,21 @@ function openYouTube(o = {}) {
               <span><b>${esc(ch)}</b><small>${mine ? `${esc(handle)} &middot; ` : ""}${list.length} video${list.length === 1 ? "" : "s"}${mine ? ` &middot; Joined ${esc(joined)}` : " here"}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
               ${mine ? `<button type="button" class="yt2__sub" data-go="upload">Upload video</button>` : subBtn(ch)}
             </div>
+            ${mine ? `<div class="yt2__backup">${backupBar()}</div>` : ""}
             ${list.length ? grid(list) : mine ? `<p class="yt2__empty">This is your channel. You haven't posted anything yet &mdash; hit <b>Upload video</b> and paste a YouTube link to publish it here.</p>` : ""}`;
         },
-        upload() {
+        upload(s) {
+          const ed = s.edit ? VIDEOS.find(v => v.mine && v.id === s.edit) : null;
           return `
-            <h2 class="yt2__h">Upload video</h2>
-            <form class="yt2__form" autocomplete="off">
-              <p class="yt2__hint">Paste a YouTube link (or video ID). It will be posted to <b>${esc(NAME)}</b>'s channel.</p>
-              <label>YouTube link<input name="url" placeholder="https://www.youtube.com/watch?v=..." required></label>
-              <label>Title<input name="title" maxlength="100" placeholder="Filled in automatically when possible"></label>
-              <label>Category<input name="cat" list="ytCatList" value="Videos" maxlength="24"><datalist id="ytCatList">${cats().filter(c => c !== "All").map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
-              <label>Description<textarea name="desc" rows="3" maxlength="500"></textarea></label>
-              <div class="yt2__prev"></div>
-              <button type="submit" class="yt2__sub yt2__sub--red">Publish</button>
+            <h2 class="yt2__h">${ed ? "Edit video" : "Upload video"}</h2>
+            <form class="yt2__form" autocomplete="off"${ed ? ` data-editing="${esc(ed.id)}"` : ""}>
+              <p class="yt2__hint">${ed ? "Changes are saved to your channel." : `Paste a YouTube link (or video ID). It will be posted to <b>${esc(NAME)}</b>'s channel.`}</p>
+              <label>YouTube link<input name="url" placeholder="https://www.youtube.com/watch?v=..." value="${ed ? `https://youtu.be/${esc(ed.id)}` : ""}"${ed ? " readonly" : " required"}></label>
+              <label>Title<input name="title" maxlength="100" value="${ed ? esc(ed.title) : ""}" placeholder="Filled in automatically when possible"></label>
+              <label>Category<input name="cat" list="ytCatList" value="${ed ? esc(ed.cat) : "Videos"}" maxlength="24"><datalist id="ytCatList">${cats().filter(c => c !== "All").map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
+              <label>Description<textarea name="desc" rows="3" maxlength="500">${ed ? esc(ed.desc) : ""}</textarea></label>
+              <div class="yt2__prev">${ed ? `<img src="${ytThumb(ed.id)}" alt="">` : ""}</div>
+              <button type="submit" class="yt2__sub yt2__sub--red">${ed ? "Save changes" : "Publish"}</button>
             </form>`;
         },
         watch(s) {
@@ -1512,11 +1515,17 @@ function openYouTube(o = {}) {
                   <span class="yt2__actions">
                     <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">&#128077; ${liked ? "Liked" : "Like"}</button>
                     <button type="button" class="yt2__pill" data-share="${esc(v.id)}">Share</button>
+                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">Edit</button>` : ""}
                     ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">Delete</button>` : ""}
                     <a class="yt2__pill" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Open on YouTube</a>
                   </span>
                 </div>
                 <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>${v.desc ? esc(v.desc).replace(/\n/g, "<br>") : `Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.`}</div>
+                <section class="yt2__comments">
+                  <h3>${cmts(v.id).length} comment${cmts(v.id).length === 1 ? "" : "s"}</h3>
+                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>
+                  ${cmts(v.id).slice().reverse().map(c => `<div class="yt2__cmt"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span><b>${esc(NAME)}</b> <small>${esc(new Date(c.ts).toLocaleDateString())}</small><br>${esc(c.t)}<br><button type="button" class="yt2__cdel" data-cdel="${c.ts}" data-vid="${esc(v.id)}">Delete</button></span></div>`).join("")}
+                </section>
               </div>
               <aside class="yt2__next">
                 <label class="yt2__auto"><span>Up next</span><span class="check"><input type="checkbox" class="yt2__autobox"${autoplay ? " checked" : ""}><span>Autoplay</span></span></label>
@@ -1574,6 +1583,18 @@ function openYouTube(o = {}) {
       body.addEventListener("click", e => {
         const ch = e.target.closest("[data-channel]");
         if (ch) { e.stopPropagation(); go({ page: "channel", name: ch.dataset.channel }); return; }
+        if (e.target.closest("[data-export]")) { exportBackup(); return; }
+        const edt = e.target.closest("[data-edit]");
+        if (edt) { go({ page: "upload", edit: edt.dataset.edit }); return; }
+        const cd = e.target.closest("[data-cdel]");
+        if (cd) {
+          const m = store.get("ytComments", {});
+          m[cd.dataset.vid] = (m[cd.dataset.vid] || []).filter(c => String(c.ts) !== cd.dataset.cdel);
+          store.set("ytComments", m);
+          const s = stack[stack.length - 1], y = main.scrollTop;
+          main.innerHTML = views.watch(s); mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(VIDEOS[s.i].id)}?autoplay=1&rel=0`, VIDEOS[s.i].title); main.scrollTop = y;
+          return;
+        }
         const del = e.target.closest("[data-del]");
         if (del) {
           msgBox({ title: "Delete video", icon: "warning", text: "Remove this video from your channel?", buttons: ["Delete", "Cancel"], defaultIndex: 1 }).then(r => {
@@ -1623,9 +1644,35 @@ function openYouTube(o = {}) {
           .catch(() => {});
       });
       body.addEventListener("submit", e => {
+        const cf = e.target.closest(".yt2__cform");
+        if (cf) {
+          e.preventDefault();
+          const t = cf.elements.c.value.trim(), s = stack[stack.length - 1];
+          if (!t) return;
+          const id = VIDEOS[s.i].id, m = store.get("ytComments", {});
+          m[id] = (m[id] || []).concat({ t, ts: Date.now() });
+          store.set("ytComments", m);
+          Sound.play("notify");
+          const y = main.scrollTop;
+          main.innerHTML = views.watch(s);
+          mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`, VIDEOS[s.i].title);
+          main.scrollTop = y;
+          return;
+        }
         const f = e.target.closest(".yt2__form");
         if (!f) return;
         e.preventDefault();
+        if (f.dataset.editing) {
+          const list = store.get("ytUploads", []), u = list.find(x => x.id === f.dataset.editing), v = VIDEOS.find(x => x.mine && x.id === f.dataset.editing);
+          if (u && v) {
+            Object.assign(u, { title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim() });
+            Object.assign(v, u);
+            store.set("ytUploads", list);
+          }
+          stack.length = 0;
+          go({ page: "channel", name: NAME });
+          return;
+        }
         const id = ytParseId(f.elements.url.value);
         if (!id) { msgBox({ title: "Upload", icon: "error", text: "Couldn't find a video in that link. Paste a youtube.com or youtu.be link, or the 11-character video ID." }); return; }
         if (VIDEOS.some(v => v.mine && v.id === id)) { msgBox({ title: "Upload", icon: "info", text: "That video is already on your channel." }); return; }
@@ -1635,6 +1682,14 @@ function openYouTube(o = {}) {
         all = VIDEOS.map((_, k) => k);
         Sound.play("notify");
         go({ page: "channel", name: NAME });
+      });
+      body.addEventListener("change", e => {
+        if (e.target.matches("[data-import]") && e.target.files[0]) {
+          importBackup(e.target.files[0], ok => {
+            if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
+            msgBox({ title: "Import", icon: "info", text: "Backup imported. Reopen YouTube to see everything." }).then(() => win.close());
+          });
+        }
       });
       body.addEventListener("change", e => { if (e.target.classList.contains("yt2__autobox")) { autoplay = e.target.checked; store.set("ytAuto", autoplay); } });
       back.addEventListener("click", () => { if (stack.length > 1) { stack.pop(); render(); } });
@@ -1665,6 +1720,36 @@ function spParse(input) {
   const m = t.match(/open\.spotify\.com\/(?:intl-[\w-]+\/)?(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]{22})/) || t.match(/^spotify:(track|album|playlist|artist|episode|show):([A-Za-z0-9]{22})$/);
   return m ? { type: m[1], id: m[2] } : null;
 }
+// Uploads, comments and music are kept in localStorage, so offer a way to move them between browsers.
+const BACKUP_KEYS = ["ytUploads", "ytComments", "ytSubs", "ytLikes", "spLib"];
+function exportBackup() {
+  const data = { app: "w98-portfolio", saved: new Date().toISOString() };
+  BACKUP_KEYS.forEach(k => { data[k] = store.get(k, k === "ytComments" ? {} : []); });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  a.download = "portfolio-media-backup.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function importBackup(file, done) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!d || d.app !== "w98-portfolio") throw new Error("not a backup");
+      const merge = (a, b, key) => { const seen = new Set(a.map(x => x[key])); return a.concat(b.filter(x => x && !seen.has(x[key]))); };
+      store.set("ytUploads", merge(store.get("ytUploads", []), Array.isArray(d.ytUploads) ? d.ytUploads : [], "id"));
+      store.set("spLib", merge(store.get("spLib", []), Array.isArray(d.spLib) ? d.spLib : [], "id"));
+      ["ytSubs", "ytLikes"].forEach(k => store.set(k, Array.from(new Set(store.get(k, []).concat(Array.isArray(d[k]) ? d[k] : [])))));
+      const cm = store.get("ytComments", {});
+      Object.entries(d.ytComments || {}).forEach(([id, list]) => { if (Array.isArray(list)) cm[id] = merge(cm[id] || [], list, "ts"); });
+      store.set("ytComments", cm);
+      done(true);
+    } catch (e) { done(false); }
+  };
+  r.readAsText(file);
+}
+const backupBar = () => `<span class="media-backup"><button type="button" data-export>Export backup</button><label class="media-backup__imp">Import backup<input type="file" accept="application/json,.json" data-import hidden></label></span>`;
 const spColor = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `linear-gradient(135deg,hsl(${h},60%,38%),hsl(${(h + 40) % 360},55%,20%))`; };
 function openSpotify(o = {}) {
   WM.open("spotify", {
@@ -1674,12 +1759,23 @@ function openSpotify(o = {}) {
       const mine = () => store.get("spLib", []);
       const lib = () => mine().concat(SP_DEFAULTS);
       let cur = lib()[0], page = "home";
+      const local = [];   // audio files picked from this computer; they only last until the window closes
+      let localIdx = -1;
+      win.cleanup = () => local.forEach(f => URL.revokeObjectURL(f.url));
+      const playLocal = i => {
+        localIdx = i;
+        const a = $(".sp__audio", main);
+        if (!a) return;
+        a.src = local[i].url; a.play().catch(() => {});
+        $$(".sp__track", main).forEach((b, k) => b.classList.toggle("is-on", k === i));
+      };
       body.innerHTML = `
         <div class="sp">
           <nav class="sp__side">
             <div class="sp__logo">${icon("spotify", 24)}<span>Spotify</span></div>
             <button type="button" data-go="home">Home</button>
             <button type="button" data-go="add">+ Add music</button>
+            <button type="button" data-go="local">Play my files</button>
             <p>Your music</p>
             <div class="sp__lib"></div>
           </nav>
@@ -1692,6 +1788,18 @@ function openSpotify(o = {}) {
         const items = lib().map((x, i) => ({ ...x, mine: i < mine().length }));
         libEl.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}" class="${cur && cur.id === it.id && page === "home" ? "is-on" : ""}">${esc(it.title)}</button>`).join("");
         $$(".sp__side [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === page));
+        if (page === "local") {
+          main.innerHTML = `
+            <h2>My files</h2>
+            <p class="sp__note">Pick songs from this computer to play right here. They aren't uploaded anywhere and disappear when you close Spotify.</p>
+            <label class="sp__btn sp__pick">Choose audio files<input type="file" accept="audio/*" multiple hidden data-files></label>
+            <audio class="sp__audio" controls></audio>
+            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}">&#9835; ${esc(f.name)}</button>`).join("")}</div>`;
+          const a = $(".sp__audio", main);
+          if (localIdx >= 0 && local[localIdx]) a.src = local[localIdx].url;
+          a.addEventListener("ended", () => { if (localIdx + 1 < local.length) playLocal(localIdx + 1); });
+          return;
+        }
         if (page === "add") {
           main.innerHTML = `
             <h2>Add music</h2>
@@ -1701,6 +1809,7 @@ function openSpotify(o = {}) {
               <label>Name (optional)<input name="title" maxlength="60" placeholder="Filled in automatically when possible"></label>
               <button type="submit" class="sp__btn">Add to my music</button>
             </form>
+            <div class="sp__backup">${backupBar()}</div>
             ${mine().length ? `<h3>Added by you</h3><div class="sp__mine">${mine().map((it, i) => `<div><span>${esc(it.title)} <small>${esc(it.type)}</small></span><button type="button" data-rm="${i}">Remove</button></div>`).join("")}</div>` : ""}`;
           return;
         }
@@ -1711,7 +1820,23 @@ function openSpotify(o = {}) {
           <h3>Browse</h3>
           <div class="sp__grid">${items.map(tile).join("")}</div>`;
       };
+      body.addEventListener("change", e => {
+        if (e.target.matches("[data-files]")) {
+          Array.from(e.target.files).forEach(f => local.push({ name: f.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(f) }));
+          const first = localIdx < 0;
+          draw();
+          if (first && local.length) playLocal(0);
+        } else if (e.target.matches("[data-import]") && e.target.files[0]) {
+          importBackup(e.target.files[0], ok => {
+            if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
+            cur = lib()[0]; page = "home"; draw();
+          });
+        }
+      });
       body.addEventListener("click", e => {
+        if (e.target.closest("[data-export]")) { exportBackup(); return; }
+        const tr = e.target.closest("[data-track]");
+        if (tr) { playLocal(+tr.dataset.track); return; }
         const rm = e.target.closest("[data-rm]");
         if (rm) { const a = mine(); a.splice(+rm.dataset.rm, 1); store.set("spLib", a); cur = lib()[0]; draw(); return; }
         const it = e.target.closest("[data-i]");
@@ -1738,6 +1863,7 @@ function openSpotify(o = {}) {
       });
       draw();
     },
+    onClose: w => w.cleanup && w.cleanup(),
   });
 }
 

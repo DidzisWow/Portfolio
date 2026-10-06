@@ -1322,3 +1322,23 @@ body.crt::before{
 .sp__mine small{ color:#a7a7a7; }
 .sp__mine button{ border:0; background:none; color:#b3b3b3; text-decoration:underline; }
 @media (max-width:700px){ .sp__side{ display:none; } }
+
+/* --- media extras: comments, edit, backup, local audio --- */
+.yt2__comments{ margin-top:16px; }
+.yt2__comments h3{ margin:0 0 10px; font-size:14px; }
+.yt2__cform{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.yt2__cform input{ flex:1; min-width:0; padding:6px 2px; border:0; border-bottom:1px solid #ccc; font:13px Arial,sans-serif; outline:none; background:none; }
+.yt2__cform input:focus{ border-bottom-color:#0f0f0f; }
+.yt2__cform .yt2__sub{ margin:0; }
+.yt2__cmt{ display:flex; gap:10px; margin-bottom:12px; }
+.yt2__cmt small{ color:#606060; }
+.yt2__cdel{ border:0; background:none; padding:0; color:#606060; font-size:11px; text-decoration:underline; }
+.yt2__backup, .sp__backup{ margin:0 0 14px; }
+.media-backup{ display:inline-flex; gap:8px; }
+.media-backup button, .media-backup__imp{ padding:5px 12px; border:1px solid #888; border-radius:14px; background:transparent; color:inherit; font-size:11px; cursor:pointer; }
+.sp__pick{ display:inline-block; cursor:pointer; }
+.sp__audio{ width:100%; margin:14px 0 8px; }
+.sp__tracks{ display:grid; gap:2px; }
+.sp__track{ padding:8px 10px; border:0; border-radius:6px; background:none; color:#b3b3b3; text-align:left; font-size:12px; }
+.sp__track:hover{ color:#fff; background:#1f1f1f; }
+.sp__track.is-on{ color:#1ed760; background:#1f1f1f; }
