@@ -693,7 +693,7 @@ function openAbout(o = {}) {
               ${ROLE ? `<p class="ab__role">${esc(ROLE)}</p>` : ""}
               <p class="ab__tags">
                 ${STATUS ? `<span class="ab__status"><i></i>${esc(STATUS)}</span>` : ""}
-                ${LOCATION ? `<span class="ab__chip">&#128205; ${esc(LOCATION)}</span>` : ""}
+                ${LOCATION ? `<span class="ab__chip">${esc(LOCATION)}</span>` : ""}
               </p>
               ${C.tagline ? `<p class="ab__tagline">${esc(C.tagline)}</p>` : ""}
             </div>
@@ -701,11 +701,6 @@ function openAbout(o = {}) {
           <fieldset class="groupbox"><legend>About me</legend>
             <div class="ab__bio">${ABOUT_PARAS.map(p => `<p>${esc(p)}</p>`).join("") || "<p>Nothing here yet.</p>"}</div>
           </fieldset>
-          <div class="ab__stats">
-            <button type="button" data-app="projects"><b>${PROJECTS.length}</b><span>Projects</span></button>
-            <button type="button" data-tab-go="skills"><b>${SKILLS.length}</b><span>Skills</span></button>
-            ${hasExp ? `<button type="button" data-tab-go="exp"><b>${EXPERIENCE.length + EDUCATION.length}</b><span>Experience</span></button>` : `<button type="button" data-app="chrome"><b>${store.get("guestbook", GUESTBOOK_SEED).length}</b><span>Guestbook</span></button>`}
-          </div>
         </div>
         <div class="tab-panel" data-panel="skills" hidden>
           <fieldset class="groupbox"><legend>What I work with</legend>
@@ -849,10 +844,23 @@ function openNotepad(id, file, text, o = {}) {
 function openProjects(o = {}) {
   const count = `${PROJECTS.length} object(s)`;
   WM.open("projects", {
-    title: "My Projects", icon: "projects", w: 540, h: 360, from: o.from, status: [count, ""],
+    title: "My Projects", icon: "projects", w: 540, h: 410, from: o.from, status: [count, ""],
     render(body, win) {
       body.classList.add("body--flush", "body--column");
+      const wvGlyph = {
+        up: glyph(["...x...", "..xxx..", ".xxxxx.", "xxxxxxx", "..xxx..", "..xxx..", "..xxx..", "..xxx.."]),
+        icons: glyph(["xxxxx.xxxxx.", "x...x.x...x.", "x...x.x...x.", "x...x.x...x.", "xxxxx.xxxxx.", "............", "xxxxx.xxxxx.", "x...x.x...x.", "x...x.x...x.", "x...x.x...x.", "xxxxx.xxxxx.", "............"]),
+        details: glyph(["xx.xxxxxxxx", "xx.xxxxxxxx", "...........", "xx.xxxxxxxx", "xx.xxxxxxxx", "...........", "xx.xxxxxxxx", "xx.xxxxxxxx", "...........", "xx.xxxxxxxx", "xx.xxxxxxxx", "..........."]),
+      };
       body.innerHTML = `
+        <div class="toolbar wv__bar">
+          <button type="button" class="tool-btn" disabled><span class="wv__ico wv__ico--arrow">${G.back}</span><span>Back</span></button>
+          <button type="button" class="tool-btn" disabled><span class="wv__ico wv__ico--arrow">${G.fwd}</span><span>Forward</span></button>
+          <button type="button" class="tool-btn" disabled><span class="wv__ico wv__ico--up">${wvGlyph.up}</span><span>Up</span></button>
+          <span class="toolbar__sep"></span>
+          <button type="button" class="tool-btn" data-view="icons"><span class="wv__ico wv__ico--view">${wvGlyph.icons}</span><span>Icons</span></button>
+          <button type="button" class="tool-btn" data-view="details"><span class="wv__ico wv__ico--view">${wvGlyph.details}</span><span>Details</span></button>
+        </div>
         <div class="addressbar"><span>Address</span><div class="field addressbar__field">${icon("projects", 16)}<span>C:\\My Documents\\Projects</span></div></div>
         <div class="wv">
           <aside class="wv__pane">
@@ -865,8 +873,10 @@ function openProjects(o = {}) {
       win.view = store.get("projView", "icons");
       const box = $(".explorer", body);
       box.addEventListener("pointerleave", () => win.setStatus([count, ""]));
+      $$("[data-view]", body).forEach(b => b.addEventListener("click", () => { win.view = b.dataset.view; store.set("projView", win.view); win.draw(); }));
       win.draw = () => {
         box.className = "explorer sunken-box explorer--" + win.view;
+        $$("[data-view]", body).forEach(b => b.classList.toggle("is-on", b.dataset.view === win.view));
         if (!PROJECTS.length) { box.innerHTML = `<p class="explorer__empty">This folder is empty. Add projects in content.js.</p>`; return; }
         if (win.view === "details") {
           box.innerHTML = `<table class="details"><thead><tr><th>Name</th><th>Built with</th><th>Links</th></tr></thead><tbody>${PROJECTS.map((p, i) => `
@@ -874,7 +884,7 @@ function openProjects(o = {}) {
         } else {
           box.innerHTML = PROJECTS.map((p, i) => `
             <button type="button" class="file" data-i="${i}" role="listitem">
-              <span class="file__thumb">${p.image ? `<img src="${esc(p.image)}" data-fallback="${esc(initials(p.title))}" alt="">` : icon("projects", 32)}</span>
+              <span class="file__thumb">${icon("projects", 32)}</span>
               <span class="file__label">${esc(p.title)}</span>
             </button>`).join("");
         }
@@ -941,11 +951,11 @@ function inboxMessages() {
       `${ROLE ? `I'm a ${ROLE}${C.tagline ? ". " + C.tagline : "."}\n\n` : ""}` +
       `If you'd like to get in touch, click "New Mail" above and your message will open in your email program, ready to send` + (EMAIL ? `, or write to me directly at ${EMAIL}.` : ".") +
       `\n\nTalk soon,\n${NAME}` },
-    { id: "links", from: NAME, subject: "Where to find me", date: fmtDate(), body:
+    { id: "links", from: FIRST, subject: "Where to find me", date: fmtDate(), body:
       `Here's everywhere you can find me:\n\n${CONTACTS.map(x => `${x.label}:  ${/^mailto:/i.test(x.href) ? x.value : x.href}`).join("\n")}\n\n${others.length ? "I reply fastest by email." : ""}` },
     { id: "work", from: NAME, subject: "What I've been building", date: fmtDate(), body:
       PROJECTS.length ? `A few things I've made:\n\n${PROJECTS.map(p => `- ${p.title}${p.description ? ": " + p.description : ""}${p.demo ? "\n  " + p.demo : ""}`).join("\n\n")}\n\nOpen the My Projects folder on the desktop for screenshots and code.` : "Projects are on their way. Check back soon!" },
-    { id: "tip", from: "Windows 98", subject: "Welcome to Outlook Express", date: "06/14/1998", body: "Outlook Express is the fastest way to say hello. Click New Mail to write a message, or Copy Email to grab the address." },
+    { id: "tip", from: "Outlook Express Team", subject: "Welcome to Outlook Express", date: "06/14/1998", body: "Outlook Express is the fastest way to say hello. Click New Mail to write a message, or Copy Email to grab the address." },
   ];
 }
 function openContact(o = {}) {
@@ -956,9 +966,9 @@ function openContact(o = {}) {
       body.innerHTML = `
         <div class="toolbar">
           <button type="button" class="tool-btn" data-act="new">${icon("contact", 16)}<span>New Mail</span></button>
-          <button type="button" class="tool-btn" data-act="reply">${G.back}<span>Reply</span></button>
+          <button type="button" class="tool-btn" data-act="reply"><span class="oe__ico">${pixelSvg(["................", "................", ".....nn.........", "....nbbn........", "...nbbbbnnnnnnn.", "..nbbbbbbbbbbbn.", ".nbbbbbbbbbbbbn.", "..nbbbbbbbbbbbn.", "...nbbbbnnnnnnn.", "....nbbn........", ".....nn.........", "................", "................", "................", "................", "................"], 16)}</span><span>Reply</span></button>
           <span class="toolbar__sep"></span>
-          <button type="button" class="tool-btn" data-act="copy">${icon("skills", 16)}<span>Copy Email</span></button>
+          <button type="button" class="tool-btn" data-act="copy"><span class="oe__ico">${pixelSvg(["................", "......kkkk......", ".....kddddk.....", "..kkkkkddkkkkk..", "..kYYYYYYYYYYk..", "..kYkkkkkkkkYk..", "..kYkwwwwwwkYk..", "..kYkwddddwkYk..", "..kYkwwwwwwkYk..", "..kYkwddddwkYk..", "..kYkwwwwwwkYk..", "..kYkwddddwkYk..", "..kYkwwwwwwkYk..", "..kYkkkkkkkkYk..", "..kYYYYYYYYYYk..", "..kkkkkkkkkkkk.."], 16)}</span><span>Copy Email</span></button>
           ${GITHUB_URL ? `<button type="button" class="tool-btn" data-act="github">${icon("github", 16)}<span>GitHub</span></button>` : ""}
         </div>
         <div class="oe">
@@ -981,12 +991,12 @@ function openContact(o = {}) {
         if (!list.find(m => m.id === sel)) sel = list[0] ? list[0].id : null;
         $(".oe__list", body).innerHTML = list.length
           ? `<table class="details"><thead><tr><th>${folder === "sent" ? "To" : "From"}</th><th>Subject</th><th>${folder === "sent" ? "Sent" : "Received"}</th></tr></thead><tbody>${list.map(m => `
-              <tr data-id="${esc(m.id)}" class="${m.id === sel ? "is-selected" : ""}${folder === "inbox" && !r.has(m.id) ? " is-unread" : ""}"><td><span class="details__name">${icon(folder === "inbox" && !r.has(m.id) ? "contact" : "skills", 16)}${esc(folder === "sent" ? (m.to || NAME) : m.from)}</span></td><td>${esc(m.subject)}</td><td>${esc(m.date)}</td></tr>`).join("")}</tbody></table>`
+              <tr data-id="${esc(m.id)}" class="${m.id === sel ? "is-selected" : ""}${folder === "inbox" && !r.has(m.id) ? " is-unread" : ""}"><td><span class="details__name">${icon("contact", 16)}${esc(folder === "sent" ? (m.to || NAME) : m.from)}</span></td><td>${esc(m.subject)}</td><td>${esc(m.date)}</td></tr>`).join("")}</tbody></table>`
           : `<p class="explorer__empty">There are no items in this folder.</p>`;
         const m = list.find(x => x.id === sel);
         if (m && folder === "inbox") markRead(m.id);
         $(".oe__preview", body).innerHTML = m
-          ? `<div class="oe__head"><p><b>From:</b> ${esc(folder === "sent" ? "You" : m.from)}${folder !== "sent" && m.from === NAME && EMAIL ? ` &lt;${esc(EMAIL)}&gt;` : ""}</p><p><b>To:</b> ${esc(folder === "sent" ? (m.to || NAME) : "You")}</p><p><b>Subject:</b> ${esc(m.subject)}</p></div><div class="oe__body">${linkify(m.body)}</div>${folder === "drafts" ? `<p style="padding:0 12px"><button type="button" class="btn" data-act="new">Continue writing...</button></p>` : ""}`
+          ? `<div class="oe__head"><p><b>From:</b> ${esc(folder === "sent" ? "You" : m.from)}${folder !== "sent" && (m.from === NAME || m.from === FIRST) && EMAIL ? ` &lt;${esc(EMAIL)}&gt;` : ""}</p><p><b>To:</b> ${esc(folder === "sent" ? (m.to || NAME) : "You")}</p><p><b>Subject:</b> ${esc(m.subject)}</p></div><div class="oe__body">${linkify(m.body)}</div>${folder === "drafts" ? `<p style="padding:0 12px"><button type="button" class="btn" data-act="new">Continue writing...</button></p>` : ""}`
           : `<p class="explorer__empty">No message selected.</p>`;
         win.setStatus([`${list.length} message(s)${folder === "inbox" && unread ? `, ${unread} unread` : ""}`, "Working Online"]);
       };
