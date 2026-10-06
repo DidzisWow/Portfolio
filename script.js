@@ -147,6 +147,31 @@ function icon(key, size = 32) {
   return `<img class="px" src="${esc(iconSrc(key))}" width="${size}" height="${size}" alt="" draggable="false">`;
 }
 
+// Flat Material-style glyphs used by the YouTube and Spotify apps (instead of emoji).
+const UI_PATHS = {
+  home: "M12 3 3 10.5V21h6v-6h6v6h6V10.5z",
+  homeO: "M12 5.7 18 10.7V19h-2v-6H8v6H6v-8.3zM12 3 4 9.7V21h6v-6h4v6h6V9.7z",
+  search: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14",
+  plus: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z",
+  create: "M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11zM14 13h-3v3H9v-3H6v-2h3V8h2v3h3z",
+  play: "M8 5v14l11-7z",
+  like: "M1 21h4V9H1zm22-11a2 2 0 0 0-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10a2 2 0 0 0 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73z",
+  share: "M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92",
+  trash: "M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z",
+  edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z",
+  subs: "M20 8H4V6h16zm-2-6H6v2h12zm4 10v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2m-6 4-6-3.27v6.53z",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4",
+  note: "M12 3v10.55A4 4 0 1 0 14 17V7h4V3z",
+  library: "M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1m6 0a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1m6.5-19.87A1 1 0 0 0 14 3v18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6.46a1 1 0 0 0-.5-.87z",
+  back: "M15.5 20.3 7.2 12l8.3-8.3 1.4 1.4L10 12l6.9 6.9z",
+  fwd: "M8.5 3.7 16.8 12l-8.3 8.3-1.4-1.4L14 12 7.1 5.1z",
+  folder: "M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z",
+  down: "M5 20h14v-2H5zM19 9h-4V3H9v6H5l7 7z",
+  up: "M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z",
+  close: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+};
+const ui = (name, size = 20) => `<svg class="ui-i" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${UI_PATHS[name] || ""}"/></svg>`;
+
 /* ---------------------------------------------------------------- sound */
 // Every sound is synthesized live with WebAudio, so there are no audio files.
 const Sound = {
@@ -1405,8 +1430,8 @@ function openYouTube(o = {}) {
           <header class="yt2__head">
             <button type="button" class="yt2__back" title="Back" disabled>${G.back}</button>
             <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
-            <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit">Search</button></form>
-            <button type="button" class="yt2__up" data-go="upload" title="Upload a video">&#10133; Upload</button>
+            <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit" aria-label="Search">${ui("search", 20)}</button></form>
+            <button type="button" class="yt2__up" data-go="upload" title="Create">${ui("create", 22)}<span>Create</span></button>
             <button type="button" class="yt2__me" data-channel="${esc(NAME)}" title="Your channel (${esc(NAME)})" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
           </header>
           <div class="yt2__wrap">
@@ -1417,12 +1442,14 @@ function openYouTube(o = {}) {
       const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
       const drawSide = () => {
         side.innerHTML = `
-          <button type="button" data-go="home">Home</button>
-          <button type="button" data-go="subs">Subscriptions</button>
-          <button type="button" data-go="liked">Liked videos</button>
-          <button type="button" data-go="upload">Upload video</button>
+          <button type="button" data-go="home">${ui("home", 20)}<span>Home</span></button>
+          <button type="button" data-go="subs">${ui("subs", 20)}<span>Subscriptions</span></button>
+          <p>You</p>
+          <button type="button" data-channel="${esc(NAME)}">${ui("user", 20)}<span>Your channel</span></button>
+          <button type="button" data-go="liked">${ui("like", 20)}<span>Liked videos</span></button>
+          <button type="button" data-go="upload">${ui("up", 20)}<span>Upload video</span></button>
           <p>Channels</p>
-          ${channels().map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i>${esc(c)}${c === NAME ? " (you)" : ""}</button>`).join("")}`;
+          ${channels().filter(c => c !== NAME).map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i><span>${esc(c)}</span></button>`).join("")}`;
       };
       const subs = () => store.get("ytSubs", []);
       const likes = () => store.get("ytLikes", []);
@@ -1477,7 +1504,7 @@ function openYouTube(o = {}) {
           const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
           const handle = "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
           return `
-            <div class="yt2__banner" style="background:linear-gradient(120deg,${ytColor(ch)},#111)"></div>
+            <div class="yt2__banner" style="background:${ytColor(ch)}"></div>
             <div class="yt2__chan">
               <i class="yt2__av yt2__av--big" style="background:${ytColor(ch)}">${esc(ch[0].toUpperCase())}</i>
               <span><b>${esc(ch)}</b><small>${mine ? `${esc(handle)} &middot; ` : ""}${list.length} video${list.length === 1 ? "" : "s"}${mine ? ` &middot; Joined ${esc(joined)}` : " here"}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
@@ -1513,10 +1540,10 @@ function openYouTube(o = {}) {
                   <span><b data-channel="${esc(v.channel)}">${esc(v.channel)}</b><small>${esc(v.cat)}</small></span>
                   ${subBtn(v.channel)}
                   <span class="yt2__actions">
-                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">&#128077; ${liked ? "Liked" : "Like"}</button>
-                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">Share</button>
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">Edit</button>` : ""}
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">Delete</button>` : ""}
+                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">${ui("like", 18)}<span>${liked ? "Liked" : "Like"}</span></button>
+                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">${ui("share", 18)}<span>Share</span></button>
+                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">${ui("edit", 18)}<span>Edit</span></button>` : ""}
+                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">${ui("trash", 18)}<span>Delete</span></button>` : ""}
                     <a class="yt2__pill" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Open on YouTube</a>
                   </span>
                 </div>
@@ -1615,7 +1642,7 @@ function openYouTube(o = {}) {
           return;
         }
         const lk = e.target.closest("[data-like]");
-        if (lk) { const on = toggle("ytLikes", lk.dataset.like); lk.classList.toggle("is-on", on); lk.innerHTML = `&#128077; ${on ? "Liked" : "Like"}`; return; }
+        if (lk) { const on = toggle("ytLikes", lk.dataset.like); lk.classList.toggle("is-on", on); lk.innerHTML = `${ui("like", 18)}<span>${on ? "Liked" : "Like"}</span>`; return; }
         const sh = e.target.closest("[data-share]");
         if (sh) {
           const url = `https://www.youtube.com/watch?v=${sh.dataset.share}`;
@@ -1750,76 +1777,150 @@ function importBackup(file, done) {
   r.readAsText(file);
 }
 const backupBar = () => `<span class="media-backup"><button type="button" data-export>Export backup</button><label class="media-backup__imp">Import backup<input type="file" accept="application/json,.json" data-import hidden></label></span>`;
-const spColor = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `linear-gradient(135deg,hsl(${h},60%,38%),hsl(${(h + 40) % 360},55%,20%))`; };
 function openSpotify(o = {}) {
   WM.open("spotify", {
-    title: "Spotify", icon: "spotify", w: 860, h: 560, from: o.from,
+    title: "Spotify", icon: "spotify", w: 980, h: 600, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
       const mine = () => store.get("spLib", []);
-      const lib = () => mine().concat(SP_DEFAULTS);
-      let cur = lib()[0], page = "home";
+      const lib = () => mine().map(x => ({ ...x, mine: true })).concat(SP_DEFAULTS);
+      const find = id => lib().find(x => x.id === id);
+      const artCache = () => store.get("spArt", {});
+      const artOf = it => it.thumb || artCache()[it.id] || "";
+      const KIND = { track: "Song", album: "Album", playlist: "Playlist", artist: "Artist", episode: "Episode", show: "Podcast" };
+      const hue = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
       const local = [];   // audio files picked from this computer; they only last until the window closes
-      let localIdx = -1;
+      let localIdx = -1, filter = "";
+      const hist = [{ page: "home" }]; let pos = 0;
+      const tried = new Set();
       win.cleanup = () => local.forEach(f => URL.revokeObjectURL(f.url));
-      const playLocal = i => {
-        localIdx = i;
-        const a = $(".sp__audio", main);
-        if (!a) return;
-        a.src = local[i].url; a.play().catch(() => {});
-        $$(".sp__track", main).forEach((b, k) => b.classList.toggle("is-on", k === i));
-      };
+
       body.innerHTML = `
         <div class="sp">
-          <nav class="sp__side">
-            <div class="sp__logo">${icon("spotify", 24)}<span>Spotify</span></div>
-            <button type="button" data-go="home">Home</button>
-            <button type="button" data-go="add">+ Add music</button>
-            <button type="button" data-go="local">Play my files</button>
-            <p>Your music</p>
-            <div class="sp__lib"></div>
-          </nav>
-          <main class="sp__main"></main>
+          <aside class="sp__side">
+            <nav class="sp__panel sp__nav">
+              <button type="button" data-go="home">${ui("home", 24)}<span>Home</span></button>
+              <button type="button" data-go="add">${ui("search", 24)}<span>Add music</span></button>
+              <button type="button" data-go="local">${ui("folder", 24)}<span>Your files</span></button>
+            </nav>
+            <section class="sp__panel sp__libpanel">
+              <header><span>${ui("library", 22)}Your Library</span><button type="button" data-go="add" title="Add music" aria-label="Add music">${ui("plus", 18)}</button></header>
+              <input class="sp__filter" type="search" placeholder="Search in Your Library" aria-label="Search in Your Library">
+              <div class="sp__lib"></div>
+            </section>
+          </aside>
+          <main class="sp__panel sp__main">
+            <div class="sp__top"><button type="button" class="sp__nav-btn" data-hist="-1" aria-label="Back">${ui("back", 22)}</button><button type="button" class="sp__nav-btn" data-hist="1" aria-label="Forward">${ui("fwd", 22)}</button></div>
+            <div class="sp__view"></div>
+          </main>
         </div>`;
-      const main = $(".sp__main", body), libEl = $(".sp__lib", body);
-      const embed = it => `<iframe class="sp__embed${/^(track|episode)$/.test(it.type) ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
-      const tile = (it, i) => `<button type="button" class="sp__tile" data-i="${i}"><span class="sp__art" style="${it.thumb ? `background-image:url('${esc(it.thumb)}');` : ""}background-color:#222;${it.thumb ? "" : `background:${spColor(it.title)}`}">${it.thumb ? "" : "&#9835;"}</span><b>${esc(it.title)}</b><small>${esc(it.type)}${it.mine ? " &middot; yours" : ""}</small></button>`;
-      const draw = () => {
-        const items = lib().map((x, i) => ({ ...x, mine: i < mine().length }));
-        libEl.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}" class="${cur && cur.id === it.id && page === "home" ? "is-on" : ""}">${esc(it.title)}</button>`).join("");
-        $$(".sp__side [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === page));
-        if (page === "local") {
-          main.innerHTML = `
-            <h2>My files</h2>
-            <p class="sp__note">Pick songs from this computer to play right here. They aren't uploaded anywhere and disappear when you close Spotify.</p>
+      const mainEl = $(".sp__main", body), view = $(".sp__view", body), libEl = $(".sp__lib", body);
+
+      const cover = (it, cls = "") => {
+        const a = artOf(it);
+        return `<span class="sp__cover ${cls}" data-art="${esc(it.id)}"${a ? ` style="background-image:url('${esc(a)}')"` : ""}>${a ? "" : ui("note", 24)}</span>`;
+      };
+      const setArt = (id, url) => $$(`[data-art="${CSS.escape(id)}"]`, body).forEach(el => { el.style.backgroundImage = `url('${url.replace(/'/g, "%27")}')`; el.innerHTML = ""; });
+      // real cover art comes from Spotify's oEmbed endpoint when online; cached so it only loads once
+      const fetchArt = it => {
+        if (artOf(it) || tried.has(it.id)) return;
+        tried.add(it.id);
+        fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${it.type}/${it.id}`)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (j && j.thumbnail_url) { const c = artCache(); c[it.id] = j.thumbnail_url; store.set("spArt", c); setArt(it.id, j.thumbnail_url); } })
+          .catch(() => {});
+      };
+      const sub = it => `${KIND[it.type] || "Music"}${it.mine ? " &bull; You" : it.type === "playlist" ? " &bull; Spotify" : ""}`;
+
+      const drawLib = () => {
+        const q = filter.toLowerCase(), cur = hist[pos];
+        const list = lib().filter(it => !q || it.title.toLowerCase().includes(q));
+        libEl.innerHTML = list.length ? list.map(it => `
+          <button type="button" class="sp__lrow${cur.page === "item" && cur.id === it.id ? " is-on" : ""}" data-open="${esc(it.id)}">
+            ${cover(it)}<span><b>${esc(it.title)}</b><small>${sub(it)}</small></span>
+          </button>`).join("") : `<p class="sp__empty">Nothing matches "${esc(filter)}".</p>`;
+        $$(".sp__nav [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === cur.page));
+        $$(".sp__nav-btn", body).forEach(b => { const t = pos + +b.dataset.hist; b.disabled = t < 0 || t >= hist.length; });
+      };
+      const card = it => `
+        <button type="button" class="sp__card" data-open="${esc(it.id)}">
+          <span class="sp__cardart">${cover(it)}<i class="sp__go">${ui("play", 22)}</i></span>
+          <b>${esc(it.title)}</b><small>${sub(it)}</small>
+        </button>`;
+      const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
+
+      const pages = {
+        home() {
+          const items = lib(), mineList = items.filter(i => i.mine), pop = items.filter(i => !i.mine);
+          mainEl.style.setProperty("--c", "hsl(220,18%,24%)");
+          return `
+            <h1 class="sp__hello">${hello()}</h1>
+            <div class="sp__quick">${items.slice(0, 6).map(it => `<button type="button" data-open="${esc(it.id)}">${cover(it)}<b>${esc(it.title)}</b></button>`).join("")}</div>
+            ${mineList.length ? `<h2 class="sp__h">Your music</h2><div class="sp__shelf">${mineList.map(card).join("")}</div>` : ""}
+            <h2 class="sp__h">Popular playlists</h2>
+            <div class="sp__shelf">${pop.map(card).join("")}</div>
+            <p class="sp__note">Music plays through Spotify's own player. Log in to Spotify in this browser for full songs; otherwise you get 30-second previews.</p>`;
+        },
+        item(s) {
+          const it = find(s.id);
+          if (!it) return pages.home();
+          const small = /^(track|episode)$/.test(it.type);
+          mainEl.style.setProperty("--c", `hsl(${hue(it.title)},38%,30%)`);
+          return `
+            <div class="sp__hero">
+              ${cover(it, "sp__cover--hero")}
+              <div><small>${KIND[it.type] || "Music"}</small><h1>${esc(it.title)}</h1><p>${it.mine ? esc(NAME) : "Spotify"}</p></div>
+            </div>
+            <iframe class="sp__embed${small ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?utm_source=generator&theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            ${it.mine ? `<button type="button" class="sp__link" data-rm="${esc(it.id)}">Remove from Your Library</button>` : ""}`;
+        },
+        add() {
+          mainEl.style.setProperty("--c", "hsl(150,30%,22%)");
+          return `
+            <h1 class="sp__title">Add music</h1>
+            <form class="sp__form" autocomplete="off">
+              <p>In Spotify, choose <b>Share &rarr; Copy link</b> on a song, album, playlist, artist or podcast, then paste it below.</p>
+              <label>Spotify link<input name="url" placeholder="https://open.spotify.com/track/..." required></label>
+              <label>Name <em>(optional)</em><input name="title" maxlength="60" placeholder="Filled in automatically when possible"></label>
+              <button type="submit" class="sp__btn">Add</button>
+            </form>
+            <div class="sp__backup">${backupBar()}</div>`;
+        },
+        local() {
+          mainEl.style.setProperty("--c", "hsl(260,28%,26%)");
+          return `
+            <div class="sp__hero">
+              <span class="sp__cover sp__cover--hero">${ui("folder", 64)}</span>
+              <div><small>Local files</small><h1>Your files</h1><p>${local.length} song${local.length === 1 ? "" : "s"} &bull; this session only</p></div>
+            </div>
             <label class="sp__btn sp__pick">Choose audio files<input type="file" accept="audio/*" multiple hidden data-files></label>
             <audio class="sp__audio" controls></audio>
-            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}">&#9835; ${esc(f.name)}</button>`).join("")}</div>`;
-          const a = $(".sp__audio", main);
+            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}"><i>${i + 1}</i><span>${esc(f.name)}</span></button>`).join("")}</div>
+            <p class="sp__note">Files stay on this computer. They aren't uploaded and disappear when you close Spotify.</p>`;
+        },
+      };
+      const playLocal = i => {
+        localIdx = i;
+        const a = $(".sp__audio", view);
+        if (!a) return;
+        a.src = local[i].url; a.play().catch(() => {});
+        $$(".sp__track", view).forEach((b, k) => b.classList.toggle("is-on", k === i));
+      };
+      const draw = () => {
+        const s = hist[pos];
+        view.innerHTML = pages[s.page](s);
+        mainEl.scrollTop = 0;
+        if (s.page === "local") {
+          const a = $(".sp__audio", view);
           if (localIdx >= 0 && local[localIdx]) a.src = local[localIdx].url;
           a.addEventListener("ended", () => { if (localIdx + 1 < local.length) playLocal(localIdx + 1); });
-          return;
         }
-        if (page === "add") {
-          main.innerHTML = `
-            <h2>Add music</h2>
-            <form class="sp__form" autocomplete="off">
-              <p>Open Spotify, press <b>Share &rarr; Copy link</b> on any song, album, playlist, artist or podcast, and paste it here.</p>
-              <label>Spotify link<input name="url" placeholder="https://open.spotify.com/track/..." required></label>
-              <label>Name (optional)<input name="title" maxlength="60" placeholder="Filled in automatically when possible"></label>
-              <button type="submit" class="sp__btn">Add to my music</button>
-            </form>
-            <div class="sp__backup">${backupBar()}</div>
-            ${mine().length ? `<h3>Added by you</h3><div class="sp__mine">${mine().map((it, i) => `<div><span>${esc(it.title)} <small>${esc(it.type)}</small></span><button type="button" data-rm="${i}">Remove</button></div>`).join("")}</div>` : ""}`;
-          return;
-        }
-        main.innerHTML = `
-          <h2>${cur ? esc(cur.title) : "Spotify"}</h2>
-          ${cur ? embed(cur) : ""}
-          <p class="sp__note">Full songs need you to be logged in to Spotify in this browser; otherwise you get 30-second previews.</p>
-          <h3>Browse</h3>
-          <div class="sp__grid">${items.map(tile).join("")}</div>`;
+        drawLib();
+        lib().forEach(it => { if (view.querySelector(`[data-art="${CSS.escape(it.id)}"]`) || libEl.querySelector(`[data-art="${CSS.escape(it.id)}"]`)) fetchArt(it); });
       };
+      const go = s => { hist.length = pos + 1; hist.push(s); pos++; draw(); };
+
+      $(".sp__filter", body).addEventListener("input", e => { filter = e.target.value.trim(); drawLib(); });
       body.addEventListener("change", e => {
         if (e.target.matches("[data-files]")) {
           Array.from(e.target.files).forEach(f => local.push({ name: f.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(f) }));
@@ -1829,20 +1930,22 @@ function openSpotify(o = {}) {
         } else if (e.target.matches("[data-import]") && e.target.files[0]) {
           importBackup(e.target.files[0], ok => {
             if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
-            cur = lib()[0]; page = "home"; draw();
+            go({ page: "home" });
           });
         }
       });
       body.addEventListener("click", e => {
         if (e.target.closest("[data-export]")) { exportBackup(); return; }
+        const h = e.target.closest("[data-hist]");
+        if (h) { const t = pos + +h.dataset.hist; if (t >= 0 && t < hist.length) { pos = t; draw(); } return; }
         const tr = e.target.closest("[data-track]");
         if (tr) { playLocal(+tr.dataset.track); return; }
         const rm = e.target.closest("[data-rm]");
-        if (rm) { const a = mine(); a.splice(+rm.dataset.rm, 1); store.set("spLib", a); cur = lib()[0]; draw(); return; }
-        const it = e.target.closest("[data-i]");
-        if (it) { cur = lib()[+it.dataset.i]; page = "home"; draw(); main.scrollTop = 0; return; }
+        if (rm) { store.set("spLib", mine().filter(x => x.id !== rm.dataset.rm)); go({ page: "home" }); return; }
+        const op = e.target.closest("[data-open]");
+        if (op) { go({ page: "item", id: op.dataset.open }); return; }
         const g = e.target.closest("[data-go]");
-        if (g) { page = g.dataset.go; draw(); }
+        if (g && !(hist[pos].page === g.dataset.go)) go({ page: g.dataset.go });
       });
       body.addEventListener("submit", async e => {
         const f = e.target.closest(".sp__form");
@@ -1850,16 +1953,15 @@ function openSpotify(o = {}) {
         e.preventDefault();
         const p = spParse(f.elements.url.value);
         if (!p) { msgBox({ title: "Add music", icon: "error", text: "That doesn't look like a Spotify link. It should start with https://open.spotify.com/ and point to a song, album, playlist, artist or podcast." }); return; }
-        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your music." }); return; }
+        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your library." }); return; }
         let title = f.elements.title.value.trim(), thumb = "";
         try {
           const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
           if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
         } catch (err) {}
-        const item = { ...p, title: title || `Spotify ${p.type}`, thumb };
-        store.set("spLib", [item].concat(mine()));
+        store.set("spLib", [{ ...p, title: title || `Spotify ${KIND[p.type] || p.type}`, thumb }].concat(mine()));
         Sound.play("notify");
-        cur = lib()[0]; page = "home"; draw();
+        go({ page: "item", id: p.id });
       });
       draw();
     },
