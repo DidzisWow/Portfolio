@@ -2534,6 +2534,21 @@ const ago = iso => {
   if (d < 1) return "today"; if (d < 2) return "yesterday"; if (d < 30) return `${Math.floor(d)} days ago`;
   return "on " + new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
+// Primer Octicons (16px, MIT) used by the GitHub app instead of emoji.
+const GH_OCT = {
+  mark: "M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z",
+  people: "M2 5.5a3.5 3.5 0 1 1 5.898 2.549 5.508 5.508 0 0 1 3.034 4.084.75.75 0 1 1-1.482.235 4 4 0 0 0-7.9 0 .75.75 0 0 1-1.482-.236A5.507 5.507 0 0 1 3.102 8.05 3.493 3.493 0 0 1 2 5.5ZM11 4a3.001 3.001 0 0 1 2.22 5.018 5.01 5.01 0 0 1 2.56 3.012.749.749 0 0 1-.885.954.752.752 0 0 1-.549-.514 3.507 3.507 0 0 0-2.522-2.372.75.75 0 0 1-.574-.73v-.352a.75.75 0 0 1 .416-.672A1.5 1.5 0 0 0 11 5.5.75.75 0 0 1 11 4Zm-5.5-.5a2 2 0 1 0-.001 3.999A2 2 0 0 0 5.5 3.5Z",
+  location: "m12.596 11.596-3.535 3.536a1.5 1.5 0 0 1-2.122 0l-3.535-3.536a6.5 6.5 0 1 1 9.192-9.193 6.5 6.5 0 0 1 0 9.193Zm-1.06-8.132v-.001a5 5 0 1 0-7.072 7.072L8 14.07l3.536-3.534a5 5 0 0 0 0-7.072ZM8 9a2 2 0 1 1-.001-3.999A2 2 0 0 1 8 9Z",
+  link: "m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z",
+  repo: "M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z",
+  file: "M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z",
+  dir: "M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z",
+  star: "M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z",
+  starFill: "M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z",
+  fork: "M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z",
+  code: "m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z",
+};
+const ghOct = (k, size = 16) => `<svg class="gh__oct gh__oct--${k}" viewBox="0 0 16 16" width="${size}" height="${size}" fill="currentColor" aria-hidden="true"><path d="${GH_OCT[k]}"/></svg>`;
 function openGitHubApp(o = {}) {
   WM.open("github", {
     title: "GitHub", icon: "github", w: 860, h: 580, from: o.from, status: ["Connecting to api.github.com..."],
@@ -2545,9 +2560,9 @@ function openGitHubApp(o = {}) {
       const lang = l => l ? `<span class="gh__lang"><i style="background:${LANG_COLORS[l] || "#8b949e"}"></i>${esc(l)}</span>` : "";
       const repoCard = (r, i) => `
         <div class="gh__card">
-          <div class="gh__card-top"><a class="gh__repo-link" data-repo="${i}">${esc(r.name)}</a><span class="gh__badge">Public</span></div>
+          <div class="gh__card-top">${ghOct("repo")}<a class="gh__repo-link" data-repo="${i}">${esc(r.name)}</a><span class="gh__badge">Public</span></div>
           <p>${esc(r.description || "No description provided.")}</p>
-          <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>&#9733; ${r.stars}</span>` : ""}${r.forks ? `<span>&#5833; ${r.forks}</span>` : ""}</div>
+          <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>${ghOct("star", 14)} ${r.stars}</span>` : ""}${r.forks ? `<span>${ghOct("fork", 14)} ${r.forks}</span>` : ""}</div>
         </div>`;
       const pinned = () => {
         const linked = PROJECTS.map(p => p.github).filter(Boolean);
@@ -2555,7 +2570,7 @@ function openGitHubApp(o = {}) {
           .sort((a, b) => b.score - a.score).slice(0, 6);
       };
       const graph = () => {
-        const weeks = 20, days = weeks * 7, counts = {};
+        const weeks = 40, days = weeks * 7, counts = {};
         data.events.forEach(e => { const k = e.date.slice(0, 10); counts[k] = (counts[k] || 0) + Math.max(1, e.commits); });
         const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days + 1 + (6 - start.getDay()));
         let cells = "", total = 0;
@@ -2570,9 +2585,9 @@ function openGitHubApp(o = {}) {
           }
           cells += "</div>";
         }
-        return `<div class="gh__box"><h3>${data.live ? `${total} contributions in the last ${weeks} weeks` : "Contribution activity"}</h3>
+        return `<div class="gh__box"><h3>${total} contributions in the last ${weeks} weeks</h3>
           <div class="gh__graph">${cells}</div>
-          <div class="gh__legend">${data.live ? "Based on public activity." : "Set your GitHub username in content.js to show real activity."} <span>Less <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> More</span></div></div>`;
+          <div class="gh__legend">Based on public activity. <span>Less <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> More</span></div></div>`;
       };
       const activity = () => {
         if (!data.events.length) return "";
@@ -2583,31 +2598,30 @@ function openGitHubApp(o = {}) {
         <div class="gh__box gh__readme">
           <small class="gh__path">${esc(data.user.login)} / README.md</small>
           <h2>Hi there, I'm ${esc(FIRST)} &#128075;</h2>
-          ${ROLE ? `<p><b>${esc(ROLE)}</b>${C.tagline ? " &mdash; " + esc(C.tagline) : ""}</p>` : ""}
           ${ABOUT_PARAS.slice(0, 2).map(p => `<p>${esc(p)}</p>`).join("")}
-          ${SKILLS.length ? `<p class="gh__skills">${SKILLS.map(s => `<span>${esc(s)}</span>`).join("")}</p>` : ""}
+          ${SKILLS.length ? `<p>Tech: ${SKILLS.map(esc).join(", ")}</p>` : ""}
         </div>`;
       const views = {
-        overview: () => `${readme()}<h3 class="gh__h">Pinned</h3><div class="gh__grid">${pinned().map(x => repoCard(x.r, x.i)).join("") || "<p class='gh__muted'>No repositories yet.</p>"}</div>${graph()}${activity()}`,
+        overview: () => `${readme()}<h3 class="gh__h">Pinned</h3><div class="gh__grid">${pinned().map(x => repoCard(x.r, x.i)).join("") || "<p class='gh__muted'>No repositories yet.</p>"}</div>${data.live ? graph() : ""}${activity()}`,
         repos: () => {
           const list = data.repos.map((r, i) => ({ r, i })).filter(x => !filter || (x.r.name + " " + x.r.description).toLowerCase().includes(filter));
           return `<input class="gh__filter" placeholder="Find a repository..." value="${esc(filter)}">
             <ul class="gh__list">${list.map(({ r, i }) => `<li><div><a class="gh__repo-link" data-repo="${i}">${esc(r.name)}</a><span class="gh__badge">Public</span><p>${esc(r.description)}</p>
-              <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>&#9733; ${r.stars}</span>` : ""}${r.updated ? `<span>Updated ${ago(r.updated)}</span>` : ""}</div></div>
-              <button type="button" class="gh__btn" data-star="${i}">&#9734; Star</button></li>`).join("") || "<li class='gh__muted'>No repositories match.</li>"}</ul>`;
+              <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>${ghOct("star", 14)} ${r.stars}</span>` : ""}${r.updated ? `<span>Updated ${ago(r.updated)}</span>` : ""}</div></div>
+              <button type="button" class="gh__btn" data-star="${i}">${ghOct("star")} Star</button></li>`).join("") || "<li class='gh__muted'>No repositories match.</li>"}</ul>`;
         },
       };
       const shell = inner => {
         const u = data.user;
-        const avatar = u.avatar ? `<img src="${esc(u.avatar)}" data-fallback="${esc(initials(u.name))}" alt="">` : `<span>${esc(initials(u.name))}</span>`;
+        const avatar = `<span>${esc(initials(u.name))}</span>` + (u.avatar ? `<img src="${esc(u.avatar)}" alt="" onerror="this.remove()">` : "");
+        const hasLink = u.html_url && !GH_PLACEHOLDER;
         return `
           <header class="gh__top">
-            <span class="gh__mark">${icon("github", 28)}</span>
+            <span class="gh__mark">${ghOct("mark", 32)}</span>
+            <b class="gh__login-top">${esc(u.login)}</b>
             <input class="gh__search" placeholder="Search or jump to..." aria-label="Search">
-            <nav><a>Pull requests</a><a>Issues</a><a>Codespaces</a><a>Explore</a></nav>
             <span class="gh__me">${esc((u.name || "?")[0])}</span>
           </header>
-          ${data.live ? "" : `<div class="gh__note">${data.reason === "placeholder" ? "Showing projects from content.js. Put your GitHub profile link in content.js (social.github) to load your real profile and repos." : `Couldn't reach GitHub (${esc(data.reason)}), so this shows your projects from content.js.`}</div>`}
           <nav class="gh__tabs">
             <button type="button" data-tab="overview" class="${tab === "overview" ? "is-on" : ""}">Overview</button>
             <button type="button" data-tab="repos" class="${tab === "repos" ? "is-on" : ""}">Repositories <span class="gh__count">${data.repos.length}</span></button>
@@ -2619,17 +2633,18 @@ function openGitHubApp(o = {}) {
               <p class="gh__login">${esc(u.login)}</p>
               ${u.bio ? `<p class="gh__bio">${esc(u.bio)}</p>` : ""}
               <button type="button" class="gh__btn gh__btn--wide" data-follow>${store.get("ghFollow", false) ? "Unfollow" : "Follow"}</button>
-              <p class="gh__muted">&#128101; <b>${u.followers + (store.get("ghFollow", false) ? 1 : 0)}</b> followers &middot; <b>${u.following}</b> following</p>
-              ${u.location ? `<p class="gh__muted">&#128205; ${esc(u.location)}</p>` : ""}
-              ${u.blog ? `<p class="gh__muted">&#128279; <a href="${esc(/^https?:/.test(u.blog) ? u.blog : "https://" + u.blog)}" target="_blank" rel="noopener">${esc(u.blog)}</a></p>` : ""}
-              <p><a class="gh__btn gh__btn--wide" href="${esc(u.html_url)}" target="_blank" rel="noopener">Open on github.com</a></p>
+              <p class="gh__muted">${ghOct("people")} <b>${u.followers + (store.get("ghFollow", false) ? 1 : 0)}</b> followers &middot; <b>${u.following}</b> following</p>
+              ${u.location ? `<p class="gh__muted">${ghOct("location")} ${esc(u.location)}</p>` : ""}
+              ${u.blog ? `<p class="gh__muted">${ghOct("link")} <a href="${esc(/^https?:/.test(u.blog) ? u.blog : "https://" + u.blog)}" target="_blank" rel="noopener">${esc(u.blog)}</a></p>` : ""}
+              ${hasLink ? `<p class="gh__muted">${ghOct("link")} <a href="${esc(u.html_url)}" target="_blank" rel="noopener">${esc(u.html_url.replace(/^https?:\/\//, ""))}</a></p>` : ""}
             </aside>
             <main class="gh__main">${inner}</main>
           </div>`;
       };
-      const draw = () => { root.innerHTML = shell(views[tab]()); win.setTitle(`${data.user.login} - GitHub`); };
+      const draw = () => { root.classList.remove("is-repo"); root.innerHTML = shell(views[tab]()); win.setTitle(`${data.user.login} - GitHub`); };
       const openRepo = async i => {
         const r = data.repos[i];
+        root.classList.add("is-repo");
         root.innerHTML = shell(`<div class="gh__loading"><span class="gh__spinner"></span>Opening ${esc(r.name)}...</div>`);
         win.setTitle(`${data.user.login}/${r.name} - GitHub`);
         let files = null, md = "";
@@ -2639,10 +2654,7 @@ function openGitHubApp(o = {}) {
           md = await ghFetch(`/repos/${r.full}/readme`, true).catch(() => "");
           win.setStatus(["Done"]);
         }
-        if (!files) {
-          const l = (r.language || "").toLowerCase();
-          files = [{ name: "README.md", type: "file" }, ...(l.includes("python") ? ["main.py", "requirements.txt"] : l.includes("java") && !l.includes("script") ? ["src", "Main.java"] : ["index.html", "style.css", "script.js"]).map(n => ({ name: n, type: n.includes(".") ? "file" : "dir" }))];
-        }
+        if (!files) files = [];
         if (!md) {
           const p = r.local !== undefined ? PROJECTS[r.local] : null;
           md = `# ${p ? p.title : r.name}\n\n${r.description || ""}\n\n${r.topics.length ? "## Built with\n" + r.topics.map(t => "- " + t).join("\n") + "\n" : ""}${r.homepage ? `\n[Live demo](${r.homepage})` : ""}`;
@@ -2650,23 +2662,22 @@ function openGitHubApp(o = {}) {
         files.sort((a, b) => (a.type === "dir" ? 0 : 1) - (b.type === "dir" ? 0 : 1) || a.name.localeCompare(b.name));
         $(".gh__main", root).innerHTML = `
           <div class="gh__repo-head">
-            <button type="button" class="gh__btn" data-tab="${tab}">&larr; Back</button>
-            <h2>${icon("projects", 16)} <a data-tab="${tab}">${esc(data.user.login)}</a> / <b>${esc(r.name)}</b></h2>
+            <h2>${ghOct("repo")} <a data-tab="${tab}">${esc(data.user.login)}</a> / <b>${esc(r.name)}</b></h2>
             <span class="gh__badge">Public</span>
           </div>
           <p class="gh__muted">${esc(r.description)}</p>
           <div class="gh__repo-actions">
-            ${r.html_url ? `<a class="gh__btn gh__btn--green" href="${esc(r.html_url)}" target="_blank" rel="noopener">&lt;&gt; Code</a>` : ""}
+            ${r.html_url ? `<a class="gh__btn gh__btn--green" href="${esc(r.html_url)}" target="_blank" rel="noopener">${ghOct("code")} Code</a>` : ""}
             ${r.homepage ? `<a class="gh__btn" href="${esc(r.homepage)}" target="_blank" rel="noopener">Live demo</a>` : ""}
-            ${lang(r.language)}${r.stars ? `<span class="gh__muted">&#9733; ${r.stars}</span>` : ""}
+            ${lang(r.language)}${r.stars ? `<span class="gh__muted">${ghOct("star", 14)} ${r.stars}</span>` : ""}
           </div>
-          <table class="gh__files"><tbody>${files.slice(0, 40).map(f => `<tr><td>${f.type === "dir" ? "&#128193;" : "&#128196;"} ${f.html_url ? `<a href="${esc(f.html_url)}" target="_blank" rel="noopener">${esc(f.name)}</a>` : esc(f.name)}</td></tr>`).join("")}</tbody></table>
+          ${files.length ? `<table class="gh__files"><tbody>${files.slice(0, 40).map(f => `<tr><td>${f.type === "dir" ? `<span class="gh__ico gh__ico--dir">${ghOct("dir")}</span>` : `<span class="gh__ico">${ghOct("file")}</span>`}${f.html_url ? `<a href="${esc(f.html_url)}" target="_blank" rel="noopener">${esc(f.name)}</a>` : esc(f.name)}</td></tr>`).join("")}</tbody></table>` : ""}
           <div class="gh__box gh__readme"><small class="gh__path">README.md</small>${mdToHtml(md)}</div>`;
       };
       root.addEventListener("click", e => {
         const t = e.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; draw(); return; }
         const r = e.target.closest("[data-repo]"); if (r) { openRepo(+r.dataset.repo); return; }
-        const s = e.target.closest("[data-star]"); if (s) { s.classList.toggle("is-on"); s.innerHTML = s.classList.contains("is-on") ? "&#9733; Starred" : "&#9734; Star"; return; }
+        const s = e.target.closest("[data-star]"); if (s) { s.classList.toggle("is-on"); s.innerHTML = s.classList.contains("is-on") ? `${ghOct("starFill")} Starred` : `${ghOct("star")} Star`; return; }
         if (e.target.closest("[data-follow]")) { store.set("ghFollow", !store.get("ghFollow", false)); draw(); }
       });
       root.addEventListener("input", e => {
@@ -2685,7 +2696,8 @@ function openGitHubApp(o = {}) {
       ghData().then(d => {
         if (!WM.has("github")) return;
         data = d;
-        win.setStatus([d.live ? `Live data from api.github.com/users/${d.user.login}` : "Showing projects from content.js"]);
+        if (!d.live && d.reason && d.reason !== "placeholder") console.info("[gh]", d.reason);
+        win.setStatus([d.live ? `github.com/${d.user.login}` : "Done"]);
         draw();
       });
     },
@@ -3389,7 +3401,7 @@ function openDisplay(o = {}) {
   WM.open("display", {
     title: "Display Properties", icon: "monitor", w: 380, from: o.from, resizable: false,
     render(body, win) {
-      const st = { crt: store.get("crt", true), bg: store.get("bg", "clouds"), saver: store.get("saver", "starfield"), wait: store.get("saverWait", 3), scheme: store.get("scheme", "standard") };
+      const st = { crt: store.get("crt", false), bg: store.get("bg", "clouds"), saver: store.get("saver", "starfield"), wait: store.get("saverWait", 3), scheme: store.get("scheme", "standard") };
       body.innerHTML = `
         <div class="tabs" role="tablist">
           <button type="button" class="tab is-active" data-tab="bg">Background</button>
@@ -4472,7 +4484,7 @@ function saveIconPositions() {
 function initDesktop() {
   const desk = $("#desktop"), wrap = $("#desktopIcons"), box = $("#selectBox");
   applyBg(store.get("bg", "clouds"));
-  applyCRT(store.get("crt", true));
+  applyCRT(store.get("crt", false));
   applyScheme(store.get("scheme", "standard"));
   buildDesktopIcons();
   window.addEventListener("resize", () => layoutIcons());
