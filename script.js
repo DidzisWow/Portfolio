@@ -147,6 +147,31 @@ function icon(key, size = 32) {
   return `<img class="px" src="${esc(iconSrc(key))}" width="${size}" height="${size}" alt="" draggable="false">`;
 }
 
+// Flat Material-style glyphs used by the YouTube and Spotify apps (instead of emoji).
+const UI_PATHS = {
+  home: "M12 3 3 10.5V21h6v-6h6v6h6V10.5z",
+  homeO: "M12 5.7 18 10.7V19h-2v-6H8v6H6v-8.3zM12 3 4 9.7V21h6v-6h4v6h6V9.7z",
+  search: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14",
+  plus: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z",
+  create: "M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11zM14 13h-3v3H9v-3H6v-2h3V8h2v3h3z",
+  play: "M8 5v14l11-7z",
+  like: "M1 21h4V9H1zm22-11a2 2 0 0 0-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10a2 2 0 0 0 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73z",
+  share: "M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92",
+  trash: "M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z",
+  edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z",
+  subs: "M20 8H4V6h16zm-2-6H6v2h12zm4 10v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2m-6 4-6-3.27v6.53z",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4",
+  note: "M12 3v10.55A4 4 0 1 0 14 17V7h4V3z",
+  library: "M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1m6 0a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1m6.5-19.87A1 1 0 0 0 14 3v18a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V6.46a1 1 0 0 0-.5-.87z",
+  back: "M15.5 20.3 7.2 12l8.3-8.3 1.4 1.4L10 12l6.9 6.9z",
+  fwd: "M8.5 3.7 16.8 12l-8.3 8.3-1.4-1.4L14 12 7.1 5.1z",
+  folder: "M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z",
+  down: "M5 20h14v-2H5zM19 9h-4V3H9v6H5l7 7z",
+  up: "M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z",
+  close: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+};
+const ui = (name, size = 20) => `<svg class="ui-i" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${UI_PATHS[name] || ""}"/></svg>`;
+
 /* ---------------------------------------------------------------- sound */
 // Every sound is synthesized live with WebAudio, so there are no audio files.
 const Sound = {
@@ -668,7 +693,7 @@ function openAbout(o = {}) {
               ${ROLE ? `<p class="ab__role">${esc(ROLE)}</p>` : ""}
               <p class="ab__tags">
                 ${STATUS ? `<span class="ab__status"><i></i>${esc(STATUS)}</span>` : ""}
-                ${LOCATION ? `<span class="ab__chip">&#128205; ${esc(LOCATION)}</span>` : ""}
+                ${LOCATION ? `<span class="ab__chip">${esc(LOCATION)}</span>` : ""}
               </p>
               ${C.tagline ? `<p class="ab__tagline">${esc(C.tagline)}</p>` : ""}
             </div>
@@ -676,11 +701,6 @@ function openAbout(o = {}) {
           <fieldset class="groupbox"><legend>About me</legend>
             <div class="ab__bio">${ABOUT_PARAS.map(p => `<p>${esc(p)}</p>`).join("") || "<p>Nothing here yet.</p>"}</div>
           </fieldset>
-          <div class="ab__stats">
-            <button type="button" data-app="projects"><b>${PROJECTS.length}</b><span>Projects</span></button>
-            <button type="button" data-tab-go="skills"><b>${SKILLS.length}</b><span>Skills</span></button>
-            ${hasExp ? `<button type="button" data-tab-go="exp"><b>${EXPERIENCE.length + EDUCATION.length}</b><span>Experience</span></button>` : `<button type="button" data-app="chrome"><b>${store.get("guestbook", GUESTBOOK_SEED).length}</b><span>Guestbook</span></button>`}
-          </div>
         </div>
         <div class="tab-panel" data-panel="skills" hidden>
           <fieldset class="groupbox"><legend>What I work with</legend>
@@ -824,10 +844,23 @@ function openNotepad(id, file, text, o = {}) {
 function openProjects(o = {}) {
   const count = `${PROJECTS.length} object(s)`;
   WM.open("projects", {
-    title: "My Projects", icon: "projects", w: 540, h: 360, from: o.from, status: [count, ""],
+    title: "My Projects", icon: "projects", w: 540, h: 410, from: o.from, status: [count, ""],
     render(body, win) {
       body.classList.add("body--flush", "body--column");
+      const wvGlyph = {
+        up: glyph(["...x...", "..xxx..", ".xxxxx.", "xxxxxxx", "..xxx..", "..xxx..", "..xxx..", "..xxx.."]),
+        icons: glyph(["xxxxx.xxxxx.", "x...x.x...x.", "x...x.x...x.", "x...x.x...x.", "xxxxx.xxxxx.", "............", "xxxxx.xxxxx.", "x...x.x...x.", "x...x.x...x.", "x...x.x...x.", "xxxxx.xxxxx.", "............"]),
+        details: glyph(["xx.xxxxxxxx", "xx.xxxxxxxx", "...........", "xx.xxxxxxxx", "xx.xxxxxxxx", "...........", "xx.xxxxxxxx", "xx.xxxxxxxx", "...........", "xx.xxxxxxxx", "xx.xxxxxxxx", "..........."]),
+      };
       body.innerHTML = `
+        <div class="toolbar wv__bar">
+          <button type="button" class="tool-btn" disabled><span class="wv__ico wv__ico--arrow">${G.back}</span><span>Back</span></button>
+          <button type="button" class="tool-btn" disabled><span class="wv__ico wv__ico--arrow">${G.fwd}</span><span>Forward</span></button>
+          <button type="button" class="tool-btn" disabled><span class="wv__ico wv__ico--up">${wvGlyph.up}</span><span>Up</span></button>
+          <span class="toolbar__sep"></span>
+          <button type="button" class="tool-btn" data-view="icons"><span class="wv__ico wv__ico--view">${wvGlyph.icons}</span><span>Icons</span></button>
+          <button type="button" class="tool-btn" data-view="details"><span class="wv__ico wv__ico--view">${wvGlyph.details}</span><span>Details</span></button>
+        </div>
         <div class="addressbar"><span>Address</span><div class="field addressbar__field">${icon("projects", 16)}<span>C:\\My Documents\\Projects</span></div></div>
         <div class="wv">
           <aside class="wv__pane">
@@ -840,8 +873,10 @@ function openProjects(o = {}) {
       win.view = store.get("projView", "icons");
       const box = $(".explorer", body);
       box.addEventListener("pointerleave", () => win.setStatus([count, ""]));
+      $$("[data-view]", body).forEach(b => b.addEventListener("click", () => { win.view = b.dataset.view; store.set("projView", win.view); win.draw(); }));
       win.draw = () => {
         box.className = "explorer sunken-box explorer--" + win.view;
+        $$("[data-view]", body).forEach(b => b.classList.toggle("is-on", b.dataset.view === win.view));
         if (!PROJECTS.length) { box.innerHTML = `<p class="explorer__empty">This folder is empty. Add projects in content.js.</p>`; return; }
         if (win.view === "details") {
           box.innerHTML = `<table class="details"><thead><tr><th>Name</th><th>Built with</th><th>Links</th></tr></thead><tbody>${PROJECTS.map((p, i) => `
@@ -849,7 +884,7 @@ function openProjects(o = {}) {
         } else {
           box.innerHTML = PROJECTS.map((p, i) => `
             <button type="button" class="file" data-i="${i}" role="listitem">
-              <span class="file__thumb">${p.image ? `<img src="${esc(p.image)}" data-fallback="${esc(initials(p.title))}" alt="">` : icon("projects", 32)}</span>
+              <span class="file__thumb">${icon("projects", 32)}</span>
               <span class="file__label">${esc(p.title)}</span>
             </button>`).join("");
         }
@@ -916,11 +951,11 @@ function inboxMessages() {
       `${ROLE ? `I'm a ${ROLE}${C.tagline ? ". " + C.tagline : "."}\n\n` : ""}` +
       `If you'd like to get in touch, click "New Mail" above and your message will open in your email program, ready to send` + (EMAIL ? `, or write to me directly at ${EMAIL}.` : ".") +
       `\n\nTalk soon,\n${NAME}` },
-    { id: "links", from: NAME, subject: "Where to find me", date: fmtDate(), body:
+    { id: "links", from: FIRST, subject: "Where to find me", date: fmtDate(), body:
       `Here's everywhere you can find me:\n\n${CONTACTS.map(x => `${x.label}:  ${/^mailto:/i.test(x.href) ? x.value : x.href}`).join("\n")}\n\n${others.length ? "I reply fastest by email." : ""}` },
     { id: "work", from: NAME, subject: "What I've been building", date: fmtDate(), body:
       PROJECTS.length ? `A few things I've made:\n\n${PROJECTS.map(p => `- ${p.title}${p.description ? ": " + p.description : ""}${p.demo ? "\n  " + p.demo : ""}`).join("\n\n")}\n\nOpen the My Projects folder on the desktop for screenshots and code.` : "Projects are on their way. Check back soon!" },
-    { id: "tip", from: "Windows 98", subject: "Welcome to Outlook Express", date: "06/14/1998", body: "Outlook Express is the fastest way to say hello. Click New Mail to write a message, or Copy Email to grab the address." },
+    { id: "tip", from: "Outlook Express Team", subject: "Welcome to Outlook Express", date: "06/14/1998", body: "Outlook Express is the fastest way to say hello. Click New Mail to write a message, or Copy Email to grab the address." },
   ];
 }
 function openContact(o = {}) {
@@ -931,9 +966,9 @@ function openContact(o = {}) {
       body.innerHTML = `
         <div class="toolbar">
           <button type="button" class="tool-btn" data-act="new">${icon("contact", 16)}<span>New Mail</span></button>
-          <button type="button" class="tool-btn" data-act="reply">${G.back}<span>Reply</span></button>
+          <button type="button" class="tool-btn" data-act="reply"><span class="oe__ico">${pixelSvg(["................", "................", ".....nn.........", "....nbbn........", "...nbbbbnnnnnnn.", "..nbbbbbbbbbbbn.", ".nbbbbbbbbbbbbn.", "..nbbbbbbbbbbbn.", "...nbbbbnnnnnnn.", "....nbbn........", ".....nn.........", "................", "................", "................", "................", "................"], 16)}</span><span>Reply</span></button>
           <span class="toolbar__sep"></span>
-          <button type="button" class="tool-btn" data-act="copy">${icon("skills", 16)}<span>Copy Email</span></button>
+          <button type="button" class="tool-btn" data-act="copy"><span class="oe__ico">${pixelSvg(["................", "......kkkk......", ".....kddddk.....", "..kkkkkddkkkkk..", "..kYYYYYYYYYYk..", "..kYkkkkkkkkYk..", "..kYkwwwwwwkYk..", "..kYkwddddwkYk..", "..kYkwwwwwwkYk..", "..kYkwddddwkYk..", "..kYkwwwwwwkYk..", "..kYkwddddwkYk..", "..kYkwwwwwwkYk..", "..kYkkkkkkkkYk..", "..kYYYYYYYYYYk..", "..kkkkkkkkkkkk.."], 16)}</span><span>Copy Email</span></button>
           ${GITHUB_URL ? `<button type="button" class="tool-btn" data-act="github">${icon("github", 16)}<span>GitHub</span></button>` : ""}
         </div>
         <div class="oe">
@@ -956,12 +991,12 @@ function openContact(o = {}) {
         if (!list.find(m => m.id === sel)) sel = list[0] ? list[0].id : null;
         $(".oe__list", body).innerHTML = list.length
           ? `<table class="details"><thead><tr><th>${folder === "sent" ? "To" : "From"}</th><th>Subject</th><th>${folder === "sent" ? "Sent" : "Received"}</th></tr></thead><tbody>${list.map(m => `
-              <tr data-id="${esc(m.id)}" class="${m.id === sel ? "is-selected" : ""}${folder === "inbox" && !r.has(m.id) ? " is-unread" : ""}"><td><span class="details__name">${icon(folder === "inbox" && !r.has(m.id) ? "contact" : "skills", 16)}${esc(folder === "sent" ? (m.to || NAME) : m.from)}</span></td><td>${esc(m.subject)}</td><td>${esc(m.date)}</td></tr>`).join("")}</tbody></table>`
+              <tr data-id="${esc(m.id)}" class="${m.id === sel ? "is-selected" : ""}${folder === "inbox" && !r.has(m.id) ? " is-unread" : ""}"><td><span class="details__name">${icon("contact", 16)}${esc(folder === "sent" ? (m.to || NAME) : m.from)}</span></td><td>${esc(m.subject)}</td><td>${esc(m.date)}</td></tr>`).join("")}</tbody></table>`
           : `<p class="explorer__empty">There are no items in this folder.</p>`;
         const m = list.find(x => x.id === sel);
         if (m && folder === "inbox") markRead(m.id);
         $(".oe__preview", body).innerHTML = m
-          ? `<div class="oe__head"><p><b>From:</b> ${esc(folder === "sent" ? "You" : m.from)}${folder !== "sent" && m.from === NAME && EMAIL ? ` &lt;${esc(EMAIL)}&gt;` : ""}</p><p><b>To:</b> ${esc(folder === "sent" ? (m.to || NAME) : "You")}</p><p><b>Subject:</b> ${esc(m.subject)}</p></div><div class="oe__body">${linkify(m.body)}</div>${folder === "drafts" ? `<p style="padding:0 12px"><button type="button" class="btn" data-act="new">Continue writing...</button></p>` : ""}`
+          ? `<div class="oe__head"><p><b>From:</b> ${esc(folder === "sent" ? "You" : m.from)}${folder !== "sent" && (m.from === NAME || m.from === FIRST) && EMAIL ? ` &lt;${esc(EMAIL)}&gt;` : ""}</p><p><b>To:</b> ${esc(folder === "sent" ? (m.to || NAME) : "You")}</p><p><b>Subject:</b> ${esc(m.subject)}</p></div><div class="oe__body">${linkify(m.body)}</div>${folder === "drafts" ? `<p style="padding:0 12px"><button type="button" class="btn" data-act="new">Continue writing...</button></p>` : ""}`
           : `<p class="explorer__empty">No message selected.</p>`;
         win.setStatus([`${list.length} message(s)${folder === "inbox" && unread ? `, ${unread} unread` : ""}`, "Working Online"]);
       };
@@ -1136,10 +1171,9 @@ const PAGES = {
     </div>`;
   },
   newtab: () => `<div class="nt">
-      <div class="nt__logo"><span>Chrome</span><b>98</b></div>
-      <form class="nt__search" data-form="search"><input class="field" name="q" placeholder="Search, or type a website like google.com" aria-label="Search"><button class="btn" type="submit">Search</button></form>
-      <div class="nt__tiles">${CR_TILES.map(([label, url, ic, app]) => `<a class="nt__tile" ${app ? `data-app="${app}"` : `data-go="${esc(url)}"`}>${icon(ic, 32)}<span>${esc(label)}</span></a>`).join("")}</div>
-      <p class="nt__tip">Type any website (like <b>google.com</b>) to see how it looked back in the day. Pick the year in the toolbar.<br>Middle-click a link to open it in a new tab.</p>
+      <div class="nt__logo" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></div>
+      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search, or type a website like google.com" aria-label="Search" autocomplete="off" spellcheck="false"></form>
+      <div class="nt__tiles">${CR_TILES.map(([label, url, ic, app, col]) => `<a class="nt__tile" ${app ? `data-app="${app}"` : `data-go="${esc(url)}"`}><span class="nt__fav"${col ? ` style="color:${col}"` : ""}>${col ? esc(label[0]) : icon(ic, 24)}</span><span class="nt__lbl">${esc(label)}</span></a>`).join("")}</div>
     </div>`,
   github: url => `<div class="ie-page">
       <h1>Opening GitHub...</h1>
@@ -1174,20 +1208,29 @@ const PAGES = {
 const PAGE_TITLES = { web: "Time Machine", newtab: "New Tab", home: `${NAME}'s Homepage`, about: "About Me", guestbook: "Guestbook", links: "Cool Links", search: "AltaVista Search", youtube: "YouTube", github: "GitHub", error: "Cannot find server", "404": "404 Not Found", blank: "about:blank" };
 
 const CR_BOOKMARKS = () => [
-  ["My Homepage", HOME, "about"],
-  ["Guestbook", HOME + "guestbook.html", "skills"],
-  ["Cool Links", HOME + "links.html", "projects"],
+  ["My Homepage", HOME, "page"],
+  ["Guestbook", HOME + "guestbook.html", "page"],
+  ["Cool Links", HOME + "links.html", "page"],
   ["YouTube", "http://www.youtube.com", "youtube"],
   ["GitHub", GITHUB_URL || "http://www.github.com", "github"],
-  ["AltaVista", "http://www.altavista.com", "chrome"],
+  ["AltaVista", "http://www.altavista.com", "page"],
 ];
+// Chrome toolbar glyphs (flat Material paths), kept local to the Chrome app
+const CR_PATHS = {
+  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
+  fwd: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+  reload: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z",
+  page: "M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm7 7V3.5L18.5 9z",
+};
+const crIco = (name, size = 20) => `<svg class="cr-svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${CR_PATHS[name]}"/></svg>`;
+const crBmIcon = ic => CR_PATHS[ic] ? crIco(ic, 16) : icon(ic, 16);
 const CR_TILES = [
-  ["My Homepage", HOME, "about"],
-  ["Google, 1998", "http://www.google.com", "chrome"],
-  ["Yahoo!", "http://www.yahoo.com", "chrome"],
-  ["Space Jam", "http://www.spacejam.com", "chrome"],
-  ["Apple", "http://www.apple.com", "chrome"],
-  ["Amazon", "http://www.amazon.com", "chrome"],
+  ["My Homepage", HOME, "about", "", "#1a73e8"],
+  ["Google, 1998", "http://www.google.com", "chrome", "", "#4285f4"],
+  ["Yahoo!", "http://www.yahoo.com", "chrome", "", "#720e9e"],
+  ["Space Jam", "http://www.spacejam.com", "chrome", "", "#1a237e"],
+  ["Apple", "http://www.apple.com", "chrome", "", "#5f6368"],
+  ["Amazon", "http://www.amazon.com", "chrome", "", "#ff9900"],
   ["YouTube", "http://www.youtube.com", "youtube"],
   ["GitHub", "http://www.github.com", "github"],
   ["Discord", "", "discord", "discord"],
@@ -1195,23 +1238,19 @@ const CR_TILES = [
 function openChrome(o = {}) {
   const had = WM.has("chrome");
   const w = WM.open("chrome", {
-    title: "Chrome 98", icon: "chrome", w: 720, h: 520, from: o.from, status: ["Done"],
+    title: "Chrome 98", icon: "chrome", w: 800, h: 600, from: o.from, status: ["Done"],
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `
-        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New Tab">+</button></div>
-        <div class="toolbar">
-          <button type="button" class="tool-btn" data-nav="back" title="Back">${G.back}<span>Back</span></button>
-          <button type="button" class="tool-btn" data-nav="fwd" title="Forward">${G.fwd}<span>Forward</span></button>
-          <button type="button" class="tool-btn" data-nav="stop" title="Stop"><span style="color:#c00;display:flex">${G.close}</span><span>Stop</span></button>
-          <button type="button" class="tool-btn" data-nav="reload" title="Refresh">${G.reload}<span>Refresh</span></button>
-          <button type="button" class="tool-btn" data-nav="home" title="Home">${G.home}<span>Home</span></button>
-          <span class="toolbar__sep"></span>
-          <label class="cr-year" title="Which year the Time Machine shows websites from">Year<select class="field">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
-          <span class="browser__throbber">${icon("chrome", 22)}</span>
+        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New Tab" aria-label="New Tab">${ui("plus", 18)}</button></div>
+        <div class="cr-bar">
+          <button type="button" class="cr-ico" data-nav="back" title="Back" aria-label="Back">${crIco("back")}</button>
+          <button type="button" class="cr-ico" data-nav="fwd" title="Forward" aria-label="Forward">${crIco("fwd")}</button>
+          <button type="button" class="cr-ico" data-nav="reload" title="Reload" aria-label="Reload">${crIco("reload")}</button>
+          <form class="addressbar cr-omni">${ui("search", 16)}<input id="addr-chrome" class="addressbar__input" spellcheck="false" autocomplete="off" placeholder="Search or type a URL" aria-label="Address and search bar"></form>
+          <label class="cr-year" title="Which year the Time Machine shows websites from. Type any website (like google.com) to see how it looked back in the day."><span>Year</span><select class="field">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
         </div>
-        <form class="addressbar"><label for="addr-chrome">Address</label><input id="addr-chrome" class="field addressbar__input" spellcheck="false" autocomplete="off"><button class="btn btn--sm" type="submit">Go</button></form>
-        <div class="cr-bookmarks">${CR_BOOKMARKS().map(([label, url, ic]) => `<button type="button" data-go="${esc(url)}" title="${esc(url)}">${icon(ic, 16)}<span>${esc(label)}</span></button>`).join("")}</div>
+        <div class="cr-bookmarks">${CR_BOOKMARKS().map(([label, url, ic]) => `<button type="button" data-go="${esc(url)}" title="${esc(url)}">${crBmIcon(ic)}<span>${esc(label)}</span></button>`).join("")}</div>
         <div class="browser__view sunken-box"><div class="browser__doc"></div></div>`;
       const input = $(".addressbar__input", body), doc = $(".browser__doc", body), view = $(".browser__view", body), list = $(".cr-tabs__list", body);
       const bBack = $('[data-nav="back"]', body), bFwd = $('[data-nav="fwd"]', body);
@@ -1219,7 +1258,7 @@ function openChrome(o = {}) {
       let active = null, tid = 0;
       const sync = () => { bBack.disabled = !active || active.idx <= 0; bFwd.disabled = !active || active.idx >= active.hist.length - 1; };
       const drawTabs = () => {
-        list.innerHTML = tabs.map(t => `<div class="cr-tab${t === active ? " is-active" : ""}" data-tab="${t.id}" role="tab" title="${esc(t.title)}">${icon(t.icon || "chrome", 16)}<span>${esc(t.title)}</span><button type="button" data-close="${t.id}" aria-label="Close tab">${G.close}</button></div>`).join("");
+        list.innerHTML = tabs.map(t => `<div class="cr-tab${t === active ? " is-active" : ""}" data-tab="${t.id}" role="tab" title="${esc(t.title)}">${icon(t.icon || "chrome", 16)}<span>${esc(t.title)}</span><button type="button" data-close="${t.id}" aria-label="Close tab"><svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button></div>`).join("");
       };
       const showTitle = () => win.setTitle(`${active.title} - Chrome 98`);
       // archived pages load inside an iframe: show progress until it finishes
@@ -1314,7 +1353,7 @@ function openChrome(o = {}) {
         if (active && routeOf(active.hist[active.idx] || "") === "web") load(active, active.hist[active.idx]);
       });
       $(".addressbar", body).addEventListener("submit", e => { e.preventDefault(); navigate(input.value); });
-      $$(".toolbar [data-nav]", body).forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
+      $$(".cr-bar [data-nav]", body).forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
       $(".cr-bookmarks", body).addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { if (e.ctrlKey || e.metaKey) newTab(b.dataset.go, false); else navigate(b.dataset.go); } });
       const follow = (e, background) => {
         const t = e.target.closest("[data-go],[data-app],[data-nav],[data-project]");
@@ -1351,15 +1390,8 @@ function openChrome(o = {}) {
       doc.addEventListener("pointerout", e => {
         if (e.target.closest("[data-go], a[href]") && !win.el.classList.contains("is-loading")) win.setStatus(["Done"]);
       });
-      newTab(o.url || HOME);
+      newTab(o.url || "chrome://newtab");
     },
-    menu: win => [
-      { label: "File", items: [{ label: "New Tab", action: () => win.newTab() }, { sep: true }, { label: "Close", action: () => win.close() }] },
-      { label: "View", items: [{ label: "Refresh", action: () => win.nav("reload") }, { label: "Stop", action: () => win.nav("stop") }] },
-      { label: "Go", items: [{ label: "Back", action: () => win.nav("back") }, { label: "Forward", action: () => win.nav("fwd") }, { sep: true }, { label: "Home Page", action: () => win.nav("home") }, { label: "Search the Web", action: () => win.navigate("http://www.altavista.com") }] },
-      { label: "Favorites", items: CR_BOOKMARKS().map(([label, url]) => ({ label, action: () => win.navigate(url) })) },
-      { label: "Help", items: [{ label: "About Chrome 98", action: () => msgBox({ title: "About Chrome 98", icon: "info", text: "Chrome 98\nVersion 0.98 (Dial-up Edition)\n\nNow with tabs, frames, tables and blinking text." }) }] },
-    ],
   });
   if (had && o.url && w.newTab) w.newTab(o.url);
 }
@@ -1405,8 +1437,8 @@ function openYouTube(o = {}) {
           <header class="yt2__head">
             <button type="button" class="yt2__back" title="Back" disabled>${G.back}</button>
             <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
-            <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit">Search</button></form>
-            <button type="button" class="yt2__up" data-go="upload" title="Upload a video">&#10133; Upload</button>
+            <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit" aria-label="Search">${ui("search", 20)}</button></form>
+            <button type="button" class="yt2__up" data-go="upload" title="Create">${ui("create", 22)}<span>Create</span></button>
             <button type="button" class="yt2__me" data-channel="${esc(NAME)}" title="Your channel (${esc(NAME)})" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
           </header>
           <div class="yt2__wrap">
@@ -1417,12 +1449,14 @@ function openYouTube(o = {}) {
       const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
       const drawSide = () => {
         side.innerHTML = `
-          <button type="button" data-go="home">Home</button>
-          <button type="button" data-go="subs">Subscriptions</button>
-          <button type="button" data-go="liked">Liked videos</button>
-          <button type="button" data-go="upload">Upload video</button>
+          <button type="button" data-go="home">${ui("home", 20)}<span>Home</span></button>
+          <button type="button" data-go="subs">${ui("subs", 20)}<span>Subscriptions</span></button>
+          <p>You</p>
+          <button type="button" data-channel="${esc(NAME)}">${ui("user", 20)}<span>Your channel</span></button>
+          <button type="button" data-go="liked">${ui("like", 20)}<span>Liked videos</span></button>
+          <button type="button" data-go="upload">${ui("up", 20)}<span>Upload video</span></button>
           <p>Channels</p>
-          ${channels().map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i>${esc(c)}${c === NAME ? " (you)" : ""}</button>`).join("")}`;
+          ${channels().filter(c => c !== NAME).map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i><span>${esc(c)}</span></button>`).join("")}`;
       };
       const subs = () => store.get("ytSubs", []);
       const likes = () => store.get("ytLikes", []);
@@ -1477,7 +1511,7 @@ function openYouTube(o = {}) {
           const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
           const handle = "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
           return `
-            <div class="yt2__banner" style="background:linear-gradient(120deg,${ytColor(ch)},#111)"></div>
+            <div class="yt2__banner" style="background:${ytColor(ch)}"></div>
             <div class="yt2__chan">
               <i class="yt2__av yt2__av--big" style="background:${ytColor(ch)}">${esc(ch[0].toUpperCase())}</i>
               <span><b>${esc(ch)}</b><small>${mine ? `${esc(handle)} &middot; ` : ""}${list.length} video${list.length === 1 ? "" : "s"}${mine ? ` &middot; Joined ${esc(joined)}` : " here"}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
@@ -1513,10 +1547,10 @@ function openYouTube(o = {}) {
                   <span><b data-channel="${esc(v.channel)}">${esc(v.channel)}</b><small>${esc(v.cat)}</small></span>
                   ${subBtn(v.channel)}
                   <span class="yt2__actions">
-                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">&#128077; ${liked ? "Liked" : "Like"}</button>
-                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">Share</button>
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">Edit</button>` : ""}
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">Delete</button>` : ""}
+                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">${ui("like", 18)}<span>${liked ? "Liked" : "Like"}</span></button>
+                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">${ui("share", 18)}<span>Share</span></button>
+                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">${ui("edit", 18)}<span>Edit</span></button>` : ""}
+                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">${ui("trash", 18)}<span>Delete</span></button>` : ""}
                     <a class="yt2__pill" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Open on YouTube</a>
                   </span>
                 </div>
@@ -1615,7 +1649,7 @@ function openYouTube(o = {}) {
           return;
         }
         const lk = e.target.closest("[data-like]");
-        if (lk) { const on = toggle("ytLikes", lk.dataset.like); lk.classList.toggle("is-on", on); lk.innerHTML = `&#128077; ${on ? "Liked" : "Like"}`; return; }
+        if (lk) { const on = toggle("ytLikes", lk.dataset.like); lk.classList.toggle("is-on", on); lk.innerHTML = `${ui("like", 18)}<span>${on ? "Liked" : "Like"}</span>`; return; }
         const sh = e.target.closest("[data-share]");
         if (sh) {
           const url = `https://www.youtube.com/watch?v=${sh.dataset.share}`;
@@ -1750,76 +1784,150 @@ function importBackup(file, done) {
   r.readAsText(file);
 }
 const backupBar = () => `<span class="media-backup"><button type="button" data-export>Export backup</button><label class="media-backup__imp">Import backup<input type="file" accept="application/json,.json" data-import hidden></label></span>`;
-const spColor = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `linear-gradient(135deg,hsl(${h},60%,38%),hsl(${(h + 40) % 360},55%,20%))`; };
 function openSpotify(o = {}) {
   WM.open("spotify", {
-    title: "Spotify", icon: "spotify", w: 860, h: 560, from: o.from,
+    title: "Spotify", icon: "spotify", w: 980, h: 600, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
       const mine = () => store.get("spLib", []);
-      const lib = () => mine().concat(SP_DEFAULTS);
-      let cur = lib()[0], page = "home";
+      const lib = () => mine().map(x => ({ ...x, mine: true })).concat(SP_DEFAULTS);
+      const find = id => lib().find(x => x.id === id);
+      const artCache = () => store.get("spArt", {});
+      const artOf = it => it.thumb || artCache()[it.id] || "";
+      const KIND = { track: "Song", album: "Album", playlist: "Playlist", artist: "Artist", episode: "Episode", show: "Podcast" };
+      const hue = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
       const local = [];   // audio files picked from this computer; they only last until the window closes
-      let localIdx = -1;
+      let localIdx = -1, filter = "";
+      const hist = [{ page: "home" }]; let pos = 0;
+      const tried = new Set();
       win.cleanup = () => local.forEach(f => URL.revokeObjectURL(f.url));
-      const playLocal = i => {
-        localIdx = i;
-        const a = $(".sp__audio", main);
-        if (!a) return;
-        a.src = local[i].url; a.play().catch(() => {});
-        $$(".sp__track", main).forEach((b, k) => b.classList.toggle("is-on", k === i));
-      };
+
       body.innerHTML = `
         <div class="sp">
-          <nav class="sp__side">
-            <div class="sp__logo">${icon("spotify", 24)}<span>Spotify</span></div>
-            <button type="button" data-go="home">Home</button>
-            <button type="button" data-go="add">+ Add music</button>
-            <button type="button" data-go="local">Play my files</button>
-            <p>Your music</p>
-            <div class="sp__lib"></div>
-          </nav>
-          <main class="sp__main"></main>
+          <aside class="sp__side">
+            <nav class="sp__panel sp__nav">
+              <button type="button" data-go="home">${ui("home", 24)}<span>Home</span></button>
+              <button type="button" data-go="add">${ui("search", 24)}<span>Add music</span></button>
+              <button type="button" data-go="local">${ui("folder", 24)}<span>Your files</span></button>
+            </nav>
+            <section class="sp__panel sp__libpanel">
+              <header><span>${ui("library", 22)}Your Library</span><button type="button" data-go="add" title="Add music" aria-label="Add music">${ui("plus", 18)}</button></header>
+              <input class="sp__filter" type="search" placeholder="Search in Your Library" aria-label="Search in Your Library">
+              <div class="sp__lib"></div>
+            </section>
+          </aside>
+          <main class="sp__panel sp__main">
+            <div class="sp__top"><button type="button" class="sp__nav-btn" data-hist="-1" aria-label="Back">${ui("back", 22)}</button><button type="button" class="sp__nav-btn" data-hist="1" aria-label="Forward">${ui("fwd", 22)}</button></div>
+            <div class="sp__view"></div>
+          </main>
         </div>`;
-      const main = $(".sp__main", body), libEl = $(".sp__lib", body);
-      const embed = it => `<iframe class="sp__embed${/^(track|episode)$/.test(it.type) ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
-      const tile = (it, i) => `<button type="button" class="sp__tile" data-i="${i}"><span class="sp__art" style="${it.thumb ? `background-image:url('${esc(it.thumb)}');` : ""}background-color:#222;${it.thumb ? "" : `background:${spColor(it.title)}`}">${it.thumb ? "" : "&#9835;"}</span><b>${esc(it.title)}</b><small>${esc(it.type)}${it.mine ? " &middot; yours" : ""}</small></button>`;
-      const draw = () => {
-        const items = lib().map((x, i) => ({ ...x, mine: i < mine().length }));
-        libEl.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}" class="${cur && cur.id === it.id && page === "home" ? "is-on" : ""}">${esc(it.title)}</button>`).join("");
-        $$(".sp__side [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === page));
-        if (page === "local") {
-          main.innerHTML = `
-            <h2>My files</h2>
-            <p class="sp__note">Pick songs from this computer to play right here. They aren't uploaded anywhere and disappear when you close Spotify.</p>
+      const mainEl = $(".sp__main", body), view = $(".sp__view", body), libEl = $(".sp__lib", body);
+
+      const cover = (it, cls = "") => {
+        const a = artOf(it);
+        return `<span class="sp__cover ${cls}" data-art="${esc(it.id)}"${a ? ` style="background-image:url('${esc(a)}')"` : ""}>${a ? "" : ui("note", 24)}</span>`;
+      };
+      const setArt = (id, url) => $$(`[data-art="${CSS.escape(id)}"]`, body).forEach(el => { el.style.backgroundImage = `url('${url.replace(/'/g, "%27")}')`; el.innerHTML = ""; });
+      // real cover art comes from Spotify's oEmbed endpoint when online; cached so it only loads once
+      const fetchArt = it => {
+        if (artOf(it) || tried.has(it.id)) return;
+        tried.add(it.id);
+        fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${it.type}/${it.id}`)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (j && j.thumbnail_url) { const c = artCache(); c[it.id] = j.thumbnail_url; store.set("spArt", c); setArt(it.id, j.thumbnail_url); } })
+          .catch(() => {});
+      };
+      const sub = it => `${KIND[it.type] || "Music"}${it.mine ? " &bull; You" : it.type === "playlist" ? " &bull; Spotify" : ""}`;
+
+      const drawLib = () => {
+        const q = filter.toLowerCase(), cur = hist[pos];
+        const list = lib().filter(it => !q || it.title.toLowerCase().includes(q));
+        libEl.innerHTML = list.length ? list.map(it => `
+          <button type="button" class="sp__lrow${cur.page === "item" && cur.id === it.id ? " is-on" : ""}" data-open="${esc(it.id)}">
+            ${cover(it)}<span><b>${esc(it.title)}</b><small>${sub(it)}</small></span>
+          </button>`).join("") : `<p class="sp__empty">Nothing matches "${esc(filter)}".</p>`;
+        $$(".sp__nav [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === cur.page));
+        $$(".sp__nav-btn", body).forEach(b => { const t = pos + +b.dataset.hist; b.disabled = t < 0 || t >= hist.length; });
+      };
+      const card = it => `
+        <button type="button" class="sp__card" data-open="${esc(it.id)}">
+          <span class="sp__cardart">${cover(it)}<i class="sp__go">${ui("play", 22)}</i></span>
+          <b>${esc(it.title)}</b><small>${sub(it)}</small>
+        </button>`;
+      const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
+
+      const pages = {
+        home() {
+          const items = lib(), mineList = items.filter(i => i.mine), pop = items.filter(i => !i.mine);
+          mainEl.style.setProperty("--c", "hsl(220,18%,24%)");
+          return `
+            <h1 class="sp__hello">${hello()}</h1>
+            <div class="sp__quick">${items.slice(0, 6).map(it => `<button type="button" data-open="${esc(it.id)}">${cover(it)}<b>${esc(it.title)}</b></button>`).join("")}</div>
+            ${mineList.length ? `<h2 class="sp__h">Your music</h2><div class="sp__shelf">${mineList.map(card).join("")}</div>` : ""}
+            <h2 class="sp__h">Popular playlists</h2>
+            <div class="sp__shelf">${pop.map(card).join("")}</div>
+            <p class="sp__note">Music plays through Spotify's own player. Log in to Spotify in this browser for full songs; otherwise you get 30-second previews.</p>`;
+        },
+        item(s) {
+          const it = find(s.id);
+          if (!it) return pages.home();
+          const small = /^(track|episode)$/.test(it.type);
+          mainEl.style.setProperty("--c", `hsl(${hue(it.title)},38%,30%)`);
+          return `
+            <div class="sp__hero">
+              ${cover(it, "sp__cover--hero")}
+              <div><small>${KIND[it.type] || "Music"}</small><h1>${esc(it.title)}</h1><p>${it.mine ? esc(NAME) : "Spotify"}</p></div>
+            </div>
+            <iframe class="sp__embed${small ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?utm_source=generator&theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            ${it.mine ? `<button type="button" class="sp__link" data-rm="${esc(it.id)}">Remove from Your Library</button>` : ""}`;
+        },
+        add() {
+          mainEl.style.setProperty("--c", "hsl(150,30%,22%)");
+          return `
+            <h1 class="sp__title">Add music</h1>
+            <form class="sp__form" autocomplete="off">
+              <p>In Spotify, choose <b>Share &rarr; Copy link</b> on a song, album, playlist, artist or podcast, then paste it below.</p>
+              <label>Spotify link<input name="url" placeholder="https://open.spotify.com/track/..." required></label>
+              <label>Name <em>(optional)</em><input name="title" maxlength="60" placeholder="Filled in automatically when possible"></label>
+              <button type="submit" class="sp__btn">Add</button>
+            </form>
+            <div class="sp__backup">${backupBar()}</div>`;
+        },
+        local() {
+          mainEl.style.setProperty("--c", "hsl(260,28%,26%)");
+          return `
+            <div class="sp__hero">
+              <span class="sp__cover sp__cover--hero">${ui("folder", 64)}</span>
+              <div><small>Local files</small><h1>Your files</h1><p>${local.length} song${local.length === 1 ? "" : "s"} &bull; this session only</p></div>
+            </div>
             <label class="sp__btn sp__pick">Choose audio files<input type="file" accept="audio/*" multiple hidden data-files></label>
             <audio class="sp__audio" controls></audio>
-            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}">&#9835; ${esc(f.name)}</button>`).join("")}</div>`;
-          const a = $(".sp__audio", main);
+            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}"><i>${i + 1}</i><span>${esc(f.name)}</span></button>`).join("")}</div>
+            <p class="sp__note">Files stay on this computer. They aren't uploaded and disappear when you close Spotify.</p>`;
+        },
+      };
+      const playLocal = i => {
+        localIdx = i;
+        const a = $(".sp__audio", view);
+        if (!a) return;
+        a.src = local[i].url; a.play().catch(() => {});
+        $$(".sp__track", view).forEach((b, k) => b.classList.toggle("is-on", k === i));
+      };
+      const draw = () => {
+        const s = hist[pos];
+        view.innerHTML = pages[s.page](s);
+        mainEl.scrollTop = 0;
+        if (s.page === "local") {
+          const a = $(".sp__audio", view);
           if (localIdx >= 0 && local[localIdx]) a.src = local[localIdx].url;
           a.addEventListener("ended", () => { if (localIdx + 1 < local.length) playLocal(localIdx + 1); });
-          return;
         }
-        if (page === "add") {
-          main.innerHTML = `
-            <h2>Add music</h2>
-            <form class="sp__form" autocomplete="off">
-              <p>Open Spotify, press <b>Share &rarr; Copy link</b> on any song, album, playlist, artist or podcast, and paste it here.</p>
-              <label>Spotify link<input name="url" placeholder="https://open.spotify.com/track/..." required></label>
-              <label>Name (optional)<input name="title" maxlength="60" placeholder="Filled in automatically when possible"></label>
-              <button type="submit" class="sp__btn">Add to my music</button>
-            </form>
-            <div class="sp__backup">${backupBar()}</div>
-            ${mine().length ? `<h3>Added by you</h3><div class="sp__mine">${mine().map((it, i) => `<div><span>${esc(it.title)} <small>${esc(it.type)}</small></span><button type="button" data-rm="${i}">Remove</button></div>`).join("")}</div>` : ""}`;
-          return;
-        }
-        main.innerHTML = `
-          <h2>${cur ? esc(cur.title) : "Spotify"}</h2>
-          ${cur ? embed(cur) : ""}
-          <p class="sp__note">Full songs need you to be logged in to Spotify in this browser; otherwise you get 30-second previews.</p>
-          <h3>Browse</h3>
-          <div class="sp__grid">${items.map(tile).join("")}</div>`;
+        drawLib();
+        lib().forEach(it => { if (view.querySelector(`[data-art="${CSS.escape(it.id)}"]`) || libEl.querySelector(`[data-art="${CSS.escape(it.id)}"]`)) fetchArt(it); });
       };
+      const go = s => { hist.length = pos + 1; hist.push(s); pos++; draw(); };
+
+      $(".sp__filter", body).addEventListener("input", e => { filter = e.target.value.trim(); drawLib(); });
       body.addEventListener("change", e => {
         if (e.target.matches("[data-files]")) {
           Array.from(e.target.files).forEach(f => local.push({ name: f.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(f) }));
@@ -1829,20 +1937,22 @@ function openSpotify(o = {}) {
         } else if (e.target.matches("[data-import]") && e.target.files[0]) {
           importBackup(e.target.files[0], ok => {
             if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
-            cur = lib()[0]; page = "home"; draw();
+            go({ page: "home" });
           });
         }
       });
       body.addEventListener("click", e => {
         if (e.target.closest("[data-export]")) { exportBackup(); return; }
+        const h = e.target.closest("[data-hist]");
+        if (h) { const t = pos + +h.dataset.hist; if (t >= 0 && t < hist.length) { pos = t; draw(); } return; }
         const tr = e.target.closest("[data-track]");
         if (tr) { playLocal(+tr.dataset.track); return; }
         const rm = e.target.closest("[data-rm]");
-        if (rm) { const a = mine(); a.splice(+rm.dataset.rm, 1); store.set("spLib", a); cur = lib()[0]; draw(); return; }
-        const it = e.target.closest("[data-i]");
-        if (it) { cur = lib()[+it.dataset.i]; page = "home"; draw(); main.scrollTop = 0; return; }
+        if (rm) { store.set("spLib", mine().filter(x => x.id !== rm.dataset.rm)); go({ page: "home" }); return; }
+        const op = e.target.closest("[data-open]");
+        if (op) { go({ page: "item", id: op.dataset.open }); return; }
         const g = e.target.closest("[data-go]");
-        if (g) { page = g.dataset.go; draw(); }
+        if (g && !(hist[pos].page === g.dataset.go)) go({ page: g.dataset.go });
       });
       body.addEventListener("submit", async e => {
         const f = e.target.closest(".sp__form");
@@ -1850,16 +1960,15 @@ function openSpotify(o = {}) {
         e.preventDefault();
         const p = spParse(f.elements.url.value);
         if (!p) { msgBox({ title: "Add music", icon: "error", text: "That doesn't look like a Spotify link. It should start with https://open.spotify.com/ and point to a song, album, playlist, artist or podcast." }); return; }
-        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your music." }); return; }
+        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your library." }); return; }
         let title = f.elements.title.value.trim(), thumb = "";
         try {
           const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
           if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
         } catch (err) {}
-        const item = { ...p, title: title || `Spotify ${p.type}`, thumb };
-        store.set("spLib", [item].concat(mine()));
+        store.set("spLib", [{ ...p, title: title || `Spotify ${KIND[p.type] || p.type}`, thumb }].concat(mine()));
         Sound.play("notify");
-        cur = lib()[0]; page = "home"; draw();
+        go({ page: "item", id: p.id });
       });
       draw();
     },
@@ -2042,10 +2151,10 @@ async function dcAI(who, key, list) {
 /* ---------- Discord ---------- */
 const DC = {
   members: [
-    { name: "neon_ninja", color: "#d9480f", status: "online", activity: "Playing Quake II" },
-    { name: "dialup_dana", color: "#0b7285", status: "idle", activity: "Listening to Winamp" },
-    { name: "jpeg_jeff", color: "#6741d9", status: "dnd", activity: "Coding in Notepad" },
-    { name: "Mom", color: "#be185d", status: "off", activity: "" },
+    { name: "neon_ninja", color: "#f08c4a", status: "online", activity: "Playing Quake II" },
+    { name: "dialup_dana", color: "#38b6c8", status: "idle", activity: "Listening to Winamp" },
+    { name: "jpeg_jeff", color: "#9a7bf0", status: "dnd", activity: "Coding in Notepad" },
+    { name: "Mom", color: "#e670a8", status: "off", activity: "" },
   ],
   topics: {
     welcome: "Read the rules, then say hi.",
@@ -2056,7 +2165,7 @@ const DC = {
     memes: "Dancing babies and hamster dances only.",
   },
   ch: {}, dm: {}, unread: {}, key: "ch:general", status: "online", seeded: false,
-  sys: "Discord98",
+  sys: "Discord",
 };
 const DC_LINES = {
   general: ["my modem just made the scream noise for 4 straight minutes", "anyone else's mouse ball need cleaning or just me", "brb someone picked up the phone and killed my connection", "who has the good screensavers. i need flying toasters", "just burned my first mix CD. took 40 minutes"],
@@ -2068,7 +2177,7 @@ const DC_LINES = {
 function dcSeed() {
   if (DC.seeded) return;
   DC.seeded = true;
-  const y = "Yesterday";
+  const y = "Yesterday at 9:41 PM";
   const m = (who, text, t = y, extra = {}) => ({ who, text, t, reacts: {}, ...extra });
   const sys = text => m(DC.sys, text, y, { sys: true });
   DC.ch = {
@@ -2109,8 +2218,8 @@ function dcSeed() {
   DC.ch.general[4].reacts = { "\u{1F480}": 2, "\u{1F525}": 1 };
   DC.ch.welcome[2].reacts = { "\u{1F44B}": 3 };
   DC.dm = {
-    neon_ninja: [m("neon_ninja", "yo you down for some quake tonight?", "Today")],
-    Mom: [m("Mom", "Hi sweetie, how do I print the internet? Love, Mom", "Today")],
+    neon_ninja: [m("neon_ninja", "yo you down for some quake tonight?", "Today at 8:12 AM")],
+    Mom: [m("Mom", "Hi sweetie, how do I print the internet? Love, Mom", "Today at 8:12 AM")],
   };
   DC.unread = { "dm:neon_ninja": 1, "dm:Mom": 1, "ch:showcase": PROJECTS.length ? Math.min(4, PROJECTS.length) : 1 };
 }
@@ -2118,7 +2227,7 @@ const DC_EMOJI = ["\u{1F600}", "\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}
 function openDiscord(o = {}) {
   dcSeed();
   WM.open("discord", {
-    title: "Discord", icon: "discord", w: 760, h: 470, from: o.from,
+    title: "Discord", icon: "discord", w: 900, h: 560, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
       body.innerHTML = `
@@ -2133,25 +2242,24 @@ function openDiscord(o = {}) {
             <p class="dc__server"></p>
             <div class="dc__side-list"></div>
             <div class="dc__me">
-              <button type="button" class="dc__av" style="background:#000080;border:0" title="Change status">${esc(FIRST[0] || "?")}<i></i></button>
+              <button type="button" class="dc__av" style="background:#5865f2;border:0" title="Change status">${esc(FIRST[0] || "?")}<i></i></button>
               <span><b>${esc(FIRST)}</b><small class="dc__me-status"></small></span>
             </div>
           </div>
           <section class="dc__main">
             <header class="dc__header"></header>
-            <div class="dc__log sunken-box" aria-live="polite"></div>
+            <div class="dc__log" aria-live="polite"></div>
             <p class="dc__typing"></p>
             <form class="dc__form">
-              <button type="button" class="btn btn--sm dc__emoji-btn" title="Emoji">\u{1F642}</button>
               <input class="field dc__input" maxlength="400" autocomplete="off" aria-label="Message">
-              <button class="btn btn--sm" type="submit">Send</button>
+              <button type="button" class="dc__emoji-btn" title="Emoji"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 2a10 10 0 100 20 10 10 0 000-20zM8.5 7.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm7 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM7.8 13.5h8.4a4.2 4.2 0 01-8.4 0z"/></svg></button>
             </form>
           </section>
           <aside class="dc__members"></aside>
         </div>`;
       const log = $(".dc__log", body), input = $(".dc__input", body), typing = $(".dc__typing", body);
       const member = n => DC.members.find(m => m.name === n);
-      const color = who => who === FIRST ? "#000080" : who === DC.sys ? "#5865f2" : (member(who) || {}).color || "#444";
+      const color = who => who === FIRST ? "#5865f2" : who === DC.sys ? "#5865f2" : (member(who) || {}).color || "#949ba4";
       const listOf = key => key.startsWith("dm:") ? (DC.dm[key.slice(3)] = DC.dm[key.slice(3)] || []) : DC.ch[key.slice(3)];
       const statusText = { online: "Online", idle: "Idle", dnd: "Do Not Disturb", off: "Offline" };
       const fmt = text => esc(text).replace(/@(\w+)/g, '<span class="at">@$1</span>');
@@ -2165,11 +2273,11 @@ function openDiscord(o = {}) {
         return `<div class="dc__msg${cont ? " is-cont" : ""}${mention ? " is-mention" : ""}" data-mi="${i}">
           ${cont ? "" : `<span class="dc__av" style="background:${color(m.who)}">${esc(m.who[0])}</span>`}
           <div class="dc__body">
-            ${cont ? "" : `<span class="dc__who" style="color:${color(m.who)}">${esc(m.who)}</span><span class="dc__time">${esc(m.t)}</span>`}
+            ${cont ? "" : `<span class="dc__who" style="color:${color(m.who)}">${esc(m.who)}</span>${m.sys ? '<span class="dc__tag">APP</span>' : ""}<span class="dc__time">${esc(m.t)}</span>`}
             <p class="dc__text${m.me ? " is-me" : ""}${m.sys ? " dc__sys" : ""}">${m.me ? "* " + esc(m.who) + " " : ""}${fmt(m.text)}</p>
             ${reacts ? `<div class="dc__reacts">${reacts}</div>` : ""}
           </div>
-          <div class="dc__hover">${["\u{1F44D}", "\u{1F602}", "\u{1F525}", "\u{1F480}"].map(e => `<button type="button" data-r="${e}" data-mi="${i}" title="React">${e}</button>`).join("")}</div>
+          <div class="dc__hover">${["\u{1F44D}", "\u{1F602}"].map(e => `<button type="button" data-r="${e}" data-mi="${i}" title="React">${e}</button>`).join("")}</div>
         </div>`;
       };
       const drawLog = () => { const arr = listOf(DC.key); log.innerHTML = arr.map(msgHTML).join(""); log.scrollTop = log.scrollHeight; };
@@ -2191,12 +2299,12 @@ function openDiscord(o = {}) {
           const names = Array.from(new Set([...Object.keys(DC.dm), ...DC.members.map(m => m.name)]));
           side.innerHTML = `<p class="dc__heading">Direct Messages</p>` + names.map(n => {
             const k = "dm:" + n, u = DC.unread[k] || 0, mm = member(n) || {};
-            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"><span class="dc__av" style="background:${color(n)};width:20px;height:20px;font-size:10px">${esc(n[0])}<i class="${mm.status || ""}"></i></span>${esc(n)}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
+            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"><span class="dc__av" style="background:${color(n)}">${esc(n[0])}<i class="${mm.status || ""}"></i></span>${esc(n)}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
           }).join("");
         } else {
           side.innerHTML = `<p class="dc__heading">Text Channels</p>` + Object.keys(DC.ch).map(c => {
             const k = "ch:" + c, u = DC.unread[k] || 0;
-            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"># ${c}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
+            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"><span class="dc__hash">#</span>${c}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
           }).join("");
         }
       };
@@ -2204,18 +2312,18 @@ function openDiscord(o = {}) {
         const h = $(".dc__header", body);
         if (DC.key.startsWith("dm:")) {
           const n = DC.key.slice(3), mm = member(n);
-          h.innerHTML = `<b>@ ${esc(n)}</b><span>${mm ? esc(statusText[mm.status]) + (mm.activity ? " - " + esc(mm.activity) : "") : ""}</span>`;
+          h.innerHTML = `<i class="dc__hash">@</i><b>${esc(n)}</b><span>${mm ? esc(statusText[mm.status]) + (mm.activity ? " - " + esc(mm.activity) : "") : ""}</span>`;
           input.placeholder = `Message @${n}`;
         } else {
           const c = DC.key.slice(3);
-          h.innerHTML = `<b># ${esc(c)}</b><span>${esc(DC.topics[c] || "")}</span>`;
+          h.innerHTML = `<i class="dc__hash">#</i><b>${esc(c)}</b><span>${esc(DC.topics[c] || "")}</span>`;
           input.placeholder = `Message #${c}  (try /help)`;
         }
       };
       const drawMembers = () => {
         const groups = [["Online", DC.members.filter(m => m.status !== "off")], ["Offline", DC.members.filter(m => m.status === "off")]];
         $(".dc__members", body).innerHTML = `<p class="dc__heading">Online &mdash; ${groups[0][1].length + 1}</p>
-          <div class="dc__member"><span class="dc__av" style="background:#000080">${esc(FIRST[0])}<i class="${DC.status === "online" ? "" : DC.status}"></i></span><span><b>${esc(FIRST)}</b><small>That's you</small></span></div>` +
+          <div class="dc__member"><span class="dc__av" style="background:#5865f2">${esc(FIRST[0])}<i class="${DC.status === "online" ? "" : DC.status}"></i></span><span><b>${esc(FIRST)}</b><small>That's you</small></span></div>` +
           groups.map(([label, ms], gi) => (gi ? `<p class="dc__heading">${label} &mdash; ${ms.length}</p>` : "") + ms.map(m => `
             <button type="button" class="dc__member${m.status === "off" ? " is-off" : ""}" data-dm="${m.name}" title="Message ${m.name}">
               <span class="dc__av" style="background:${m.color}">${esc(m.name[0])}<i class="${m.status === "online" ? "" : m.status}"></i></span>
@@ -2426,6 +2534,21 @@ const ago = iso => {
   if (d < 1) return "today"; if (d < 2) return "yesterday"; if (d < 30) return `${Math.floor(d)} days ago`;
   return "on " + new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
+// Primer Octicons (16px, MIT) used by the GitHub app instead of emoji.
+const GH_OCT = {
+  mark: "M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z",
+  people: "M2 5.5a3.5 3.5 0 1 1 5.898 2.549 5.508 5.508 0 0 1 3.034 4.084.75.75 0 1 1-1.482.235 4 4 0 0 0-7.9 0 .75.75 0 0 1-1.482-.236A5.507 5.507 0 0 1 3.102 8.05 3.493 3.493 0 0 1 2 5.5ZM11 4a3.001 3.001 0 0 1 2.22 5.018 5.01 5.01 0 0 1 2.56 3.012.749.749 0 0 1-.885.954.752.752 0 0 1-.549-.514 3.507 3.507 0 0 0-2.522-2.372.75.75 0 0 1-.574-.73v-.352a.75.75 0 0 1 .416-.672A1.5 1.5 0 0 0 11 5.5.75.75 0 0 1 11 4Zm-5.5-.5a2 2 0 1 0-.001 3.999A2 2 0 0 0 5.5 3.5Z",
+  location: "m12.596 11.596-3.535 3.536a1.5 1.5 0 0 1-2.122 0l-3.535-3.536a6.5 6.5 0 1 1 9.192-9.193 6.5 6.5 0 0 1 0 9.193Zm-1.06-8.132v-.001a5 5 0 1 0-7.072 7.072L8 14.07l3.536-3.534a5 5 0 0 0 0-7.072ZM8 9a2 2 0 1 1-.001-3.999A2 2 0 0 1 8 9Z",
+  link: "m7.775 3.275 1.25-1.25a3.5 3.5 0 1 1 4.95 4.95l-2.5 2.5a3.5 3.5 0 0 1-4.95 0 .751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018 1.998 1.998 0 0 0 2.83 0l2.5-2.5a2.002 2.002 0 0 0-2.83-2.83l-1.25 1.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042Zm-4.69 9.64a1.998 1.998 0 0 0 2.83 0l1.25-1.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042l-1.25 1.25a3.5 3.5 0 1 1-4.95-4.95l2.5-2.5a3.5 3.5 0 0 1 4.95 0 .751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018 1.998 1.998 0 0 0-2.83 0l-2.5 2.5a1.998 1.998 0 0 0 0 2.83Z",
+  repo: "M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z",
+  file: "M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z",
+  dir: "M1.75 1A1.75 1.75 0 0 0 0 2.75v10.5C0 14.216.784 15 1.75 15h12.5A1.75 1.75 0 0 0 16 13.25v-8.5A1.75 1.75 0 0 0 14.25 3H7.5a.25.25 0 0 1-.2-.1l-.9-1.2C6.07 1.26 5.55 1 5 1H1.75Z",
+  star: "M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z",
+  starFill: "M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z",
+  fork: "M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z",
+  code: "m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z",
+};
+const ghOct = (k, size = 16) => `<svg class="gh__oct gh__oct--${k}" viewBox="0 0 16 16" width="${size}" height="${size}" fill="currentColor" aria-hidden="true"><path d="${GH_OCT[k]}"/></svg>`;
 function openGitHubApp(o = {}) {
   WM.open("github", {
     title: "GitHub", icon: "github", w: 860, h: 580, from: o.from, status: ["Connecting to api.github.com..."],
@@ -2437,9 +2560,9 @@ function openGitHubApp(o = {}) {
       const lang = l => l ? `<span class="gh__lang"><i style="background:${LANG_COLORS[l] || "#8b949e"}"></i>${esc(l)}</span>` : "";
       const repoCard = (r, i) => `
         <div class="gh__card">
-          <div class="gh__card-top"><a class="gh__repo-link" data-repo="${i}">${esc(r.name)}</a><span class="gh__badge">Public</span></div>
+          <div class="gh__card-top">${ghOct("repo")}<a class="gh__repo-link" data-repo="${i}">${esc(r.name)}</a><span class="gh__badge">Public</span></div>
           <p>${esc(r.description || "No description provided.")}</p>
-          <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>&#9733; ${r.stars}</span>` : ""}${r.forks ? `<span>&#5833; ${r.forks}</span>` : ""}</div>
+          <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>${ghOct("star", 14)} ${r.stars}</span>` : ""}${r.forks ? `<span>${ghOct("fork", 14)} ${r.forks}</span>` : ""}</div>
         </div>`;
       const pinned = () => {
         const linked = PROJECTS.map(p => p.github).filter(Boolean);
@@ -2447,7 +2570,7 @@ function openGitHubApp(o = {}) {
           .sort((a, b) => b.score - a.score).slice(0, 6);
       };
       const graph = () => {
-        const weeks = 20, days = weeks * 7, counts = {};
+        const weeks = 40, days = weeks * 7, counts = {};
         data.events.forEach(e => { const k = e.date.slice(0, 10); counts[k] = (counts[k] || 0) + Math.max(1, e.commits); });
         const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days + 1 + (6 - start.getDay()));
         let cells = "", total = 0;
@@ -2462,9 +2585,9 @@ function openGitHubApp(o = {}) {
           }
           cells += "</div>";
         }
-        return `<div class="gh__box"><h3>${data.live ? `${total} contributions in the last ${weeks} weeks` : "Contribution activity"}</h3>
+        return `<div class="gh__box"><h3>${total} contributions in the last ${weeks} weeks</h3>
           <div class="gh__graph">${cells}</div>
-          <div class="gh__legend">${data.live ? "Based on public activity." : "Set your GitHub username in content.js to show real activity."} <span>Less <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> More</span></div></div>`;
+          <div class="gh__legend">Based on public activity. <span>Less <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> More</span></div></div>`;
       };
       const activity = () => {
         if (!data.events.length) return "";
@@ -2475,31 +2598,30 @@ function openGitHubApp(o = {}) {
         <div class="gh__box gh__readme">
           <small class="gh__path">${esc(data.user.login)} / README.md</small>
           <h2>Hi there, I'm ${esc(FIRST)} &#128075;</h2>
-          ${ROLE ? `<p><b>${esc(ROLE)}</b>${C.tagline ? " &mdash; " + esc(C.tagline) : ""}</p>` : ""}
           ${ABOUT_PARAS.slice(0, 2).map(p => `<p>${esc(p)}</p>`).join("")}
-          ${SKILLS.length ? `<p class="gh__skills">${SKILLS.map(s => `<span>${esc(s)}</span>`).join("")}</p>` : ""}
+          ${SKILLS.length ? `<p>Tech: ${SKILLS.map(esc).join(", ")}</p>` : ""}
         </div>`;
       const views = {
-        overview: () => `${readme()}<h3 class="gh__h">Pinned</h3><div class="gh__grid">${pinned().map(x => repoCard(x.r, x.i)).join("") || "<p class='gh__muted'>No repositories yet.</p>"}</div>${graph()}${activity()}`,
+        overview: () => `${readme()}<h3 class="gh__h">Pinned</h3><div class="gh__grid">${pinned().map(x => repoCard(x.r, x.i)).join("") || "<p class='gh__muted'>No repositories yet.</p>"}</div>${data.live ? graph() : ""}${activity()}`,
         repos: () => {
           const list = data.repos.map((r, i) => ({ r, i })).filter(x => !filter || (x.r.name + " " + x.r.description).toLowerCase().includes(filter));
           return `<input class="gh__filter" placeholder="Find a repository..." value="${esc(filter)}">
             <ul class="gh__list">${list.map(({ r, i }) => `<li><div><a class="gh__repo-link" data-repo="${i}">${esc(r.name)}</a><span class="gh__badge">Public</span><p>${esc(r.description)}</p>
-              <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>&#9733; ${r.stars}</span>` : ""}${r.updated ? `<span>Updated ${ago(r.updated)}</span>` : ""}</div></div>
-              <button type="button" class="gh__btn" data-star="${i}">&#9734; Star</button></li>`).join("") || "<li class='gh__muted'>No repositories match.</li>"}</ul>`;
+              <div class="gh__meta">${lang(r.language)}${r.stars ? `<span>${ghOct("star", 14)} ${r.stars}</span>` : ""}${r.updated ? `<span>Updated ${ago(r.updated)}</span>` : ""}</div></div>
+              <button type="button" class="gh__btn" data-star="${i}">${ghOct("star")} Star</button></li>`).join("") || "<li class='gh__muted'>No repositories match.</li>"}</ul>`;
         },
       };
       const shell = inner => {
         const u = data.user;
-        const avatar = u.avatar ? `<img src="${esc(u.avatar)}" data-fallback="${esc(initials(u.name))}" alt="">` : `<span>${esc(initials(u.name))}</span>`;
+        const avatar = `<span>${esc(initials(u.name))}</span>` + (u.avatar ? `<img src="${esc(u.avatar)}" alt="" onerror="this.remove()">` : "");
+        const hasLink = u.html_url && !GH_PLACEHOLDER;
         return `
           <header class="gh__top">
-            <span class="gh__mark">${icon("github", 28)}</span>
+            <span class="gh__mark">${ghOct("mark", 32)}</span>
+            <b class="gh__login-top">${esc(u.login)}</b>
             <input class="gh__search" placeholder="Search or jump to..." aria-label="Search">
-            <nav><a>Pull requests</a><a>Issues</a><a>Codespaces</a><a>Explore</a></nav>
             <span class="gh__me">${esc((u.name || "?")[0])}</span>
           </header>
-          ${data.live ? "" : `<div class="gh__note">${data.reason === "placeholder" ? "Showing projects from content.js. Put your GitHub profile link in content.js (social.github) to load your real profile and repos." : `Couldn't reach GitHub (${esc(data.reason)}), so this shows your projects from content.js.`}</div>`}
           <nav class="gh__tabs">
             <button type="button" data-tab="overview" class="${tab === "overview" ? "is-on" : ""}">Overview</button>
             <button type="button" data-tab="repos" class="${tab === "repos" ? "is-on" : ""}">Repositories <span class="gh__count">${data.repos.length}</span></button>
@@ -2511,17 +2633,18 @@ function openGitHubApp(o = {}) {
               <p class="gh__login">${esc(u.login)}</p>
               ${u.bio ? `<p class="gh__bio">${esc(u.bio)}</p>` : ""}
               <button type="button" class="gh__btn gh__btn--wide" data-follow>${store.get("ghFollow", false) ? "Unfollow" : "Follow"}</button>
-              <p class="gh__muted">&#128101; <b>${u.followers + (store.get("ghFollow", false) ? 1 : 0)}</b> followers &middot; <b>${u.following}</b> following</p>
-              ${u.location ? `<p class="gh__muted">&#128205; ${esc(u.location)}</p>` : ""}
-              ${u.blog ? `<p class="gh__muted">&#128279; <a href="${esc(/^https?:/.test(u.blog) ? u.blog : "https://" + u.blog)}" target="_blank" rel="noopener">${esc(u.blog)}</a></p>` : ""}
-              <p><a class="gh__btn gh__btn--wide" href="${esc(u.html_url)}" target="_blank" rel="noopener">Open on github.com</a></p>
+              <p class="gh__muted">${ghOct("people")} <b>${u.followers + (store.get("ghFollow", false) ? 1 : 0)}</b> followers &middot; <b>${u.following}</b> following</p>
+              ${u.location ? `<p class="gh__muted">${ghOct("location")} ${esc(u.location)}</p>` : ""}
+              ${u.blog ? `<p class="gh__muted">${ghOct("link")} <a href="${esc(/^https?:/.test(u.blog) ? u.blog : "https://" + u.blog)}" target="_blank" rel="noopener">${esc(u.blog)}</a></p>` : ""}
+              ${hasLink ? `<p class="gh__muted">${ghOct("link")} <a href="${esc(u.html_url)}" target="_blank" rel="noopener">${esc(u.html_url.replace(/^https?:\/\//, ""))}</a></p>` : ""}
             </aside>
             <main class="gh__main">${inner}</main>
           </div>`;
       };
-      const draw = () => { root.innerHTML = shell(views[tab]()); win.setTitle(`${data.user.login} - GitHub`); };
+      const draw = () => { root.classList.remove("is-repo"); root.innerHTML = shell(views[tab]()); win.setTitle(`${data.user.login} - GitHub`); };
       const openRepo = async i => {
         const r = data.repos[i];
+        root.classList.add("is-repo");
         root.innerHTML = shell(`<div class="gh__loading"><span class="gh__spinner"></span>Opening ${esc(r.name)}...</div>`);
         win.setTitle(`${data.user.login}/${r.name} - GitHub`);
         let files = null, md = "";
@@ -2531,10 +2654,7 @@ function openGitHubApp(o = {}) {
           md = await ghFetch(`/repos/${r.full}/readme`, true).catch(() => "");
           win.setStatus(["Done"]);
         }
-        if (!files) {
-          const l = (r.language || "").toLowerCase();
-          files = [{ name: "README.md", type: "file" }, ...(l.includes("python") ? ["main.py", "requirements.txt"] : l.includes("java") && !l.includes("script") ? ["src", "Main.java"] : ["index.html", "style.css", "script.js"]).map(n => ({ name: n, type: n.includes(".") ? "file" : "dir" }))];
-        }
+        if (!files) files = [];
         if (!md) {
           const p = r.local !== undefined ? PROJECTS[r.local] : null;
           md = `# ${p ? p.title : r.name}\n\n${r.description || ""}\n\n${r.topics.length ? "## Built with\n" + r.topics.map(t => "- " + t).join("\n") + "\n" : ""}${r.homepage ? `\n[Live demo](${r.homepage})` : ""}`;
@@ -2542,23 +2662,22 @@ function openGitHubApp(o = {}) {
         files.sort((a, b) => (a.type === "dir" ? 0 : 1) - (b.type === "dir" ? 0 : 1) || a.name.localeCompare(b.name));
         $(".gh__main", root).innerHTML = `
           <div class="gh__repo-head">
-            <button type="button" class="gh__btn" data-tab="${tab}">&larr; Back</button>
-            <h2>${icon("projects", 16)} <a data-tab="${tab}">${esc(data.user.login)}</a> / <b>${esc(r.name)}</b></h2>
+            <h2>${ghOct("repo")} <a data-tab="${tab}">${esc(data.user.login)}</a> / <b>${esc(r.name)}</b></h2>
             <span class="gh__badge">Public</span>
           </div>
           <p class="gh__muted">${esc(r.description)}</p>
           <div class="gh__repo-actions">
-            ${r.html_url ? `<a class="gh__btn gh__btn--green" href="${esc(r.html_url)}" target="_blank" rel="noopener">&lt;&gt; Code</a>` : ""}
+            ${r.html_url ? `<a class="gh__btn gh__btn--green" href="${esc(r.html_url)}" target="_blank" rel="noopener">${ghOct("code")} Code</a>` : ""}
             ${r.homepage ? `<a class="gh__btn" href="${esc(r.homepage)}" target="_blank" rel="noopener">Live demo</a>` : ""}
-            ${lang(r.language)}${r.stars ? `<span class="gh__muted">&#9733; ${r.stars}</span>` : ""}
+            ${lang(r.language)}${r.stars ? `<span class="gh__muted">${ghOct("star", 14)} ${r.stars}</span>` : ""}
           </div>
-          <table class="gh__files"><tbody>${files.slice(0, 40).map(f => `<tr><td>${f.type === "dir" ? "&#128193;" : "&#128196;"} ${f.html_url ? `<a href="${esc(f.html_url)}" target="_blank" rel="noopener">${esc(f.name)}</a>` : esc(f.name)}</td></tr>`).join("")}</tbody></table>
+          ${files.length ? `<table class="gh__files"><tbody>${files.slice(0, 40).map(f => `<tr><td>${f.type === "dir" ? `<span class="gh__ico gh__ico--dir">${ghOct("dir")}</span>` : `<span class="gh__ico">${ghOct("file")}</span>`}${f.html_url ? `<a href="${esc(f.html_url)}" target="_blank" rel="noopener">${esc(f.name)}</a>` : esc(f.name)}</td></tr>`).join("")}</tbody></table>` : ""}
           <div class="gh__box gh__readme"><small class="gh__path">README.md</small>${mdToHtml(md)}</div>`;
       };
       root.addEventListener("click", e => {
         const t = e.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; draw(); return; }
         const r = e.target.closest("[data-repo]"); if (r) { openRepo(+r.dataset.repo); return; }
-        const s = e.target.closest("[data-star]"); if (s) { s.classList.toggle("is-on"); s.innerHTML = s.classList.contains("is-on") ? "&#9733; Starred" : "&#9734; Star"; return; }
+        const s = e.target.closest("[data-star]"); if (s) { s.classList.toggle("is-on"); s.innerHTML = s.classList.contains("is-on") ? `${ghOct("starFill")} Starred` : `${ghOct("star")} Star`; return; }
         if (e.target.closest("[data-follow]")) { store.set("ghFollow", !store.get("ghFollow", false)); draw(); }
       });
       root.addEventListener("input", e => {
@@ -2577,7 +2696,8 @@ function openGitHubApp(o = {}) {
       ghData().then(d => {
         if (!WM.has("github")) return;
         data = d;
-        win.setStatus([d.live ? `Live data from api.github.com/users/${d.user.login}` : "Showing projects from content.js"]);
+        if (!d.live && d.reason && d.reason !== "placeholder") console.info("[gh]", d.reason);
+        win.setStatus([d.live ? `github.com/${d.user.login}` : "Done"]);
         draw();
       });
     },
@@ -3281,7 +3401,7 @@ function openDisplay(o = {}) {
   WM.open("display", {
     title: "Display Properties", icon: "monitor", w: 380, from: o.from, resizable: false,
     render(body, win) {
-      const st = { crt: store.get("crt", true), bg: store.get("bg", "clouds"), saver: store.get("saver", "starfield"), wait: store.get("saverWait", 3), scheme: store.get("scheme", "standard") };
+      const st = { crt: store.get("crt", false), bg: store.get("bg", "clouds"), saver: store.get("saver", "starfield"), wait: store.get("saverWait", 3), scheme: store.get("scheme", "standard") };
       body.innerHTML = `
         <div class="tabs" role="tablist">
           <button type="button" class="tab is-active" data-tab="bg">Background</button>
@@ -4364,7 +4484,7 @@ function saveIconPositions() {
 function initDesktop() {
   const desk = $("#desktop"), wrap = $("#desktopIcons"), box = $("#selectBox");
   applyBg(store.get("bg", "clouds"));
-  applyCRT(store.get("crt", true));
+  applyCRT(store.get("crt", false));
   applyScheme(store.get("scheme", "standard"));
   buildDesktopIcons();
   window.addEventListener("resize", () => layoutIcons());

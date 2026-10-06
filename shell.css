@@ -1,0 +1,34 @@
+/* shell polish (loaded after style.css) */
+
+/* ---------- About Me: Win98 label/value lines instead of pill chips ---------- */
+.ab__id .ab__tags{ display:block; margin:0 0 6px; }
+.ab__tags .ab__status, .ab__tags .ab__chip{
+  display:flex; align-items:center; gap:5px; margin:2px 0; padding:0;
+  background:none; box-shadow:none; font-size:11px;
+}
+.ab__tags .ab__status::before, .ab__tags .ab__chip::before{ color:#444; }
+.ab__tags .ab__status::before{ content:"Status:"; min-width:50px; }
+.ab__tags .ab__chip::before{ content:"Location:"; min-width:63px; }
+.ab__tags .ab__status i{
+  width:8px; height:8px; border-radius:0; background:#00a000;
+  box-shadow:inset -1px -1px #006000, inset 1px 1px #80ff80;
+}
+
+/* ---------- My Projects: flat Explorer web-view pane + toolbar ---------- */
+.wv .wv__pane{ background:#fff; }
+.wv .wv__head{ flex-direction:row; align-items:center; gap:8px; }
+.wv .wv__head h2{ font:bold 14px/1.15 Verdana,Tahoma,sans-serif; }
+.wv .wv__rule{ background:linear-gradient(90deg,#000080,transparent); }
+.wv__ico{ display:flex; align-items:center; justify-content:center; height:16px; }
+.tool-btn .wv__ico svg{ height:auto; width:auto; }
+.tool-btn .wv__ico--arrow svg{ width:18px; height:14px; }
+.tool-btn .wv__ico--up svg{ width:14px; height:16px; }
+.tool-btn .wv__ico--view svg{ width:12px; height:12px; }
+.wv__bar .tool-btn.is-on{ box-shadow:var(--thin-in); background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='1' height='1' fill='%23c0c0c0'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23c0c0c0'/%3E%3C/svg%3E"); }
+
+/* ---------- Outlook Express: authentic icons, calm folder counts ---------- */
+.oe__folder:not(.is-on) b{ color:#000; }
+.oe__list tr:not(.is-unread):not(.is-selected) .details__name img,
+.oe__list tr:not(.is-unread):not(.is-selected) .details__name svg{ opacity:.5; }
+.tool-btn .oe__ico{ display:flex; align-items:center; justify-content:center; height:16px; }
+.tool-btn .oe__ico svg{ width:16px; height:16px; }

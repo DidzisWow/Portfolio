@@ -1,0 +1,55 @@
+/* github polish (loaded after style.css) */
+/* Flat, light github.com look inside the Win98 window. Overrides style.css via the .gh prefix. */
+
+.gh{ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif; }
+
+/* --- header: light github.com bar ------------------------------------- */
+.gh .gh__top{ position:relative; background:#f6f8fa; color:#1f2328; border-bottom:1px solid #d1d9e0; padding:12px 16px; gap:10px; }
+.gh .gh__mark{ display:inline-flex; align-items:center; color:#1f2328; }
+.gh .gh__mark svg{ display:block; }
+.gh .gh__login-top{ font-size:14px; font-weight:600; color:#1f2328; }
+.gh .gh__search{ margin-left:auto; width:272px; max-width:50%; background:#fff; color:#1f2328; border:1px solid #d1d9e0; font-size:13px; }
+.gh .gh__search::placeholder{ color:#59636e; opacity:1; }
+.gh .gh__search:focus{ border-color:#0969da; box-shadow:0 0 0 3px #0969da33; }
+.gh .gh__top nav{ display:none; }
+.gh .gh__me{ background:#d1d9e0; color:#59636e; }
+.gh .gh__note{ display:none; }
+
+/* --- buttons, tabs, inputs: valid font longhands ---------------------- */
+.gh .gh__btn{ font-size:13px; font-weight:500; line-height:20px; padding:5px 12px; }
+.gh .gh__btn--wide{ padding:5px 12px; }
+.gh .gh__btn svg{ flex:none; }
+.gh .gh__tabs button{ font-size:14px; }
+.gh .gh__filter{ font-size:14px; }
+
+/* --- Octicons --------------------------------------------------------- */
+.gh .gh__oct{ flex:none; fill:currentColor; vertical-align:text-bottom; }
+.gh .gh__muted .gh__oct{ margin-right:4px; }
+.gh .gh__card-top .gh__oct{ color:#59636e; }
+.gh .gh__meta span{ display:inline-flex; align-items:center; gap:4px; }
+.gh .gh__meta .gh__oct, .gh .gh__repo-actions .gh__oct{ vertical-align:baseline; }
+.gh .gh__repo-actions .gh__muted{ display:inline-flex; align-items:center; gap:4px; margin:0; }
+.gh .gh__repo-actions .gh__muted .gh__oct{ margin:0; }
+.gh .gh__repo-head h2 .gh__oct{ color:#59636e; margin-right:2px; }
+.gh .gh__ico{ display:inline-flex; margin-right:8px; vertical-align:text-bottom; color:#59636e; }
+.gh .gh__ico--dir{ color:#54aeff; }
+.gh .gh__files td{ vertical-align:middle; }
+
+/* --- avatar: quiet initials tile, image on top ------------------------ */
+.gh .gh__avatar{ display:grid; background:#f6f8fa; border:1px solid #d1d9e0; }
+.gh .gh__avatar > *{ grid-area:1/1; }
+.gh .gh__avatar span{ align-self:center; justify-self:center; font:600 72px/1 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif; color:#818b98; }
+.gh .gh__avatar img{ width:100%; height:100%; object-fit:cover; }
+
+/* --- contribution graph: use the full box width ----------------------- */
+.gh .gh__graph{ justify-content:space-between; }
+
+/* --- repositories list ------------------------------------------------ */
+.gh .gh__list li{ padding:24px 0; }
+.gh .gh__list .gh__badge{ margin-left:8px; vertical-align:2px; }
+.gh .gh__list li > .gh__btn{ flex:none; white-space:nowrap; }
+.gh .gh__list .gh__repo-link{ font-size:18px; font-weight:600; }
+
+/* --- repo page: no profile sidebar, README strip ---------------------- */
+.gh.is-repo .gh__side{ display:none; }
+.gh .gh__path{ margin:-16px -16px 16px; padding:10px 16px; border-bottom:1px solid #d1d9e0; background:#f6f8fa; border-radius:6px 6px 0 0; font-family:inherit; font-size:12px; font-weight:600; line-height:1.5; color:#1f2328; }
