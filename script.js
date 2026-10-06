@@ -48,7 +48,7 @@ const DEFAULT_VIDEOS = [
   { id: "dQw4w9WgXcQ", title: "Rick Astley - Never Gonna Give You Up (Official Music Video)", channel: "Rick Astley", cat: "Music" },
   { id: "9bZkp7q19f0", title: "PSY - GANGNAM STYLE M/V", channel: "officialpsy", cat: "Music" },
 ];
-const VIDEOS = (Array.isArray(C.videos) && C.videos.length ? C.videos : DEFAULT_VIDEOS)
+const BASE_VIDEOS = (Array.isArray(C.videos) && C.videos.length ? C.videos : DEFAULT_VIDEOS)
   .map(v => ({ id: v.id, title: v.title || "Untitled", channel: v.channel || "CoryxKenshin", cat: v.cat || "Videos" }));
 const ABOUT_PARAS = String(C.about || "").split(/\n\s*\n/).map(p => p.replace(/\s+/g, " ").trim()).filter(Boolean);
 
@@ -1382,8 +1382,13 @@ function openResume(o = {}) {
 }
 
 /* ---------- YouTube ---------- */
-const YT_CATS = ["All", ...Array.from(new Set(VIDEOS.map(v => v.cat)))];
-const YT_CHANNELS = Array.from(new Set(VIDEOS.map(v => v.channel)));
+// Accepts a full YouTube link (watch, youtu.be, shorts, embed, live) or a bare 11-character ID.
+function ytParseId(input) {
+  const t = String(input || "").trim();
+  if (/^[\w-]{11}$/.test(t)) return t;
+  const m = t.match(/(?:youtu\.be\/|[?&]v=|\/(?:embed|shorts|live|v)\/)([\w-]{11})/);
+  return m ? m[1] : "";
+}
 function ytColor(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `hsl(${h},55%,42%)`; }
 const ytThumb = id => `https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg`;
 function openYouTube(o = {}) {
@@ -1391,26 +1396,34 @@ function openYouTube(o = {}) {
     title: "YouTube", icon: "youtube", w: 880, h: 570, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
+      // videos posted from "Your channel" live in localStorage and show up under the portfolio owner's name
+      const VIDEOS = BASE_VIDEOS.concat(store.get("ytUploads", []).map(u => ({ id: u.id, title: u.title, cat: u.cat || "Videos", desc: u.desc || "", channel: NAME, mine: true })));
+      const cats = () => ["All", ...Array.from(new Set(VIDEOS.map(v => v.cat)))];
+      const channels = () => { const c = Array.from(new Set(VIDEOS.map(v => v.channel))).filter(c => c !== NAME); return [NAME, ...c]; };
       body.innerHTML = `
         <div class="yt2">
           <header class="yt2__head">
             <button type="button" class="yt2__back" title="Back" disabled>${G.back}</button>
             <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
             <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit">Search</button></form>
-            <span class="yt2__me" title="Signed in as ${esc(NAME)}" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</span>
+            <button type="button" class="yt2__up" data-go="upload" title="Upload a video">&#10133; Upload</button>
+            <button type="button" class="yt2__me" data-channel="${esc(NAME)}" title="Your channel (${esc(NAME)})" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
           </header>
           <div class="yt2__wrap">
-            <nav class="yt2__side">
-              <button type="button" data-go="home">Home</button>
-              <button type="button" data-go="subs">Subscriptions</button>
-              <button type="button" data-go="liked">Liked videos</button>
-              <p>Channels</p>
-              ${YT_CHANNELS.map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i>${esc(c)}</button>`).join("")}
-            </nav>
+            <nav class="yt2__side"></nav>
             <main class="yt2__main"></main>
           </div>
         </div>`;
-      const main = $(".yt2__main", body), back = $(".yt2__back", body);
+      const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
+      const drawSide = () => {
+        side.innerHTML = `
+          <button type="button" data-go="home">Home</button>
+          <button type="button" data-go="subs">Subscriptions</button>
+          <button type="button" data-go="liked">Liked videos</button>
+          <button type="button" data-go="upload">Upload video</button>
+          <p>Channels</p>
+          ${channels().map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i>${esc(c)}${c === NAME ? " (you)" : ""}</button>`).join("")}`;
+      };
       const subs = () => store.get("ytSubs", []);
       const likes = () => store.get("ytLikes", []);
       const toggle = (key, val) => { const a = store.get(key, []); const i = a.indexOf(val); if (i >= 0) a.splice(i, 1); else a.push(val); store.set(key, a); return i < 0; };
@@ -1433,14 +1446,14 @@ function openYouTube(o = {}) {
         </button>`;
       const grid = list => list.length ? `<div class="yt2__grid">${list.map(i => card(VIDEOS[i], i)).join("")}</div>` : "";
       const subBtn = ch => { const on = subs().includes(ch); return `<button type="button" class="yt2__sub${on ? " is-on" : ""}" data-sub="${esc(ch)}">${on ? "Subscribed" : "Subscribe"}</button>`; };
-      const all = VIDEOS.map((_, i) => i);
+      let all = VIDEOS.map((_, i) => i);
 
       const views = {
         home(s) {
           const cat = s.cat || "All";
           const list = all.filter(i => cat === "All" || VIDEOS[i].cat === cat);
           return `
-            <div class="yt2__chips">${YT_CATS.map(c => `<button type="button" class="yt2__chip${c === cat ? " is-on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+            <div class="yt2__chips">${cats().map(c => `<button type="button" class="yt2__chip${c === cat ? " is-on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>
             ${grid(list)}`;
         },
         subs() {
@@ -1458,15 +1471,31 @@ function openYouTube(o = {}) {
           return `<h2 class="yt2__h">Results for "${esc(s.q)}"</h2>${list.length ? `<div class="yt2__rows">${list.map(i => row(VIDEOS[i], i)).join("")}</div>` : `<p class="yt2__empty">No results. Try "fnaf", "music" or a channel name.</p>`}`;
         },
         channel(s) {
-          const ch = s.name, list = all.filter(i => VIDEOS[i].channel === ch);
+          const ch = s.name, list = all.filter(i => VIDEOS[i].channel === ch), mine = ch === NAME;
+          if (mine && !store.get("ytJoined", 0)) store.set("ytJoined", Date.now());
+          const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+          const handle = "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
           return `
             <div class="yt2__banner" style="background:linear-gradient(120deg,${ytColor(ch)},#111)"></div>
             <div class="yt2__chan">
               <i class="yt2__av yt2__av--big" style="background:${ytColor(ch)}">${esc(ch[0].toUpperCase())}</i>
-              <span><b>${esc(ch)}</b><small>${list.length} video${list.length === 1 ? "" : "s"} here</small></span>
-              ${subBtn(ch)}
+              <span><b>${esc(ch)}</b><small>${mine ? `${esc(handle)} &middot; ` : ""}${list.length} video${list.length === 1 ? "" : "s"}${mine ? ` &middot; Joined ${esc(joined)}` : " here"}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
+              ${mine ? `<button type="button" class="yt2__sub" data-go="upload">Upload video</button>` : subBtn(ch)}
             </div>
-            ${grid(list)}`;
+            ${list.length ? grid(list) : mine ? `<p class="yt2__empty">This is your channel. You haven't posted anything yet &mdash; hit <b>Upload video</b> and paste a YouTube link to publish it here.</p>` : ""}`;
+        },
+        upload() {
+          return `
+            <h2 class="yt2__h">Upload video</h2>
+            <form class="yt2__form" autocomplete="off">
+              <p class="yt2__hint">Paste a YouTube link (or video ID). It will be posted to <b>${esc(NAME)}</b>'s channel.</p>
+              <label>YouTube link<input name="url" placeholder="https://www.youtube.com/watch?v=..." required></label>
+              <label>Title<input name="title" maxlength="100" placeholder="Filled in automatically when possible"></label>
+              <label>Category<input name="cat" list="ytCatList" value="Videos" maxlength="24"><datalist id="ytCatList">${cats().filter(c => c !== "All").map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
+              <label>Description<textarea name="desc" rows="3" maxlength="500"></textarea></label>
+              <div class="yt2__prev"></div>
+              <button type="submit" class="yt2__sub yt2__sub--red">Publish</button>
+            </form>`;
         },
         watch(s) {
           const v = VIDEOS[s.i], liked = likes().includes(v.id);
@@ -1483,10 +1512,11 @@ function openYouTube(o = {}) {
                   <span class="yt2__actions">
                     <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">&#128077; ${liked ? "Liked" : "Like"}</button>
                     <button type="button" class="yt2__pill" data-share="${esc(v.id)}">Share</button>
+                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">Delete</button>` : ""}
                     <a class="yt2__pill" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Open on YouTube</a>
                   </span>
                 </div>
-                <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.</div>
+                <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>${v.desc ? esc(v.desc).replace(/\n/g, "<br>") : `Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.`}</div>
               </div>
               <aside class="yt2__next">
                 <label class="yt2__auto"><span>Up next</span><span class="check"><input type="checkbox" class="yt2__autobox"${autoplay ? " checked" : ""}><span>Autoplay</span></span></label>
@@ -1503,6 +1533,7 @@ function openYouTube(o = {}) {
       };
       const render = () => {
         const s = stack[stack.length - 1];
+        drawSide();
         main.innerHTML = views[s.page](s);
         main.scrollTop = 0;
         back.disabled = stack.length < 2;
@@ -1543,6 +1574,19 @@ function openYouTube(o = {}) {
       body.addEventListener("click", e => {
         const ch = e.target.closest("[data-channel]");
         if (ch) { e.stopPropagation(); go({ page: "channel", name: ch.dataset.channel }); return; }
+        const del = e.target.closest("[data-del]");
+        if (del) {
+          msgBox({ title: "Delete video", icon: "warning", text: "Remove this video from your channel?", buttons: ["Delete", "Cancel"], defaultIndex: 1 }).then(r => {
+            if (r !== 0 && r !== "Delete") return;
+            store.set("ytUploads", store.get("ytUploads", []).filter(u => u.id !== del.dataset.del));
+            const i = VIDEOS.findIndex(v => v.mine && v.id === del.dataset.del);
+            if (i >= 0) VIDEOS.splice(i, 1);
+            all = VIDEOS.map((_, k) => k);
+            stack.length = 0;
+            go({ page: "channel", name: NAME });
+          });
+          return;
+        }
         const sb = e.target.closest("[data-sub]");
         if (sb) {
           const on = toggle("ytSubs", sb.dataset.sub);
@@ -1565,6 +1609,33 @@ function openYouTube(o = {}) {
         const g = e.target.closest("[data-go]");
         if (g) go({ page: g.dataset.go });
       });
+      body.addEventListener("input", e => {
+        const f = e.target.closest(".yt2__form");
+        if (!f || e.target.name !== "url") return;
+        const id = ytParseId(e.target.value), prev = $(".yt2__prev", f);
+        if (!id) { prev.innerHTML = e.target.value ? `<small>That doesn't look like a YouTube link yet.</small>` : ""; return; }
+        prev.innerHTML = `<img src="${ytThumb(id)}" alt="">`;
+        const t = f.elements.title;
+        if (t.value.trim() && !t.dataset.auto) return;
+        fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent("https://www.youtube.com/watch?v=" + id)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(j => { if (j && j.title && ytParseId(f.elements.url.value) === id && (!t.value.trim() || t.dataset.auto)) { t.value = j.title; t.dataset.auto = "1"; } })
+          .catch(() => {});
+      });
+      body.addEventListener("submit", e => {
+        const f = e.target.closest(".yt2__form");
+        if (!f) return;
+        e.preventDefault();
+        const id = ytParseId(f.elements.url.value);
+        if (!id) { msgBox({ title: "Upload", icon: "error", text: "Couldn't find a video in that link. Paste a youtube.com or youtu.be link, or the 11-character video ID." }); return; }
+        if (VIDEOS.some(v => v.mine && v.id === id)) { msgBox({ title: "Upload", icon: "info", text: "That video is already on your channel." }); return; }
+        const u = { id, title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim() };
+        store.set("ytUploads", store.get("ytUploads", []).concat(u));
+        VIDEOS.push({ ...u, channel: NAME, mine: true });
+        all = VIDEOS.map((_, k) => k);
+        Sound.play("notify");
+        go({ page: "channel", name: NAME });
+      });
       body.addEventListener("change", e => { if (e.target.classList.contains("yt2__autobox")) { autoplay = e.target.checked; store.set("ytAuto", autoplay); } });
       back.addEventListener("click", () => { if (stack.length > 1) { stack.pop(); render(); } });
       $(".yt2__search", body).addEventListener("submit", e => {
@@ -1575,6 +1646,98 @@ function openYouTube(o = {}) {
       go({ page: "home", cat: "All" });
     },
     onClose: w => w.cleanup && w.cleanup(),
+  });
+}
+
+/* ---------- Spotify ---------- */
+// Playlist IDs are Spotify's public editorial playlists. Add your own with "Add music".
+const SP_DEFAULTS = [
+  { type: "playlist", id: "37i9dQZF1DXcBWIGoYBM5M", title: "Today's Top Hits" },
+  { type: "playlist", id: "37i9dQZF1DX4o1oenSJRJd", title: "All Out 2000s" },
+  { type: "playlist", id: "37i9dQZF1DXbTxeAdrVG2l", title: "All Out 90s" },
+  { type: "playlist", id: "37i9dQZF1DWXRqgorJj26U", title: "Rock Classics" },
+  { type: "playlist", id: "37i9dQZF1DWWQRwui0ExPn", title: "Lofi Beats" },
+  { type: "playlist", id: "37i9dQZF1DX4sWSpwq3LiO", title: "Peaceful Piano" },
+];
+// Accepts open.spotify.com links (incl. intl-xx/ prefixes) or spotify:type:id URIs.
+function spParse(input) {
+  const t = String(input || "").trim();
+  const m = t.match(/open\.spotify\.com\/(?:intl-[\w-]+\/)?(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]{22})/) || t.match(/^spotify:(track|album|playlist|artist|episode|show):([A-Za-z0-9]{22})$/);
+  return m ? { type: m[1], id: m[2] } : null;
+}
+const spColor = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `linear-gradient(135deg,hsl(${h},60%,38%),hsl(${(h + 40) % 360},55%,20%))`; };
+function openSpotify(o = {}) {
+  WM.open("spotify", {
+    title: "Spotify", icon: "spotify", w: 860, h: 560, from: o.from,
+    render(body, win) {
+      body.classList.add("body--flush");
+      const mine = () => store.get("spLib", []);
+      const lib = () => mine().concat(SP_DEFAULTS);
+      let cur = lib()[0], page = "home";
+      body.innerHTML = `
+        <div class="sp">
+          <nav class="sp__side">
+            <div class="sp__logo">${icon("spotify", 24)}<span>Spotify</span></div>
+            <button type="button" data-go="home">Home</button>
+            <button type="button" data-go="add">+ Add music</button>
+            <p>Your music</p>
+            <div class="sp__lib"></div>
+          </nav>
+          <main class="sp__main"></main>
+        </div>`;
+      const main = $(".sp__main", body), libEl = $(".sp__lib", body);
+      const embed = it => `<iframe class="sp__embed${/^(track|episode)$/.test(it.type) ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+      const tile = (it, i) => `<button type="button" class="sp__tile" data-i="${i}"><span class="sp__art" style="${it.thumb ? `background-image:url('${esc(it.thumb)}');` : ""}background-color:#222;${it.thumb ? "" : `background:${spColor(it.title)}`}">${it.thumb ? "" : "&#9835;"}</span><b>${esc(it.title)}</b><small>${esc(it.type)}${it.mine ? " &middot; yours" : ""}</small></button>`;
+      const draw = () => {
+        const items = lib().map((x, i) => ({ ...x, mine: i < mine().length }));
+        libEl.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}" class="${cur && cur.id === it.id && page === "home" ? "is-on" : ""}">${esc(it.title)}</button>`).join("");
+        $$(".sp__side [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === page));
+        if (page === "add") {
+          main.innerHTML = `
+            <h2>Add music</h2>
+            <form class="sp__form" autocomplete="off">
+              <p>Open Spotify, press <b>Share &rarr; Copy link</b> on any song, album, playlist, artist or podcast, and paste it here.</p>
+              <label>Spotify link<input name="url" placeholder="https://open.spotify.com/track/..." required></label>
+              <label>Name (optional)<input name="title" maxlength="60" placeholder="Filled in automatically when possible"></label>
+              <button type="submit" class="sp__btn">Add to my music</button>
+            </form>
+            ${mine().length ? `<h3>Added by you</h3><div class="sp__mine">${mine().map((it, i) => `<div><span>${esc(it.title)} <small>${esc(it.type)}</small></span><button type="button" data-rm="${i}">Remove</button></div>`).join("")}</div>` : ""}`;
+          return;
+        }
+        main.innerHTML = `
+          <h2>${cur ? esc(cur.title) : "Spotify"}</h2>
+          ${cur ? embed(cur) : ""}
+          <p class="sp__note">Full songs need you to be logged in to Spotify in this browser; otherwise you get 30-second previews.</p>
+          <h3>Browse</h3>
+          <div class="sp__grid">${items.map(tile).join("")}</div>`;
+      };
+      body.addEventListener("click", e => {
+        const rm = e.target.closest("[data-rm]");
+        if (rm) { const a = mine(); a.splice(+rm.dataset.rm, 1); store.set("spLib", a); cur = lib()[0]; draw(); return; }
+        const it = e.target.closest("[data-i]");
+        if (it) { cur = lib()[+it.dataset.i]; page = "home"; draw(); main.scrollTop = 0; return; }
+        const g = e.target.closest("[data-go]");
+        if (g) { page = g.dataset.go; draw(); }
+      });
+      body.addEventListener("submit", async e => {
+        const f = e.target.closest(".sp__form");
+        if (!f) return;
+        e.preventDefault();
+        const p = spParse(f.elements.url.value);
+        if (!p) { msgBox({ title: "Add music", icon: "error", text: "That doesn't look like a Spotify link. It should start with https://open.spotify.com/ and point to a song, album, playlist, artist or podcast." }); return; }
+        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your music." }); return; }
+        let title = f.elements.title.value.trim(), thumb = "";
+        try {
+          const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
+          if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
+        } catch (err) {}
+        const item = { ...p, title: title || `Spotify ${p.type}`, thumb };
+        store.set("spLib", [item].concat(mine()));
+        Sound.play("notify");
+        cur = lib()[0]; page = "home"; draw();
+      });
+      draw();
+    },
   });
 }
 
@@ -3882,7 +4045,7 @@ function openRun() {
         if (/^(https?:\/\/|www\.)|\.(com|org|net|io|app|dev)(\/|$)/i.test(v)) { win.close(); openChrome({ url: v }); return; }
         const k = resolveApp(v);
         if (k) { win.close(); openApp(k); }
-        else msgBox({ title: v, icon: "error", text: `Cannot find the file '${v}' (or one of its components). Make sure the path and filename are correct.\n\nTry: about, projects, chrome, youtube, discord, cmd, paint, minesweeper` });
+        else msgBox({ title: v, icon: "error", text: `Cannot find the file '${v}' (or one of its components). Make sure the path and filename are correct.\n\nTry: about, projects, chrome, youtube, spotify, discord, cmd, paint, minesweeper` });
       };
       $('[data-act="ok"]', body).addEventListener("click", go);
       $('[data-act="cancel"]', body).addEventListener("click", () => win.close());
@@ -3963,6 +4126,7 @@ const APPS = {
   terminal:    { label: "MS-DOS Prompt",  open: openTerminal },
   chrome:      { label: "Chrome 98",      open: openChrome },
   youtube:     { label: "YouTube",        open: openYouTube },
+  spotify:     { label: "Spotify",        open: openSpotify },
   discord:     { label: "Discord",        open: openDiscord },
   github:      { label: "GitHub",         open: openGitHubApp },
   minesweeper: { label: "Minesweeper",    open: openMinesweeper },
@@ -3983,7 +4147,7 @@ const ALIASES = {
   cmd: "terminal", command: "terminal", dos: "terminal", prompt: "terminal", "ms-dos": "terminal",
   iexplore: "chrome", browser: "chrome", internet: "chrome", netscape: "chrome", web: "chrome",
   yt: "youtube", video: "youtube", videos: "youtube",
-  chat: "discord",
+  chat: "discord", music: "spotify", songs: "spotify", playlist: "spotify",
   recycle: "bin", trash: "bin", "recycle bin": "bin", recyclebin: "bin",
   desk: "display", control: "display", wallpaper: "display", "display properties": "display", screensaver: "display",
   git: "github", "github.com": "github", write: "notepad", wordpad: "notepad", edit: "notepad",
@@ -4016,7 +4180,7 @@ function openApp(key, opts = {}) {
 /* ==========================================================================
    DESKTOP (draggable icons, rubber-band select, right-click menu)
    ========================================================================== */
-const DESKTOP_ORDER = ["about", "projects", "skills", "contact", "resume", "bin", "terminal", "chrome", "youtube", "discord", "github", "minesweeper", "solitaire", "snake", "paint"].filter(k => !APPS[k].hidden);
+const DESKTOP_ORDER = ["about", "projects", "skills", "contact", "resume", "bin", "terminal", "chrome", "youtube", "spotify", "discord", "github", "minesweeper", "solitaire", "snake", "paint"].filter(k => !APPS[k].hidden);
 const CELL = { w: 80, h: 76 };
 let iconOrder = DESKTOP_ORDER.slice();
 
@@ -4213,7 +4377,7 @@ function initDesktop() {
 const StartMenu = {
   el: null, btn: null, fly: null,
   SUBS: {
-    programs: ["chrome", "youtube", "discord", "github", "terminal", "notepad", "paint"],
+    programs: ["chrome", "youtube", "spotify", "discord", "github", "terminal", "notepad", "paint"],
     games: ["minesweeper", "solitaire", "snake"],
     settings: ["display", "datetime", "welcome"],
   },

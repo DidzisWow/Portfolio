@@ -121,6 +121,7 @@ const CONTENT = {
     projects: "images/projects.svg",
     contact: "images/contact.svg",
     chrome: "images/chrome.svg",       // official Google Chrome logo (CC0, via Simple Icons)
+    spotify: "images/spotify.svg",     // Spotify-style logo
     youtube: "images/youtube.svg",     // official YouTube logo (CC0, via Simple Icons)
     discord: "images/discord.svg",     // official Discord logo (CC0, via Simple Icons)
     github: "images/github.svg",       // official GitHub logo (CC0, via Simple Icons)

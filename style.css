@@ -1276,3 +1276,49 @@ body.crt::before{
 .dos.t-white{ color:#fff; }
 .dos.t-blue{ background:#0000aa; color:#fff; }
 .dos.t-blue .dos__fx{ background:#0000aa; }
+/* --- YouTube: your channel + upload --- */
+.yt2__up{ padding:5px 12px; border:1px solid #ccc; border-radius:16px; background:#f8f8f8; font-size:12px; flex-shrink:0; }
+.yt2__up:hover{ background:#eee; }
+.yt2__me{ border:0; cursor:pointer; font-size:14px; }
+.yt2__form{ display:grid; gap:10px; max-width:520px; }
+.yt2__form label{ display:grid; gap:3px; font-weight:bold; }
+.yt2__form input, .yt2__form textarea{ padding:7px 10px; border:1px solid #ccc; border-radius:6px; font:13px Arial,sans-serif; outline:none; }
+.yt2__form input:focus, .yt2__form textarea:focus{ border-color:#1c62b9; }
+.yt2__hint{ margin:0; color:#606060; }
+.yt2__prev img{ width:240px; max-width:100%; border-radius:8px; display:block; }
+.yt2__sub--red{ margin:0; justify-self:start; background:#cc0000; }
+
+/* --- Spotify --- */
+.sp{ display:flex; height:100%; background:#121212; color:#fff; font:12px/1.4 Arial,Helvetica,sans-serif; }
+.sp button{ font-family:inherit; cursor:pointer; }
+.sp__side{ width:190px; flex-shrink:0; background:#000; padding:12px 8px; display:flex; flex-direction:column; gap:2px; overflow:hidden; }
+.sp__logo{ display:flex; align-items:center; gap:8px; padding:0 8px 12px; font:bold 18px Arial; }
+.sp__side > button, .sp__lib button{ display:block; width:100%; padding:7px 10px; border:0; border-radius:6px; background:none; color:#b3b3b3; text-align:left; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sp__side > button:hover, .sp__lib button:hover{ color:#fff; }
+.sp__side .is-on{ color:#fff !important; background:#282828 !important; }
+.sp__side p{ margin:12px 10px 4px; color:#b3b3b3; font-weight:bold; text-transform:uppercase; font-size:10px; letter-spacing:.08em; }
+.sp__lib{ overflow:auto; flex:1; min-height:0; }
+.sp__main{ flex:1; min-width:0; overflow:auto; padding:16px 20px; background:linear-gradient(#2a2a2a,#121212 260px); }
+.sp__main h2{ margin:0 0 12px; font-size:22px; }
+.sp__main h3{ margin:20px 0 10px; font-size:15px; }
+.sp__embed{ width:100%; height:352px; border:0; border-radius:12px; display:block; background:#181818; }
+.sp__embed--small{ height:152px; }
+.sp__note{ margin:8px 0 0; color:#a7a7a7; font-size:11px; }
+.sp__grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:14px; }
+.sp__tile{ padding:10px; border:0; border-radius:8px; background:#181818; color:#fff; text-align:left; display:block; }
+.sp__tile:hover{ background:#282828; }
+.sp__art{ display:grid; place-items:center; aspect-ratio:1; border-radius:6px; margin-bottom:8px; font-size:32px; background-size:cover; background-position:center; box-shadow:0 4px 12px rgba(0,0,0,.5); }
+.sp__tile b{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp__tile small{ color:#a7a7a7; text-transform:capitalize; }
+.sp__form{ display:grid; gap:10px; max-width:480px; }
+.sp__form p{ margin:0; color:#b3b3b3; }
+.sp__form label{ display:grid; gap:3px; font-weight:bold; }
+.sp__form input{ padding:8px 10px; border:0; border-radius:6px; background:#2a2a2a; color:#fff; font:13px Arial,sans-serif; outline:none; }
+.sp__form input:focus{ box-shadow:0 0 0 2px #1ed760; }
+.sp__btn{ justify-self:start; padding:8px 18px; border:0; border-radius:20px; background:#1ed760; color:#000; font-weight:bold; font-size:13px; }
+.sp__btn:hover{ background:#3be477; }
+.sp__mine{ display:grid; gap:6px; max-width:480px; }
+.sp__mine div{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 10px; border-radius:6px; background:#181818; }
+.sp__mine small{ color:#a7a7a7; }
+.sp__mine button{ border:0; background:none; color:#b3b3b3; text-decoration:underline; }
+@media (max-width:700px){ .sp__side{ display:none; } }
