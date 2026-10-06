@@ -2144,10 +2144,10 @@ async function dcAI(who, key, list) {
 /* ---------- Discord ---------- */
 const DC = {
   members: [
-    { name: "neon_ninja", color: "#d9480f", status: "online", activity: "Playing Quake II" },
-    { name: "dialup_dana", color: "#0b7285", status: "idle", activity: "Listening to Winamp" },
-    { name: "jpeg_jeff", color: "#6741d9", status: "dnd", activity: "Coding in Notepad" },
-    { name: "Mom", color: "#be185d", status: "off", activity: "" },
+    { name: "neon_ninja", color: "#f08c4a", status: "online", activity: "Playing Quake II" },
+    { name: "dialup_dana", color: "#38b6c8", status: "idle", activity: "Listening to Winamp" },
+    { name: "jpeg_jeff", color: "#9a7bf0", status: "dnd", activity: "Coding in Notepad" },
+    { name: "Mom", color: "#e670a8", status: "off", activity: "" },
   ],
   topics: {
     welcome: "Read the rules, then say hi.",
@@ -2158,7 +2158,7 @@ const DC = {
     memes: "Dancing babies and hamster dances only.",
   },
   ch: {}, dm: {}, unread: {}, key: "ch:general", status: "online", seeded: false,
-  sys: "Discord98",
+  sys: "Discord",
 };
 const DC_LINES = {
   general: ["my modem just made the scream noise for 4 straight minutes", "anyone else's mouse ball need cleaning or just me", "brb someone picked up the phone and killed my connection", "who has the good screensavers. i need flying toasters", "just burned my first mix CD. took 40 minutes"],
@@ -2170,7 +2170,7 @@ const DC_LINES = {
 function dcSeed() {
   if (DC.seeded) return;
   DC.seeded = true;
-  const y = "Yesterday";
+  const y = "Yesterday at 9:41 PM";
   const m = (who, text, t = y, extra = {}) => ({ who, text, t, reacts: {}, ...extra });
   const sys = text => m(DC.sys, text, y, { sys: true });
   DC.ch = {
@@ -2211,8 +2211,8 @@ function dcSeed() {
   DC.ch.general[4].reacts = { "\u{1F480}": 2, "\u{1F525}": 1 };
   DC.ch.welcome[2].reacts = { "\u{1F44B}": 3 };
   DC.dm = {
-    neon_ninja: [m("neon_ninja", "yo you down for some quake tonight?", "Today")],
-    Mom: [m("Mom", "Hi sweetie, how do I print the internet? Love, Mom", "Today")],
+    neon_ninja: [m("neon_ninja", "yo you down for some quake tonight?", "Today at 8:12 AM")],
+    Mom: [m("Mom", "Hi sweetie, how do I print the internet? Love, Mom", "Today at 8:12 AM")],
   };
   DC.unread = { "dm:neon_ninja": 1, "dm:Mom": 1, "ch:showcase": PROJECTS.length ? Math.min(4, PROJECTS.length) : 1 };
 }
@@ -2220,7 +2220,7 @@ const DC_EMOJI = ["\u{1F600}", "\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}
 function openDiscord(o = {}) {
   dcSeed();
   WM.open("discord", {
-    title: "Discord", icon: "discord", w: 760, h: 470, from: o.from,
+    title: "Discord", icon: "discord", w: 900, h: 560, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
       body.innerHTML = `
@@ -2235,25 +2235,24 @@ function openDiscord(o = {}) {
             <p class="dc__server"></p>
             <div class="dc__side-list"></div>
             <div class="dc__me">
-              <button type="button" class="dc__av" style="background:#000080;border:0" title="Change status">${esc(FIRST[0] || "?")}<i></i></button>
+              <button type="button" class="dc__av" style="background:#5865f2;border:0" title="Change status">${esc(FIRST[0] || "?")}<i></i></button>
               <span><b>${esc(FIRST)}</b><small class="dc__me-status"></small></span>
             </div>
           </div>
           <section class="dc__main">
             <header class="dc__header"></header>
-            <div class="dc__log sunken-box" aria-live="polite"></div>
+            <div class="dc__log" aria-live="polite"></div>
             <p class="dc__typing"></p>
             <form class="dc__form">
-              <button type="button" class="btn btn--sm dc__emoji-btn" title="Emoji">\u{1F642}</button>
               <input class="field dc__input" maxlength="400" autocomplete="off" aria-label="Message">
-              <button class="btn btn--sm" type="submit">Send</button>
+              <button type="button" class="dc__emoji-btn" title="Emoji"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 2a10 10 0 100 20 10 10 0 000-20zM8.5 7.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm7 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM7.8 13.5h8.4a4.2 4.2 0 01-8.4 0z"/></svg></button>
             </form>
           </section>
           <aside class="dc__members"></aside>
         </div>`;
       const log = $(".dc__log", body), input = $(".dc__input", body), typing = $(".dc__typing", body);
       const member = n => DC.members.find(m => m.name === n);
-      const color = who => who === FIRST ? "#000080" : who === DC.sys ? "#5865f2" : (member(who) || {}).color || "#444";
+      const color = who => who === FIRST ? "#5865f2" : who === DC.sys ? "#5865f2" : (member(who) || {}).color || "#949ba4";
       const listOf = key => key.startsWith("dm:") ? (DC.dm[key.slice(3)] = DC.dm[key.slice(3)] || []) : DC.ch[key.slice(3)];
       const statusText = { online: "Online", idle: "Idle", dnd: "Do Not Disturb", off: "Offline" };
       const fmt = text => esc(text).replace(/@(\w+)/g, '<span class="at">@$1</span>');
@@ -2267,11 +2266,11 @@ function openDiscord(o = {}) {
         return `<div class="dc__msg${cont ? " is-cont" : ""}${mention ? " is-mention" : ""}" data-mi="${i}">
           ${cont ? "" : `<span class="dc__av" style="background:${color(m.who)}">${esc(m.who[0])}</span>`}
           <div class="dc__body">
-            ${cont ? "" : `<span class="dc__who" style="color:${color(m.who)}">${esc(m.who)}</span><span class="dc__time">${esc(m.t)}</span>`}
+            ${cont ? "" : `<span class="dc__who" style="color:${color(m.who)}">${esc(m.who)}</span>${m.sys ? '<span class="dc__tag">APP</span>' : ""}<span class="dc__time">${esc(m.t)}</span>`}
             <p class="dc__text${m.me ? " is-me" : ""}${m.sys ? " dc__sys" : ""}">${m.me ? "* " + esc(m.who) + " " : ""}${fmt(m.text)}</p>
             ${reacts ? `<div class="dc__reacts">${reacts}</div>` : ""}
           </div>
-          <div class="dc__hover">${["\u{1F44D}", "\u{1F602}", "\u{1F525}", "\u{1F480}"].map(e => `<button type="button" data-r="${e}" data-mi="${i}" title="React">${e}</button>`).join("")}</div>
+          <div class="dc__hover">${["\u{1F44D}", "\u{1F602}"].map(e => `<button type="button" data-r="${e}" data-mi="${i}" title="React">${e}</button>`).join("")}</div>
         </div>`;
       };
       const drawLog = () => { const arr = listOf(DC.key); log.innerHTML = arr.map(msgHTML).join(""); log.scrollTop = log.scrollHeight; };
@@ -2293,12 +2292,12 @@ function openDiscord(o = {}) {
           const names = Array.from(new Set([...Object.keys(DC.dm), ...DC.members.map(m => m.name)]));
           side.innerHTML = `<p class="dc__heading">Direct Messages</p>` + names.map(n => {
             const k = "dm:" + n, u = DC.unread[k] || 0, mm = member(n) || {};
-            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"><span class="dc__av" style="background:${color(n)};width:20px;height:20px;font-size:10px">${esc(n[0])}<i class="${mm.status || ""}"></i></span>${esc(n)}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
+            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"><span class="dc__av" style="background:${color(n)}">${esc(n[0])}<i class="${mm.status || ""}"></i></span>${esc(n)}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
           }).join("");
         } else {
           side.innerHTML = `<p class="dc__heading">Text Channels</p>` + Object.keys(DC.ch).map(c => {
             const k = "ch:" + c, u = DC.unread[k] || 0;
-            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"># ${c}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
+            return `<button type="button" class="dc__channel${k === DC.key ? " is-active" : ""}${u ? " is-unread" : ""}" data-key="${k}"><span class="dc__hash">#</span>${c}${u ? `<span class="dc__pill">${u}</span>` : ""}</button>`;
           }).join("");
         }
       };
@@ -2306,18 +2305,18 @@ function openDiscord(o = {}) {
         const h = $(".dc__header", body);
         if (DC.key.startsWith("dm:")) {
           const n = DC.key.slice(3), mm = member(n);
-          h.innerHTML = `<b>@ ${esc(n)}</b><span>${mm ? esc(statusText[mm.status]) + (mm.activity ? " - " + esc(mm.activity) : "") : ""}</span>`;
+          h.innerHTML = `<i class="dc__hash">@</i><b>${esc(n)}</b><span>${mm ? esc(statusText[mm.status]) + (mm.activity ? " - " + esc(mm.activity) : "") : ""}</span>`;
           input.placeholder = `Message @${n}`;
         } else {
           const c = DC.key.slice(3);
-          h.innerHTML = `<b># ${esc(c)}</b><span>${esc(DC.topics[c] || "")}</span>`;
+          h.innerHTML = `<i class="dc__hash">#</i><b>${esc(c)}</b><span>${esc(DC.topics[c] || "")}</span>`;
           input.placeholder = `Message #${c}  (try /help)`;
         }
       };
       const drawMembers = () => {
         const groups = [["Online", DC.members.filter(m => m.status !== "off")], ["Offline", DC.members.filter(m => m.status === "off")]];
         $(".dc__members", body).innerHTML = `<p class="dc__heading">Online &mdash; ${groups[0][1].length + 1}</p>
-          <div class="dc__member"><span class="dc__av" style="background:#000080">${esc(FIRST[0])}<i class="${DC.status === "online" ? "" : DC.status}"></i></span><span><b>${esc(FIRST)}</b><small>That's you</small></span></div>` +
+          <div class="dc__member"><span class="dc__av" style="background:#5865f2">${esc(FIRST[0])}<i class="${DC.status === "online" ? "" : DC.status}"></i></span><span><b>${esc(FIRST)}</b><small>That's you</small></span></div>` +
           groups.map(([label, ms], gi) => (gi ? `<p class="dc__heading">${label} &mdash; ${ms.length}</p>` : "") + ms.map(m => `
             <button type="button" class="dc__member${m.status === "off" ? " is-off" : ""}" data-dm="${m.name}" title="Message ${m.name}">
               <span class="dc__av" style="background:${m.color}">${esc(m.name[0])}<i class="${m.status === "online" ? "" : m.status}"></i></span>
