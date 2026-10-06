@@ -1,1 +1,126 @@
 /* chrome polish (loaded after style.css) */
+/* Flat, Chrome-98-like browser UI inside the Win98 window frame. Everything is scoped to the Chrome window. */
+.window[data-id="chrome"]{
+  --cr-font:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --cr-strip:#dee1e6; --cr-text:#202124; --cr-mute:#5f6368; --cr-line:#dadce0; --cr-hover:rgba(60,64,67,.08);
+}
+.window[data-id="chrome"] .window__body{ background:#fff; font-family:var(--cr-font); }
+
+/* ---- tab strip ---- */
+.window[data-id="chrome"] .cr-tabs{ gap:0; padding:8px 8px 0; background:var(--cr-strip); align-items:flex-end; }
+.window[data-id="chrome"] .cr-tabs__list{ gap:0; padding:0 8px; margin:0 -8px; }
+.window[data-id="chrome"] .cr-tab{
+  position:relative; flex:0 1 240px; width:240px; max-width:240px; min-width:72px; height:34px; margin:0; padding:0 6px 0 12px; gap:8px;
+  border-radius:8px 8px 0 0; background:transparent; box-shadow:none; color:var(--cr-mute); font:12px/1 var(--cr-font);
+}
+.window[data-id="chrome"] .cr-tab:hover:not(.is-active){ background:rgba(255,255,255,.5); }
+.window[data-id="chrome"] .cr-tab.is-active{ height:34px; margin:0; background:#fff; color:var(--cr-text); z-index:1; }
+.window[data-id="chrome"] .cr-tab.is-active::before,
+.window[data-id="chrome"] .cr-tab.is-active::after{ content:""; position:absolute; bottom:0; width:8px; height:8px; }
+.window[data-id="chrome"] .cr-tab.is-active::before{ left:-8px; border-bottom-right-radius:8px; box-shadow:4px 4px 0 4px #fff; }
+.window[data-id="chrome"] .cr-tab.is-active::after{ right:-8px; border-bottom-left-radius:8px; box-shadow:-4px 4px 0 4px #fff; }
+.window[data-id="chrome"] .cr-tab img,
+.window[data-id="chrome"] .cr-tab svg.pix{ width:16px; height:16px; }
+.window[data-id="chrome"] .cr-tab > button{ display:none; flex-shrink:0; width:18px; height:18px; border-radius:50%; color:var(--cr-mute); background:none; box-shadow:none; }
+.window[data-id="chrome"] .cr-tab:hover > button,
+.window[data-id="chrome"] .cr-tab.is-active > button,
+.window[data-id="chrome"] .cr-tab > button:focus-visible{ display:grid; }
+.window[data-id="chrome"] .cr-tab > button:hover{ background:var(--cr-line); color:var(--cr-text); box-shadow:none; }
+.window[data-id="chrome"] .cr-tab > button svg{ transform:none; width:8px; height:8px; }
+.window[data-id="chrome"].is-loading .cr-tab.is-active img{ animation:spin .9s linear infinite; }
+.window[data-id="chrome"] .cr-tabs__new{
+  display:grid; place-items:center; flex-shrink:0; width:28px; height:28px; margin:0 0 3px 4px; padding:0; border-radius:50%;
+  background:none; box-shadow:none; color:var(--cr-mute);
+}
+.window[data-id="chrome"] .cr-tabs__new:hover{ background:rgba(60,64,67,.12); }
+.window[data-id="chrome"] .cr-tabs__new:active{ box-shadow:none; background:rgba(60,64,67,.2); }
+
+/* ---- toolbar: one row of round icon buttons + omnibox ---- */
+.window[data-id="chrome"] .cr-bar{
+  display:flex; align-items:center; gap:4px; padding:6px 8px; background:#fff; flex-shrink:0;
+  font:12px var(--cr-font); color:var(--cr-mute); position:relative; z-index:1;
+}
+.window[data-id="chrome"] .cr-ico{
+  display:grid; place-items:center; flex-shrink:0; width:28px; height:28px; padding:0; border:0; border-radius:50%;
+  background:none; box-shadow:none; color:var(--cr-mute);
+}
+.window[data-id="chrome"] .cr-ico:hover:not(:disabled){ background:var(--cr-hover); }
+.window[data-id="chrome"] .cr-ico:active:not(:disabled){ background:rgba(60,64,67,.16); box-shadow:none; padding:0; }
+.window[data-id="chrome"] .cr-ico:disabled{ color:#bdc1c6; }
+.window[data-id="chrome"] .cr-svg{ display:block; }
+.window[data-id="chrome"] .cr-ico:focus-visible, .window[data-id="chrome"] .cr-tabs__new:focus-visible{ outline:2px solid #1a73e8; outline-offset:-2px; }
+.window[data-id="chrome"] .addressbar{
+  flex:1; min-width:0; display:flex; align-items:center; gap:8px; padding:0 14px; height:30px; border-radius:15px;
+  background:#f1f3f4; box-shadow:none; color:var(--cr-mute);
+}
+.window[data-id="chrome"] .addressbar:hover{ background:#e8eaed; }
+.window[data-id="chrome"] .addressbar:focus-within{ background:#fff; box-shadow:0 0 0 2px #1a73e8; }
+.window[data-id="chrome"] .addressbar .ui-i{ flex-shrink:0; }
+.window[data-id="chrome"] .addressbar__input{
+  flex:1; min-width:0; width:100%; height:100%; padding:0; border:0; border-radius:0; background:none; box-shadow:none;
+  font:14px var(--cr-font); color:var(--cr-text);
+}
+.window[data-id="chrome"] .addressbar__input:focus, .window[data-id="chrome"] .addressbar__input:focus-visible{ outline:none; }
+.window[data-id="chrome"] .addressbar__input::placeholder{ color:var(--cr-mute); }
+.window[data-id="chrome"] .cr-year{ display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:4px; font:12px var(--cr-font); color:var(--cr-mute); }
+.window[data-id="chrome"] .cr-year select{
+  height:26px; padding:0 6px; border:1px solid var(--cr-line); border-radius:13px; background:#fff; box-shadow:none;
+  font:12px var(--cr-font); color:var(--cr-mute);
+}
+.window[data-id="chrome"] .cr-year select:focus{ outline:none; border-color:#1a73e8; }
+
+/* ---- bookmarks bar ---- */
+.window[data-id="chrome"] .cr-bookmarks{
+  gap:2px; padding:3px 8px; background:#fff; box-shadow:none; border-bottom:1px solid var(--cr-line); position:relative; z-index:1;
+}
+.window[data-id="chrome"] .cr-bookmarks button{
+  gap:6px; padding:4px 8px; border-radius:4px; background:none; box-shadow:none; font:12px var(--cr-font); color:var(--cr-text);
+}
+.window[data-id="chrome"] .cr-bookmarks button:hover{ background:var(--cr-hover); box-shadow:none; }
+.window[data-id="chrome"] .cr-bookmarks button:active{ background:rgba(60,64,67,.16); box-shadow:none; }
+.window[data-id="chrome"] .cr-bookmarks .cr-svg{ color:#9aa0a6; flex-shrink:0; }
+
+/* ---- page area: flat, no sunken frame ---- */
+.window[data-id="chrome"] .browser__view{ margin:0; padding:0; box-shadow:none; background:#fff; }
+.window[data-id="chrome"].is-loading .browser__doc{ opacity:1; }
+
+/* ---- new tab page ---- */
+.window[data-id="chrome"] .nt{ min-height:100%; padding:40px 20px 24px; background:#fff; font-family:var(--cr-font); }
+.window[data-id="chrome"] .nt__logo{
+  display:flex; font:400 64px/1 "Product Sans","Google Sans",Arial,"Helvetica Neue",sans-serif; letter-spacing:-2px; margin-bottom:26px; user-select:none;
+}
+.window[data-id="chrome"] .nt__logo i{ font-style:normal; }
+.window[data-id="chrome"] .nt__logo i:nth-child(1), .window[data-id="chrome"] .nt__logo i:nth-child(4){ color:#4285f4; }
+.window[data-id="chrome"] .nt__logo i:nth-child(2), .window[data-id="chrome"] .nt__logo i:nth-child(6){ color:#ea4335; }
+.window[data-id="chrome"] .nt__logo i:nth-child(3){ color:#fbbc05; }
+.window[data-id="chrome"] .nt__logo i:nth-child(5){ color:#34a853; }
+.window[data-id="chrome"] .nt__search{ position:relative; display:block; width:min(584px,92%); }
+.window[data-id="chrome"] .nt__search .ui-i{ position:absolute; left:16px; top:12px; color:#9aa0a6; pointer-events:none; }
+.window[data-id="chrome"] .nt__search .field{
+  display:block; width:100%; height:44px; padding:0 20px 0 48px; border:1px solid #dfe1e5; border-radius:22px; background:#fff; box-shadow:none;
+  font:16px var(--cr-font); color:var(--cr-text);
+}
+.window[data-id="chrome"] .nt__search .field::placeholder{ color:var(--cr-mute); }
+.window[data-id="chrome"] .nt__search .field:hover,
+.window[data-id="chrome"] .nt__search .field:focus{ border-color:transparent; box-shadow:0 1px 6px rgba(32,33,36,.28); }
+.window[data-id="chrome"] .nt__tiles{
+  display:grid; grid-template-columns:repeat(auto-fit,112px); justify-content:center; gap:0; width:100%; max-width:560px; margin-top:36px;
+}
+.window[data-id="chrome"] .nt__tile{
+  display:flex; flex-direction:column; align-items:center; gap:8px; padding:8px 0; border-radius:8px; background:none; box-shadow:none;
+  font:12px var(--cr-font); color:var(--cr-text); text-decoration:none;
+}
+.window[data-id="chrome"] .nt__tile:hover{ background:var(--cr-hover); }
+.window[data-id="chrome"] .nt__tile:active{ background:rgba(60,64,67,.16); box-shadow:none; }
+.window[data-id="chrome"] .nt__fav{
+  display:grid; place-items:center; width:48px; height:48px; border-radius:50%; background:#f1f3f4;
+  font:500 20px/1 Arial,"Helvetica Neue",sans-serif;
+}
+.window[data-id="chrome"] .nt__fav img, .window[data-id="chrome"] .nt__fav svg.pix{ width:24px; height:24px; }
+.window[data-id="chrome"] .nt__lbl{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 4px; }
+
+/* narrow screens: let the toolbar breathe */
+@media (max-width:700px){
+  .window[data-id="chrome"] .cr-year > span{ display:none; }
+  .window[data-id="chrome"] .nt__logo{ font-size:52px; }
+}

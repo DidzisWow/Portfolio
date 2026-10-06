@@ -1161,10 +1161,9 @@ const PAGES = {
     </div>`;
   },
   newtab: () => `<div class="nt">
-      <div class="nt__logo"><span>Chrome</span><b>98</b></div>
-      <form class="nt__search" data-form="search"><input class="field" name="q" placeholder="Search, or type a website like google.com" aria-label="Search"><button class="btn" type="submit">Search</button></form>
-      <div class="nt__tiles">${CR_TILES.map(([label, url, ic, app]) => `<a class="nt__tile" ${app ? `data-app="${app}"` : `data-go="${esc(url)}"`}>${icon(ic, 32)}<span>${esc(label)}</span></a>`).join("")}</div>
-      <p class="nt__tip">Type any website (like <b>google.com</b>) to see how it looked back in the day. Pick the year in the toolbar.<br>Middle-click a link to open it in a new tab.</p>
+      <div class="nt__logo" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></div>
+      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search, or type a website like google.com" aria-label="Search" autocomplete="off" spellcheck="false"></form>
+      <div class="nt__tiles">${CR_TILES.map(([label, url, ic, app, col]) => `<a class="nt__tile" ${app ? `data-app="${app}"` : `data-go="${esc(url)}"`}><span class="nt__fav"${col ? ` style="color:${col}"` : ""}>${col ? esc(label[0]) : icon(ic, 24)}</span><span class="nt__lbl">${esc(label)}</span></a>`).join("")}</div>
     </div>`,
   github: url => `<div class="ie-page">
       <h1>Opening GitHub...</h1>
@@ -1199,20 +1198,29 @@ const PAGES = {
 const PAGE_TITLES = { web: "Time Machine", newtab: "New Tab", home: `${NAME}'s Homepage`, about: "About Me", guestbook: "Guestbook", links: "Cool Links", search: "AltaVista Search", youtube: "YouTube", github: "GitHub", error: "Cannot find server", "404": "404 Not Found", blank: "about:blank" };
 
 const CR_BOOKMARKS = () => [
-  ["My Homepage", HOME, "about"],
-  ["Guestbook", HOME + "guestbook.html", "skills"],
-  ["Cool Links", HOME + "links.html", "projects"],
+  ["My Homepage", HOME, "page"],
+  ["Guestbook", HOME + "guestbook.html", "page"],
+  ["Cool Links", HOME + "links.html", "page"],
   ["YouTube", "http://www.youtube.com", "youtube"],
   ["GitHub", GITHUB_URL || "http://www.github.com", "github"],
-  ["AltaVista", "http://www.altavista.com", "chrome"],
+  ["AltaVista", "http://www.altavista.com", "page"],
 ];
+// Chrome toolbar glyphs (flat Material paths), kept local to the Chrome app
+const CR_PATHS = {
+  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
+  fwd: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+  reload: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z",
+  page: "M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm7 7V3.5L18.5 9z",
+};
+const crIco = (name, size = 20) => `<svg class="cr-svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${CR_PATHS[name]}"/></svg>`;
+const crBmIcon = ic => CR_PATHS[ic] ? crIco(ic, 16) : icon(ic, 16);
 const CR_TILES = [
-  ["My Homepage", HOME, "about"],
-  ["Google, 1998", "http://www.google.com", "chrome"],
-  ["Yahoo!", "http://www.yahoo.com", "chrome"],
-  ["Space Jam", "http://www.spacejam.com", "chrome"],
-  ["Apple", "http://www.apple.com", "chrome"],
-  ["Amazon", "http://www.amazon.com", "chrome"],
+  ["My Homepage", HOME, "about", "", "#1a73e8"],
+  ["Google, 1998", "http://www.google.com", "chrome", "", "#4285f4"],
+  ["Yahoo!", "http://www.yahoo.com", "chrome", "", "#720e9e"],
+  ["Space Jam", "http://www.spacejam.com", "chrome", "", "#1a237e"],
+  ["Apple", "http://www.apple.com", "chrome", "", "#5f6368"],
+  ["Amazon", "http://www.amazon.com", "chrome", "", "#ff9900"],
   ["YouTube", "http://www.youtube.com", "youtube"],
   ["GitHub", "http://www.github.com", "github"],
   ["Discord", "", "discord", "discord"],
@@ -1220,23 +1228,19 @@ const CR_TILES = [
 function openChrome(o = {}) {
   const had = WM.has("chrome");
   const w = WM.open("chrome", {
-    title: "Chrome 98", icon: "chrome", w: 720, h: 520, from: o.from, status: ["Done"],
+    title: "Chrome 98", icon: "chrome", w: 800, h: 600, from: o.from, status: ["Done"],
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `
-        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New Tab">+</button></div>
-        <div class="toolbar">
-          <button type="button" class="tool-btn" data-nav="back" title="Back">${G.back}<span>Back</span></button>
-          <button type="button" class="tool-btn" data-nav="fwd" title="Forward">${G.fwd}<span>Forward</span></button>
-          <button type="button" class="tool-btn" data-nav="stop" title="Stop"><span style="color:#c00;display:flex">${G.close}</span><span>Stop</span></button>
-          <button type="button" class="tool-btn" data-nav="reload" title="Refresh">${G.reload}<span>Refresh</span></button>
-          <button type="button" class="tool-btn" data-nav="home" title="Home">${G.home}<span>Home</span></button>
-          <span class="toolbar__sep"></span>
-          <label class="cr-year" title="Which year the Time Machine shows websites from">Year<select class="field">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
-          <span class="browser__throbber">${icon("chrome", 22)}</span>
+        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New Tab" aria-label="New Tab">${ui("plus", 18)}</button></div>
+        <div class="cr-bar">
+          <button type="button" class="cr-ico" data-nav="back" title="Back" aria-label="Back">${crIco("back")}</button>
+          <button type="button" class="cr-ico" data-nav="fwd" title="Forward" aria-label="Forward">${crIco("fwd")}</button>
+          <button type="button" class="cr-ico" data-nav="reload" title="Reload" aria-label="Reload">${crIco("reload")}</button>
+          <form class="addressbar cr-omni">${ui("search", 16)}<input id="addr-chrome" class="addressbar__input" spellcheck="false" autocomplete="off" placeholder="Search or type a URL" aria-label="Address and search bar"></form>
+          <label class="cr-year" title="Which year the Time Machine shows websites from. Type any website (like google.com) to see how it looked back in the day."><span>Year</span><select class="field">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
         </div>
-        <form class="addressbar"><label for="addr-chrome">Address</label><input id="addr-chrome" class="field addressbar__input" spellcheck="false" autocomplete="off"><button class="btn btn--sm" type="submit">Go</button></form>
-        <div class="cr-bookmarks">${CR_BOOKMARKS().map(([label, url, ic]) => `<button type="button" data-go="${esc(url)}" title="${esc(url)}">${icon(ic, 16)}<span>${esc(label)}</span></button>`).join("")}</div>
+        <div class="cr-bookmarks">${CR_BOOKMARKS().map(([label, url, ic]) => `<button type="button" data-go="${esc(url)}" title="${esc(url)}">${crBmIcon(ic)}<span>${esc(label)}</span></button>`).join("")}</div>
         <div class="browser__view sunken-box"><div class="browser__doc"></div></div>`;
       const input = $(".addressbar__input", body), doc = $(".browser__doc", body), view = $(".browser__view", body), list = $(".cr-tabs__list", body);
       const bBack = $('[data-nav="back"]', body), bFwd = $('[data-nav="fwd"]', body);
@@ -1244,7 +1248,7 @@ function openChrome(o = {}) {
       let active = null, tid = 0;
       const sync = () => { bBack.disabled = !active || active.idx <= 0; bFwd.disabled = !active || active.idx >= active.hist.length - 1; };
       const drawTabs = () => {
-        list.innerHTML = tabs.map(t => `<div class="cr-tab${t === active ? " is-active" : ""}" data-tab="${t.id}" role="tab" title="${esc(t.title)}">${icon(t.icon || "chrome", 16)}<span>${esc(t.title)}</span><button type="button" data-close="${t.id}" aria-label="Close tab">${G.close}</button></div>`).join("");
+        list.innerHTML = tabs.map(t => `<div class="cr-tab${t === active ? " is-active" : ""}" data-tab="${t.id}" role="tab" title="${esc(t.title)}">${icon(t.icon || "chrome", 16)}<span>${esc(t.title)}</span><button type="button" data-close="${t.id}" aria-label="Close tab"><svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button></div>`).join("");
       };
       const showTitle = () => win.setTitle(`${active.title} - Chrome 98`);
       // archived pages load inside an iframe: show progress until it finishes
@@ -1339,7 +1343,7 @@ function openChrome(o = {}) {
         if (active && routeOf(active.hist[active.idx] || "") === "web") load(active, active.hist[active.idx]);
       });
       $(".addressbar", body).addEventListener("submit", e => { e.preventDefault(); navigate(input.value); });
-      $$(".toolbar [data-nav]", body).forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
+      $$(".cr-bar [data-nav]", body).forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
       $(".cr-bookmarks", body).addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { if (e.ctrlKey || e.metaKey) newTab(b.dataset.go, false); else navigate(b.dataset.go); } });
       const follow = (e, background) => {
         const t = e.target.closest("[data-go],[data-app],[data-nav],[data-project]");
@@ -1376,15 +1380,8 @@ function openChrome(o = {}) {
       doc.addEventListener("pointerout", e => {
         if (e.target.closest("[data-go], a[href]") && !win.el.classList.contains("is-loading")) win.setStatus(["Done"]);
       });
-      newTab(o.url || HOME);
+      newTab(o.url || "chrome://newtab");
     },
-    menu: win => [
-      { label: "File", items: [{ label: "New Tab", action: () => win.newTab() }, { sep: true }, { label: "Close", action: () => win.close() }] },
-      { label: "View", items: [{ label: "Refresh", action: () => win.nav("reload") }, { label: "Stop", action: () => win.nav("stop") }] },
-      { label: "Go", items: [{ label: "Back", action: () => win.nav("back") }, { label: "Forward", action: () => win.nav("fwd") }, { sep: true }, { label: "Home Page", action: () => win.nav("home") }, { label: "Search the Web", action: () => win.navigate("http://www.altavista.com") }] },
-      { label: "Favorites", items: CR_BOOKMARKS().map(([label, url]) => ({ label, action: () => win.navigate(url) })) },
-      { label: "Help", items: [{ label: "About Chrome 98", action: () => msgBox({ title: "About Chrome 98", icon: "info", text: "Chrome 98\nVersion 0.98 (Dial-up Edition)\n\nNow with tabs, frames, tables and blinking text." }) }] },
-    ],
   });
   if (had && o.url && w.newTab) w.newTab(o.url);
 }
