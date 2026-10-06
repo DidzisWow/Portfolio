@@ -2,114 +2,99 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portfolio</title>
-<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows 98</title>
+<link rel="icon" href="images/about.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- BOOT SEQUENCE -->
-  <div id="bootScreen">
-    <div id="biosText"></div>
-    <div class="skip-hint">click anywhere to skip</div>
+<!-- Tints selected desktop icons navy, like real Windows -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="sel"><feColorMatrix type="matrix" values="0.5 0 0 0 0  0 0.5 0 0 0  0 0 0.5 0 0.25  0 0 0 1 0"/></filter>
+</svg>
+
+<!-- ============ DESKTOP ============ -->
+<div id="desktop" class="desktop" data-bg="teal">
+  <div id="deskSky" class="desktop__sky" aria-hidden="true"></div>
+  <div id="desktopIcons" class="desktop__icons" aria-label="Desktop"></div>
+  <div id="windows" class="windows"><div id="dither" class="dither" hidden></div></div>
+  <div id="startHint" class="start-hint" hidden>Click here to begin.</div>
+  <div id="startMenu" class="start-menu" hidden></div>
+
+  <footer class="taskbar">
+    <button type="button" id="startBtn" class="start-btn" aria-haspopup="true" aria-expanded="false">
+      <span class="flag flag--sm" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Start
+    </button>
+    <span class="taskbar__grip" aria-hidden="true"></span>
+    <div id="quickLaunch" class="quick-launch"></div>
+    <span class="taskbar__grip" aria-hidden="true"></span>
+    <div id="taskButtons" class="task-buttons"></div>
+    <div class="tray">
+      <button type="button" id="trayVol" class="tray__btn" title="Volume"></button>
+      <button type="button" id="clock" class="tray__btn tray__clock"></button>
+    </div>
+  </footer>
+</div>
+
+<div id="selectBox" class="select-box" hidden></div>
+
+<!-- ============ BOOT ============ -->
+<div id="boot" class="boot">
+  <div id="bios" class="bios">
+    <div class="bios__badge" aria-hidden="true"><span>Award</span><small>Energy Star Ally</small></div>
+    <pre id="biosText" class="bios__text"></pre>
+    <div class="bios__foot">
+      <span>Press <b>DEL</b> to enter SETUP</span>
+      <span>Click or press any key to skip</span>
+    </div>
   </div>
-
-  <div id="win95Splash">
-    <div class="win95-logo">
-      <div class="win95-flag"><span></span><span></span><span></span><span></span></div>
-      <div class="win95-wordmark">Windows<span>96</span></div>
+  <div id="splash" class="splash" hidden>
+    <div class="splash__sky sky-host"></div>
+    <div class="splash__logo">
+      <div class="flag flag--lg" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="splash__words">
+        <span class="splash__ms">Microsoft<sup>&reg;</sup></span>
+        <span class="splash__product"><b>Windows</b><span>98</span></span>
+      </div>
     </div>
-    <div class="win95-progress"><div class="win95-progress__bar"></div></div>
-    <div class="win95-copyright">Starting Windows&hellip;</div>
+    <div class="splash__bar"></div>
   </div>
+</div>
 
-  <!-- DESKTOP -->
-  <div id="desktop">
-    <div class="wallpaper">
-      <div class="ray ray1"></div>
-      <div class="ray ray2"></div>
-      <div class="ray ray3"></div>
-      <div class="ray ray4"></div>
-    </div>
-
-    <div class="desktop-icons">
-      <div class="icon" data-window="about">
-        <div class="icon__img" data-icon-key="about"><img alt="About"><span class="icon__plus">+</span></div>
-        <div class="icon__label">About</div>
-      </div>
-      <div class="icon" data-window="skills">
-        <div class="icon__img" data-icon-key="skills"><img alt="Skills"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Skills</div>
-      </div>
-      <div class="icon" data-window="projects">
-        <div class="icon__img" data-icon-key="projects"><img alt="Projects"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Projects</div>
-      </div>
-      <div class="icon" data-window="contact">
-        <div class="icon__img" data-icon-key="contact"><img alt="Contact"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Contact</div>
-      </div>
-      <div class="icon" data-window="chrome">
-        <div class="icon__img" data-icon-key="chrome"><img alt="Chrome"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Chrome</div>
-      </div>
-      <div class="icon" data-window="youtube">
-        <div class="icon__img" data-icon-key="youtube"><img alt="YouTube"><span class="icon__plus">+</span></div>
-        <div class="icon__label">YouTube</div>
-      </div>
-      <div class="icon icon--static">
-        <div class="icon__img" data-icon-key="discord"><img alt="Discord"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Discord</div>
-      </div>
-      <div class="icon icon--static">
-        <div class="icon__img" data-icon-key="github"><img alt="GitHub"><span class="icon__plus">+</span></div>
-        <div class="icon__label">GitHub</div>
-      </div>
-      <div class="icon icon--static">
-        <div class="icon__img" data-icon-key="terminal"><img alt="Terminal"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Terminal</div>
-      </div>
-      <div class="icon icon--static">
-        <div class="icon__img" data-icon-key="bin"><img alt="Recycle Bin"><span class="icon__plus">+</span></div>
-        <div class="icon__label">Recycle Bin</div>
+<!-- ============ SHUT DOWN ============ -->
+<div id="off" class="off" hidden>
+  <div class="off__screen">
+    <div class="off__logo">
+      <div class="flag flag--lg" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="splash__words">
+        <span class="splash__ms">Microsoft<sup>&reg;</sup></span>
+        <span class="splash__product"><b>Windows</b><span>98</span></span>
       </div>
     </div>
-
-    <!-- Windows get created in here by script.js -->
-    <div id="windowsLayer"></div>
-
-    <!-- START MENU -->
-    <div class="start-menu" id="startMenu">
-      <div class="start-menu__side">PORTFOLIO</div>
-      <ul>
-        <li data-window="about">About Me</li>
-        <li data-window="skills">Skills</li>
-        <li data-window="projects">Projects</li>
-        <li data-window="contact">Contact</li>
-        <li data-window="chrome">Chrome (1998)</li>
-        <li data-window="youtube">YouTube</li>
-        <li class="divider"></li>
-        <li id="shutdownBtn">Shut Down...</li>
-      </ul>
-    </div>
-
-    <!-- TASKBAR -->
-    <div class="taskbar">
-      <button class="start-btn" id="startBtn"><span class="start-btn__orb"></span>Start</button>
-      <div class="taskbar__windows" id="taskbarWindows"></div>
-      <div class="taskbar__clock" id="clock"></div>
-    </div>
-
+    <p class="off__msg">Windows is shutting down...</p>
+    <div class="splash__bar"></div>
   </div>
-
-  <!-- SHUTDOWN EASTER EGG -->
-  <div id="shutdownScreen">
-    <p>It's now safe to turn off your computer.</p>
-    <button id="restartBtn" class="win95-btn">Restart</button>
+  <div class="off__glow"></div>
+  <div class="off__dark" title="Click anywhere to turn the computer back on">
+    <div class="off__glass"></div>
+    <div class="off__badge"><span class="off__led"></span></div>
   </div>
+  <div class="off__flash"></div>
+</div>
 
-  <script src="content.js"></script>
-  <script src="script.js"></script>
+<!-- ============ "CRASH" (easter egg) ============ -->
+<div id="bsod" class="bsod" hidden>
+  <p class="bsod__title"><span>Windows</span></p>
+  <p>A fatal exception 0E has occurred at 0028:C0011E36 in VXD VMM(01) + 00010E36. The current application will be terminated.</p>
+  <p>*&nbsp; Press any key to terminate the current application.<br>*&nbsp; Press CTRL+ALT+DEL again to restart your computer. You will lose any unsaved information in all applications.</p>
+  <p class="bsod__center">Press any key to continue <span class="bsod__cursor">_</span></p>
+</div>
+
+<script src="content.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
