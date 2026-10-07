@@ -1,1 +1,68 @@
-/* system polish (loaded after style.css) */
+/* system polish: boot, desktop, Start menu, taskbar, menus, title bars, MS-DOS Prompt, Notepad (loaded after style.css) */
+
+/* ---------- Boot: Award BIOS screen ---------- */
+.bios{ color:#a8a8a8; }
+.bios::after{
+  content:"11/09/98-i440BX-W83977-2A69KP19C-00"; position:absolute; left:28px; bottom:50px;
+  white-space:pre; color:#a8a8a8;
+}
+.bios__badge{ border-color:#1aa078; color:#2cc79a; background:#000; }
+.bios__foot b{ color:#fff; }
+
+/* ---------- Desktop icons: flat, crisp labels like the real shell ---------- */
+.desk-icon__label{ text-shadow:1px 1px 0 #000; padding:1px 3px; }
+.desk-icon__img img, .desk-icon__img svg{ image-rendering:pixelated; }
+.desk-icon.is-selected .desk-icon__label,
+.desk-icon:focus-visible .desk-icon__label{ outline:1px dotted #fff; outline-offset:0; }
+.desk-icon.is-selected .desk-icon__label{ background:var(--navy); text-shadow:none; }
+
+/* ---------- Title bars + caption buttons ---------- */
+.title-bar{ height:18px; }
+.title-bar__text{ letter-spacing:0; }
+.window:not(.is-active) .title-bar{ color:#c0c0c0; }
+.tb-btn{ width:16px; height:14px; }
+.tb-btn:active svg{ transform:translate(1px,1px); }
+.tb-btn--close{ margin-left:2px; }
+
+/* ---------- Menus: instant like Win98, tighter rows ---------- */
+.menu{ animation:none; padding:2px; }
+.menu__item{ min-height:18px; padding:2px 20px 2px 4px; }
+.menu__item--icon{ min-height:22px; }
+.menu__sep{ margin:3px 1px; }
+.menubar{ padding:1px 0 1px; }
+.menubar__item{ padding:2px 6px; }
+
+/* ---------- Start menu ---------- */
+.start-menu{ padding:2px; }
+.start-menu__items{ min-width:200px; }
+.start-menu__banner{ width:22px; margin-right:1px; }
+.sm-item{ height:36px; padding:0 24px 0 4px; }
+.sm-item:hover, .sm-item.is-open{ background:var(--navy); color:#fff; }
+.sm-arrow svg{ width:4px; height:7px; }
+.sm-sep{ margin:2px 1px; }
+
+/* ---------- Taskbar ---------- */
+.start-btn{ height:22px; padding:0 6px 0 3px; font-weight:bold; }
+.start-btn.is-pressed{ background:var(--surface); }
+.task-btn{ height:22px; }
+.task-btn.is-pressed{ box-shadow:var(--pressed); }
+.tray{ height:22px; gap:5px; padding:0 7px 0 5px; box-shadow:var(--thin-in); }
+
+/* ---------- MS-DOS Prompt: a real console window with its toolbar ---------- */
+.window[data-id="terminal"] .window__body::before{
+  content:""; flex:0 0 28px; height:28px;
+  background:#c0c0c0 url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%2228%22 shape-rendering=%22crispEdges%22%3E%3Crect x=%224%22 y=%223%22 width=%2252%22 height=%2222%22 fill=%22%23fff%22/%3E%3Cpath d=%22M4.5 24.5V3.5H55.5%22 fill=%22none%22 stroke=%22%23808080%22/%3E%3Cpath d=%22M5.5 23.5V4.5H54.5%22 fill=%22none%22 stroke=%22%230a0a0a%22/%3E%3Cpath d=%22M55.5 3.5V24.5H4.5%22 fill=%22none%22 stroke=%22%23fff%22/%3E%3Crect x=%2238%22 y=%225%22 width=%2216%22 height=%2218%22 fill=%22%23c0c0c0%22/%3E%3Cpath d=%22M38.5 22.5V5.5H53.5%22 fill=%22none%22 stroke=%22%23fff%22/%3E%3Cpath d=%22M53.5 5.5V22.5H38.5%22 fill=%22none%22 stroke=%22%230a0a0a%22/%3E%3Cpath d=%22M52.5 6.5V21.5H39.5%22 fill=%22none%22 stroke=%22%23808080%22/%3E%3Cpath d=%22M42 13h8l-4 4z%22 fill=%22%23000%22/%3E%3Ctext x=%229%22 y=%2218%22 font-family=%22Tahoma,Arial,sans-serif%22 font-size=%2211%22 shape-rendering=%22auto%22%3EAuto%3C/text%3E%3Cpath d=%22M62.5 3V25%22 stroke=%22%23808080%22/%3E%3Cpath d=%22M63.5 3V25%22 stroke=%22%23fff%22/%3E%3Crect x=%2270.5%22 y=%228.5%22 width=%2213%22 height=%2210%22 fill=%22none%22 stroke=%22%23000%22 stroke-dasharray=%222 1%22/%3E%3Cpath d=%22M80 14l5 6%22 stroke=%22%23000%22/%3E%3Crect x=%2294.5%22 y=%226.5%22 width=%228%22 height=%2210%22 fill=%22%23fff%22 stroke=%22%23000%22/%3E%3Crect x=%2298.5%22 y=%2210.5%22 width=%228%22 height=%2210%22 fill=%22%23fff%22 stroke=%22%23000%22/%3E%3Cpath d=%22M100 13h5M100 15h5M100 17h5%22 stroke=%22%23808080%22/%3E%3Crect x=%22118.5%22 y=%227.5%22 width=%2210%22 height=%2213%22 fill=%22%23808000%22 stroke=%22%23000%22/%3E%3Crect x=%22121.5%22 y=%2211.5%22 width=%228%22 height=%229%22 fill=%22%23fff%22 stroke=%22%23000%22/%3E%3Crect x=%22121.5%22 y=%225.5%22 width=%224%22 height=%223%22 fill=%22%23c0c0c0%22 stroke=%22%23000%22/%3E%3Crect x=%22142.5%22 y=%227.5%22 width=%2214%22 height=%2212%22 fill=%22%23fff%22 stroke=%22%23000%22/%3E%3Crect x=%22143%22 y=%228%22 width=%2214%22 height=%223%22 fill=%22%23000080%22/%3E%3Cpath d=%22M145 14h3M145 14v3M154 17h-3M154 17v-3%22 stroke=%22%23000%22/%3E%3Crect x=%22166.5%22 y=%227.5%22 width=%2214%22 height=%2212%22 fill=%22%23fff%22 stroke=%22%23000%22/%3E%3Cpath d=%22M168 11h10M168 14h10M168 17h6%22 stroke=%22%23808080%22/%3E%3Crect x=%22190.5%22 y=%227.5%22 width=%2214%22 height=%2210%22 fill=%22%23008080%22 stroke=%22%23000%22/%3E%3Crect x=%22194%22 y=%2218%22 width=%226%22 height=%222%22 fill=%22%23808080%22/%3E%3Crect x=%22192%22 y=%2220%22 width=%2210%22 height=%221%22 fill=%22%23000%22/%3E%3Ctext x=%22214%22 y=%2220%22 font-family=%22Times New Roman,serif%22 font-weight=%22bold%22 font-size=%2217%22 shape-rendering=%22auto%22 fill=%22%23000%22%3EA%3C/text%3E%3Ctext x=%22223%22 y=%2220%22 font-family=%22Times New Roman,serif%22 font-weight=%22bold%22 font-size=%2210%22 shape-rendering=%22auto%22 fill=%22%23000%22%3EA%3C/text%3E%3C/svg%3E") 0 0 / 240px 28px no-repeat;
+  box-shadow:inset 0 -1px #fff, inset 0 -2px #808080;
+}
+.dos{
+  padding:1px 3px 0; color:#c0c0c0; caret-color:#c0c0c0; caret-shape:block;
+  font:19px/1.15 "VT323","Lucida Console","DejaVu Sans Mono","Courier New",monospace;
+  scrollbar-width:auto; scrollbar-color:#c0c0c0 #e4e4e4;
+}
+.dos__input{ caret-color:#c0c0c0; caret-shape:block; color:#c0c0c0; }
+.dos ::selection, .dos::selection{ background:#c0c0c0; color:#000; }
+.dos .c-white{ color:#fff; }
+
+/* ---------- Notepad ---------- */
+.notepad{ padding:1px 3px; font:13px/1.25 "Fixedsys","Lucida Console","DejaVu Sans Mono","Courier New",monospace; color:#000; }
+.notepad::selection{ background:var(--navy); color:#fff; }
