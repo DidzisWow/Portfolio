@@ -1446,7 +1446,7 @@ body.crt::before{
 .sp__backup{ margin-top:32px; }
 .sp .media-backup button, .sp .media-backup__imp{ background:none; box-shadow:inset 0 0 0 1px #727272; color:#fff; }
 .sp .media-backup button:hover, .sp .media-backup__imp:hover{ box-shadow:inset 0 0 0 1px #fff; }
-@media (max-width:760px){ .sp__side{ width:72px; } .sp__nav button span, .sp__libpanel header span:not(:first-child), .sp__lrow span:last-child, .sp__filter, .sp__libpanel header button{ display:none; } .sp__hero{ flex-direction:column; align-items:flex-start; } .sp__hero h1{ font-size:36px; } }
+@media (max-width:760px){ .sp__side{ width:72px; } .sp__libpanel header span{ font-size:0; gap:0; } .sp__libpanel header{ justify-content:center; } .sp__nav button span, .sp__lrow span:last-child, .sp__filter, .sp__libpanel header button{ display:none; } .sp__hero{ flex-direction:column; align-items:flex-start; } .sp__hero h1{ font-size:36px; } }
 .yt2__pill{ white-space:nowrap; text-decoration:none; }
 .yt2__actions{ flex-wrap:wrap; }
 .sp__hero h1{ font-size:clamp(32px,4.4vw,56px); }
