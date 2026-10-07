@@ -786,7 +786,7 @@ function saveAsDialog(name) {
 }
 function openNotepad(id, file, text, o = {}) {
   WM.open(id, {
-    title: `${file} - Notepad`, icon: "skills", w: 520, h: 370, from: o.from,
+    title: `${file} - Notepad`, icon: "notepad", w: 520, h: 370, from: o.from,
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `<textarea class="notepad" spellcheck="false" aria-label="${esc(file)}"></textarea>`;
@@ -1447,6 +1447,8 @@ function openYouTube(o = {}) {
           </div>
         </div>`;
       const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
+      // thumbnails that fail to load keep their grey box but lose the broken-image icon (error doesn't bubble, so capture it)
+      body.addEventListener("error", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-broken"); }, true);
       const drawSide = () => {
         side.innerHTML = `
           <button type="button" data-go="home">${ui("home", 20)}<span>Home</span></button>
@@ -1557,7 +1559,7 @@ function openYouTube(o = {}) {
                 <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>${v.desc ? esc(v.desc).replace(/\n/g, "<br>") : `Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.`}</div>
                 <section class="yt2__comments">
                   <h3>${cmts(v.id).length} comment${cmts(v.id).length === 1 ? "" : "s"}</h3>
-                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>
+                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>${cmts(v.id).length ? "" : `<p class="yt2__empty yt2__empty--cmt">No comments yet. Be the first to comment.</p>`}
                   ${cmts(v.id).slice().reverse().map(c => `<div class="yt2__cmt"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span><b>${esc(NAME)}</b> <small>${esc(new Date(c.ts).toLocaleDateString())}</small><br>${esc(c.t)}<br><button type="button" class="yt2__cdel" data-cdel="${c.ts}" data-vid="${esc(v.id)}">Delete</button></span></div>`).join("")}
                 </section>
               </div>
@@ -2280,7 +2282,11 @@ function openDiscord(o = {}) {
           <div class="dc__hover">${["\u{1F44D}", "\u{1F602}"].map(e => `<button type="button" data-r="${e}" data-mi="${i}" title="React">${e}</button>`).join("")}</div>
         </div>`;
       };
-      const drawLog = () => { const arr = listOf(DC.key); log.innerHTML = arr.map(msgHTML).join(""); log.scrollTop = log.scrollHeight; };
+      const drawLog = () => {
+        const arr = listOf(DC.key), dm = DC.key.startsWith("dm:"), n = DC.key.slice(3);
+        const intro = `<div class="dc__intro"><span class="dc__intro-ic"${dm ? ` style="background:${color(n)}"` : ""}>${dm ? esc(n[0] || "?") : "#"}</span><h3>${dm ? esc(n) : "Welcome to #" + esc(n) + "!"}</h3><p>${dm ? `This is the beginning of your direct message history with <b>${esc(n)}</b>.` : `This is the start of the <b>#${esc(n)}</b> channel.`}</p></div>`;
+        log.innerHTML = intro + arr.map(msgHTML).join(""); log.scrollTop = log.scrollHeight;
+      };
       const drawRail = () => {
         const home = DC.key.startsWith("dm:"), dmUnread = Object.keys(DC.unread).filter(k => k.startsWith("dm:")).reduce((a, k) => a + DC.unread[k], 0);
         const chUnread = Object.keys(DC.unread).some(k => k.startsWith("ch:") && DC.unread[k]);
@@ -2708,6 +2714,7 @@ function openGitHubApp(o = {}) {
 const SUITS = ["\u2660", "\u2665", "\u2666", "\u2663"];
 const RANKS = ["", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 const redSuit = s => s === 1 || s === 2;
+const SOL_PIPS = [0, [[.5, .5]], [[.5, 0], [.5, 1]], [[.5, 0], [.5, .5], [.5, 1]], [[0, 0], [1, 0], [0, 1], [1, 1]], [[0, 0], [1, 0], [.5, .5], [0, 1], [1, 1]], [[0, 0], [1, 0], [0, .5], [1, .5], [0, 1], [1, 1]], [[0, 0], [1, 0], [.5, .25], [0, .5], [1, .5], [0, 1], [1, 1]], [[0, 0], [1, 0], [.5, .25], [0, .5], [1, .5], [.5, .75], [0, 1], [1, 1]], [[0, 0], [1, 0], [0, 1 / 3], [1, 1 / 3], [.5, .5], [0, 2 / 3], [1, 2 / 3], [0, 1], [1, 1]], [[0, 0], [1, 0], [.5, 1 / 6], [0, 1 / 3], [1, 1 / 3], [0, 2 / 3], [1, 2 / 3], [.5, 5 / 6], [0, 1], [1, 1]]];
 function openSolitaire(o = {}) {
   WM.open("solitaire", {
     title: "Solitaire", icon: "solitaire", w: 660, h: 540, from: o.from, status: ["Score: 0", "Time: 0"],
@@ -2742,7 +2749,8 @@ function openSolitaire(o = {}) {
       const pileOf = w => w.pile === "stock" ? st.stock : w.pile === "waste" ? st.waste : w.pile === "found" ? st.found[w.i] : st.tab[w.i];
       const cardHTML = c => {
         const r = RANKS[c.r], s = SUITS[c.s], face = c.r > 10;
-        return `<span class="sol__face${redSuit(c.s) ? " is-red" : ""}"><span class="sol__corner">${r}<br>${s}</span><span class="sol__pip${face ? " sol__pip--face" : ""}">${face ? `<b>${r}</b><small>${s}</small>` : s}</span><span class="sol__corner sol__corner--b">${r}<br>${s}</span></span><span class="sol__back"></span>`;
+        const mid = face ? `<span class="sol__pip sol__pip--face"><b>${r}</b><small>${s}</small></span>` : `<span class="sol__pips${c.r === 1 ? " sol__pips--a" : ""}">${SOL_PIPS[c.r].map(([x, y]) => `<i style="left:${x * 100}%;top:${y * 100}%${y > .5 ? ";transform:translate(-50%,-50%) rotate(180deg)" : ""}">${s}</i>`).join("")}</span>`;
+        return `<span class="sol__face${redSuit(c.s) ? " is-red" : ""}"><span class="sol__corner">${r}<br>${s}</span>${mid}<span class="sol__corner sol__corner--b">${r}<br>${s}</span></span><span class="sol__back"></span>`;
       };
       const build = () => {
         board.innerHTML = `<div class="sol__slot sol__slot--stock" data-slot="stock"></div><div class="sol__slot" data-slot="waste"></div>` +
@@ -3559,9 +3567,11 @@ function openMinesweeper(o = {}) {
       let level = store.get("msLevel", "beginner");
       if (!MS_LEVELS[level] || (isMobile() && level === "expert")) level = "beginner";
       let W, H, M, cells, started, over, flags, opened, t, timer = null;
-      body.innerHTML = `<div class="ms"><div class="ms__top"><span class="ms__led" data-led="mines">010</span><button type="button" class="ms__face" aria-label="New game"></button><span class="ms__led" data-led="time">000</span></div><div class="ms__grid" role="grid" aria-label="Minefield"></div></div>`;
+      body.innerHTML = `<div class="ms"><div class="ms__top"><span class="ms__led" data-led="mines" role="img"></span><button type="button" class="ms__face" aria-label="New game"></button><span class="ms__led" data-led="time" role="img"></span></div><div class="ms__grid" role="grid" aria-label="Minefield"></div></div>`;
       const grid = $(".ms__grid", body), face = $(".ms__face", body), ledM = $('[data-led="mines"]', body), ledT = $('[data-led="time"]', body);
       const led = n => n < 0 ? "-" + String(Math.min(99, -n)).padStart(2, "0") : String(Math.min(999, n)).padStart(3, "0");
+      const SEG = ["abcdef", "bc", "abdeg", "abcdg", "bcfg", "acdfg", "acdefg", "abc", "abcdefg", "abcdfg"], SEGP = { a: "3,1 4,0 9,0 10,1 9,2 4,2", b: "11,3 12,2 13,3 13,9 12,10 11,9", c: "11,13 12,12 13,13 13,19 12,20 11,19", d: "3,21 4,20 9,20 10,21 9,22 4,22", e: "0,13 1,12 2,13 2,19 1,20 0,19", f: "0,3 1,2 2,3 2,9 1,10 0,9", g: "3,11 4,10 9,10 10,11 9,12 4,12" };
+      const setLed = (el, n) => { el.innerHTML = led(n).split("").map(ch => `<svg width="13" height="23" viewBox="0 0 13 23" shape-rendering="crispEdges" aria-hidden="true">${(ch === "-" ? "g" : SEG[+ch]).split("").map(k => `<polygon points="${SEGP[k]}"/>`).join("")}</svg>`).join(""); el.setAttribute("aria-label", led(n)); };
       const setFace = k => { face.innerHTML = pixelSvg(PIX[k], 17); };
       const nbrs = i => { const x = i % W, y = (i / W) | 0, out = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < W && ny < H) out.push(ny * W + nx); } return out; };
       const stopTimer = () => { clearInterval(timer); timer = null; };
@@ -3580,7 +3590,7 @@ function openMinesweeper(o = {}) {
         ({ w: W, h: H, m: M } = MS_LEVELS[level]);
         cells = Array.from({ length: W * H }, () => ({ mine: false, open: false, flag: false, n: 0 }));
         started = false; over = false; flags = 0; opened = 0; t = 0; stopTimer();
-        ledM.textContent = led(M); ledT.textContent = led(0); setFace("smile");
+        setLed(ledM, M); setLed(ledT, 0); setFace("smile");
         grid.style.gridTemplateColumns = `repeat(${W},16px)`;
         grid.innerHTML = cells.map((_, i) => `<div class="ms__c" data-i="${i}"></div>`).join("");
         if (lv) WM.clamp(win);
@@ -3602,13 +3612,13 @@ function openMinesweeper(o = {}) {
       };
       const lose = i => {
         over = true; stopTimer(); setFace("dead"); Sound.play("boom");
-        cells.forEach((c, j) => { if (c.mine && !c.flag) { c.open = true; draw(j); } else if (!c.mine && c.flag) cellEl(j).classList.add("is-wrong"); });
+        cells.forEach((c, j) => { if (c.mine && !c.flag) { c.open = true; draw(j); } else if (!c.mine && c.flag) { const e = cellEl(j); e.className = "ms__c is-open is-wrong"; e.innerHTML = pixelSvg(PIX.mine, 11); } });
         cellEl(i).classList.add("is-boom");
       };
       const won = () => {
         over = true; stopTimer(); setFace("cool"); Sound.play("win");
         cells.forEach((c, j) => { if (c.mine && !c.flag) { c.flag = true; draw(j); } });
-        ledM.textContent = led(0);
+        setLed(ledM, 0);
         const best = store.get("msBest", {});
         if (!best[level] || t < best[level].t) {
           best[level] = { t, name: FIRST };
@@ -3621,8 +3631,8 @@ function openMinesweeper(o = {}) {
         const c = cells[i];
         if (over || c.open || c.flag) return;
         if (!started) {
-          started = true; plant(i); t = 1; ledT.textContent = led(1);
-          timer = setInterval(() => { t = Math.min(999, t + 1); ledT.textContent = led(t); }, 1000);
+          started = true; plant(i); t = 1; setLed(ledT, 1);
+          timer = setInterval(() => { t = Math.min(999, t + 1); setLed(ledT, t); }, 1000);
         }
         if (c.mine) { c.open = true; draw(i); lose(i); return; }
         flood(i); check();
@@ -3639,7 +3649,7 @@ function openMinesweeper(o = {}) {
         const c = cells[i];
         if (over || c.open) return;
         c.flag = !c.flag; flags += c.flag ? 1 : -1;
-        ledM.textContent = led(M - flags); draw(i);
+        setLed(ledM, M - flags); draw(i);
       };
       let pressTimer = 0, longPressed = false, downI = -1;
       grid.addEventListener("contextmenu", e => e.preventDefault());
@@ -3688,7 +3698,7 @@ const PAINT_TOOLS = [["picker", "Pick Color"], ["fill", "Fill With Color"], ["pe
 function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 function openPaint(o = {}) {
   WM.open("paint", {
-    title: "untitled - Paint", icon: "paint", w: 680, h: 510, from: o.from, status: ["For Help, click Help Topics on the Help Menu.", ""],
+    title: "untitled - Paint", icon: "paint", w: 680, h: 510, from: o.from, status: ["For Help, click Help Topics on the Help Menu.", "", "520x330"],
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `
@@ -3803,7 +3813,7 @@ function openPaint(o = {}) {
       });
       cv.addEventListener("pointermove", e => {
         const p = pos(e);
-        win.setStatus(["For Help, click Help Topics on the Help Menu.", `${Math.max(0, p.x)},${Math.max(0, p.y)}`]);
+        win.setStatus(["For Help, click Help Topics on the Help Menu.", `${Math.max(0, p.x)},${Math.max(0, p.y)}`, `${cv.width}x${cv.height}`]);
         if (!drawing) return;
         if (st.tool === "pencil") stroke(drawing.last.x, drawing.last.y, p.x, p.y, 1, drawing.color);
         else if (st.tool === "brush") stroke(drawing.last.x, drawing.last.y, p.x, p.y, st.size, drawing.color, true);
@@ -4379,7 +4389,7 @@ const APPS = {
   solitaire:   { label: "Solitaire",      open: openSolitaire },
   snake:       { label: "Snake",          open: openSnake },
   paint:       { label: "Paint",          open: openPaint },
-  notepad:     { label: "Notepad",            icon: "skills",   open: openNewNote,   hidden: true },
+  notepad:     { label: "Notepad",            icon: "notepad",  open: openNewNote,   hidden: true },
   display:     { label: "Display Properties", icon: "monitor",  open: openDisplay,   hidden: true },
   datetime:    { label: "Date/Time",          icon: "clock",    open: openDateTime,  hidden: true },
   run:         { label: "Run",                icon: "terminal", open: openRun,       hidden: true },
@@ -4409,7 +4419,7 @@ function resolveApp(name) {
   return null;
 }
 function appInfo(k) {
-  if (k.startsWith("doc:")) { const d = docsAll().find(x => x.id === k.slice(4)) || {}; return { label: d.name || "Document", icon: "skills" }; }
+  if (k.startsWith("doc:")) { const d = docsAll().find(x => x.id === k.slice(4)) || {}; return { label: d.name || "Document", icon: "notepad" }; }
   if (k.startsWith("file:")) { const f = binFile(k.slice(5)) || {}; return { label: f.name || k.slice(5), icon: f.icon || "skills" }; }
   const a = APPS[k] || {};
   return { label: a.label || k, icon: k === "bin" ? (binState().bin.length ? "binfull" : "bin") : (a.icon || k) };
@@ -4768,7 +4778,7 @@ async function boot() {
   const skip = () => { skipped = true; };
   bootEl.addEventListener("pointerdown", skip);
   window.addEventListener("keydown", skip);
-  const fast = session.get("booted") === "1";
+  const fast = session.get("booted") === "1" || reduceMotion();
   const wait = ms => (skipped ? Promise.resolve() : sleep(fast ? ms * 0.4 : ms));
   const type = async (s, ms = 90) => { if (skipped) return; out.textContent += s + "\n"; await wait(ms); };
 
@@ -4831,7 +4841,15 @@ async function boot() {
 /* ==========================================================================
    START
    ========================================================================== */
-document.title = `${NAME}'s Desktop - Windows 98`;
+document.title = `${NAME} - Portfolio`;
+{
+  const desc = [ROLE, C.tagline].filter(Boolean).join(". ") || "An interactive portfolio, built as a working Windows 98 desktop.";
+  const setMeta = (sel, v) => { const m = document.querySelector(sel); if (m) m.setAttribute("content", v); };
+  setMeta('meta[name="description"]', desc);
+  setMeta('meta[property="og:title"]', `${NAME} - Portfolio`);
+  setMeta('meta[property="og:description"]', desc);
+  setMeta('meta[name="apple-mobile-web-app-title"]', NAME);
+}
 WM.init();
 StartMenu.init();
 initDesktop();

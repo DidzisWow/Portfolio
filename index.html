@@ -2,9 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Windows 98</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Portfolio</title>
+<meta name="description" content="An interactive portfolio, built as a working Windows 98 desktop. Open the windows and have a look around.">
+<meta name="theme-color" content="#008080">
+<meta name="color-scheme" content="light">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Portfolio - Windows 98">
+<meta property="og:description" content="An interactive portfolio, built as a working Windows 98 desktop. Open the windows and have a look around.">
+<meta property="og:image" content="images/about.svg">
+<meta name="twitter:card" content="summary">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portfolio">
 <link rel="icon" href="images/about.svg">
+<link rel="apple-touch-icon" href="images/about.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap">
@@ -13,6 +26,10 @@
 <link rel="stylesheet" href="github.css">
 <link rel="stylesheet" href="chrome.css">
 <link rel="stylesheet" href="shell.css">
+<link rel="stylesheet" href="games.css">
+<link rel="stylesheet" href="system.css">
+<link rel="stylesheet" href="media.css">
+<link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 
@@ -38,8 +55,8 @@
     <span class="taskbar__grip" aria-hidden="true"></span>
     <div id="taskButtons" class="task-buttons"></div>
     <div class="tray">
-      <button type="button" id="trayVol" class="tray__btn" title="Volume"></button>
-      <button type="button" id="clock" class="tray__btn tray__clock"></button>
+      <button type="button" id="trayVol" class="tray__btn" title="Volume" aria-label="Volume"></button>
+      <button type="button" id="clock" class="tray__btn tray__clock" aria-label="Clock"></button>
     </div>
   </footer>
 </div>
@@ -97,6 +114,8 @@
   <p>*&nbsp; Press any key to terminate the current application.<br>*&nbsp; Press CTRL+ALT+DEL again to restart your computer. You will lose any unsaved information in all applications.</p>
   <p class="bsod__center">Press any key to continue <span class="bsod__cursor">_</span></p>
 </div>
+
+<noscript><p style="position:fixed;inset:0;margin:0;padding:24px;background:#008080;color:#fff;font:16px Tahoma,Verdana,sans-serif">This portfolio is a Windows 98 desktop and needs JavaScript to run. Please enable it and reload the page.</p></noscript>
 
 <script src="content.js"></script>
 <script src="script.js"></script>
