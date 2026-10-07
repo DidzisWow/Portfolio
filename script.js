@@ -1447,6 +1447,8 @@ function openYouTube(o = {}) {
           </div>
         </div>`;
       const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
+      // thumbnails that fail to load keep their grey box but lose the broken-image icon (error doesn't bubble, so capture it)
+      body.addEventListener("error", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-broken"); }, true);
       const drawSide = () => {
         side.innerHTML = `
           <button type="button" data-go="home">${ui("home", 20)}<span>Home</span></button>
@@ -1557,7 +1559,7 @@ function openYouTube(o = {}) {
                 <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>${v.desc ? esc(v.desc).replace(/\n/g, "<br>") : `Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.`}</div>
                 <section class="yt2__comments">
                   <h3>${cmts(v.id).length} comment${cmts(v.id).length === 1 ? "" : "s"}</h3>
-                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>
+                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>${cmts(v.id).length ? "" : `<p class="yt2__empty yt2__empty--cmt">No comments yet. Be the first to comment.</p>`}
                   ${cmts(v.id).slice().reverse().map(c => `<div class="yt2__cmt"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span><b>${esc(NAME)}</b> <small>${esc(new Date(c.ts).toLocaleDateString())}</small><br>${esc(c.t)}<br><button type="button" class="yt2__cdel" data-cdel="${c.ts}" data-vid="${esc(v.id)}">Delete</button></span></div>`).join("")}
                 </section>
               </div>
@@ -2280,7 +2282,11 @@ function openDiscord(o = {}) {
           <div class="dc__hover">${["\u{1F44D}", "\u{1F602}"].map(e => `<button type="button" data-r="${e}" data-mi="${i}" title="React">${e}</button>`).join("")}</div>
         </div>`;
       };
-      const drawLog = () => { const arr = listOf(DC.key); log.innerHTML = arr.map(msgHTML).join(""); log.scrollTop = log.scrollHeight; };
+      const drawLog = () => {
+        const arr = listOf(DC.key), dm = DC.key.startsWith("dm:"), n = DC.key.slice(3);
+        const intro = `<div class="dc__intro"><span class="dc__intro-ic"${dm ? ` style="background:${color(n)}"` : ""}>${dm ? esc(n[0] || "?") : "#"}</span><h3>${dm ? esc(n) : "Welcome to #" + esc(n) + "!"}</h3><p>${dm ? `This is the beginning of your direct message history with <b>${esc(n)}</b>.` : `This is the start of the <b>#${esc(n)}</b> channel.`}</p></div>`;
+        log.innerHTML = intro + arr.map(msgHTML).join(""); log.scrollTop = log.scrollHeight;
+      };
       const drawRail = () => {
         const home = DC.key.startsWith("dm:"), dmUnread = Object.keys(DC.unread).filter(k => k.startsWith("dm:")).reduce((a, k) => a + DC.unread[k], 0);
         const chUnread = Object.keys(DC.unread).some(k => k.startsWith("ch:") && DC.unread[k]);
