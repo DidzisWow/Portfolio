@@ -1066,18 +1066,37 @@ const GUESTBOOK_SEED = [
   { name: "NetSurfer99", msg: "love the under construction sign. very professional", date: "06/12/1998" },
   { name: "Mom", msg: "Very nice honey. How do I get back to the AOL?", date: "06/10/1998" },
 ];
+/* Chrome's data lives in localStorage: bookmarks, history and a few settings, shared by every Chrome window. */
+const CR_PAGES = ["newtab", "history", "bookmarks", "downloads", "settings", "version"];
+const CR_ENGINES = {
+  Google: { color: "#4285f4", url: q => `https://www.google.com/search?q=${q}` },
+  Bing: { color: "#0f7b6c", url: q => `https://www.bing.com/search?q=${q}` },
+  DuckDuckGo: { color: "#de5833", url: q => `https://duckduckgo.com/?q=${q}` },
+  AltaVista: { color: "#c8102e", url: q => `http://www.altavista.com/search?q=${q}` },
+};
+const crEngine = () => { const e = store.get("crEngine", "Google"); return CR_ENGINES[e] ? e : "Google"; };
+const crBrandOf = url => /bing\.com/i.test(url) ? "Bing" : /duckduckgo\.com/i.test(url) ? "DuckDuckGo" : /altavista\.com/i.test(url) ? "AltaVista" : /google\.com/i.test(url) ? "Google" : crEngine();
+const crSearchUrl = (q, brand = crEngine()) => CR_ENGINES[brand].url(encodeURIComponent(q));
+const crQuery = url => { try { return new URL(url).searchParams.get("q") || ""; } catch (e) { return ""; } };
+const crHue = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const crHost = url => { try { return new URL(url).hostname.replace(/^www\./i, ""); } catch (e) { return String(url).replace(/^[a-z]+:\/\//i, "").split(/[/?#]/)[0].replace(/^www\./i, ""); } };
+const crSame = (a, b) => String(a).replace(/\/+$/, "").toLowerCase() === String(b).replace(/\/+$/, "").toLowerCase();
+const crCap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const crLooksLikeUrl = s => !/\s/.test(s) && (/^(https?:\/\/|www\.|chrome:|about:)/i.test(s) || /\.(com|org|net|io|app|dev|edu|gov|co|uk|de|fr|info)(\/|$|\?)/i.test(s));
+
 function normUrl(u) {
   let s = String(u || "").trim();
   if (!s) return HOME;
-  if (/^chrome:/i.test(s)) return "chrome://newtab";
-  if (!/[.:/]/.test(s)) return `http://www.altavista.com/search?q=${encodeURIComponent(s)}`;
+  const c = s.match(/^chrome:(?:\/\/)?([a-z-]*)\/?(.*)$/i);
+  if (c) return c[1] ? `chrome://${c[1].toLowerCase()}${c[2] ? "/" + c[2] : ""}` : "chrome://newtab";
+  if (/\s/.test(s) || !/[.:/]/.test(s)) return crSearchUrl(s);
   if (!/^[a-z]+:/i.test(s)) s = "http://" + s;
   return s;
 }
 function routeOf(url) {
   const u = url.toLowerCase();
   if (u === "about:blank") return "blank";
-  if (u.startsWith("chrome://")) return "newtab";
+  if (u.startsWith("chrome://")) { const p = u.slice(9).split(/[/?#]/)[0]; return CR_PAGES.includes(p) ? p : "error"; }
   if (u.includes("geocities.com")) {
     if (/about\.html?$/.test(u)) return "about";
     if (/guestbook\.html?$/.test(u)) return "guestbook";
@@ -1087,19 +1106,179 @@ function routeOf(url) {
   }
   if (/youtube\.|youtu\.be/.test(u)) return "youtube";
   if (u.includes("github.com")) return "github";
-  if (/altavista\.com|\/search\?q=/.test(u)) return "search";
+  if (/altavista\.com|\/search\?q=|^https?:\/\/duckduckgo\.com\/\?q=/.test(u)) return "search";
   // any real-looking web address opens in the Time Machine (Internet Archive)
   if (/^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(u)) return "web";
   return "error";
 }
 const SEARCH_INDEX = () => [
-  { title: `${NAME}'s Homepage`, url: HOME, kw: `home homepage portfolio ${NAME} ${ROLE}`, desc: C.tagline || "My corner of the web." },
-  { title: `About ${NAME}`, url: HOME + "about.html", kw: `about me bio ${NAME} ${SKILLS.join(" ")}`, desc: "Who I am and what I do." },
+  { title: `${NAME}'s Homepage`, url: HOME, kw: `home homepage portfolio ${NAME} ${ROLE}`, desc: C.tagline || "My corner of the web.", img: C.heroImage || "" },
+  { title: `About ${NAME}`, url: HOME + "about.html", kw: `about me bio ${NAME} ${SKILLS.join(" ")}`, desc: ABOUT_PARAS[0] || "Who I am and what I do." },
   { title: "Sign my Guestbook!", url: HOME + "guestbook.html", kw: "guestbook sign message", desc: "Leave a message. Be nice." },
   { title: "Cool Links", url: HOME + "links.html", kw: "links webring cool sites", desc: "The best sites on the information superhighway." },
-  { title: "YouTube - Broadcast Yourself", url: "http://www.youtube.com", kw: "youtube video videos coryxkenshin", desc: "Watch videos." },
-  ...PROJECTS.map((p, i) => ({ title: p.title, url: HOME + "about.html", kw: `${p.title} ${(p.tags || []).join(" ")} project`, desc: p.description || "", project: i })),
+  { title: "YouTube", url: "http://www.youtube.com", kw: "youtube video videos watch", desc: "Watch videos in the YouTube app on this desktop." },
+  { title: "Spotify - Web Player", url: "http://open.spotify.com", kw: "spotify music songs playlist listen", desc: "Listen to music in the Spotify app on this desktop.", app: "spotify" },
+  { title: "Discord", url: "http://discord.com", kw: "discord chat friends message", desc: "Chat with the people on this desktop.", app: "discord" },
+  { title: `${NAME} on GitHub`, url: GITHUB_URL || "http://www.github.com", kw: "github code repositories repos source", desc: "Code, repositories and open source projects." },
+  ...PROJECTS.map((p, i) => ({ title: p.title, url: HOME + "about.html", kw: `${p.title} ${(p.tags || []).join(" ")} project`, desc: p.description || "", project: i, img: p.image || "" })),
 ];
+function crSearchResults(q) {
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  return SEARCH_INDEX().map((r, i) => {
+    const title = r.title.toLowerCase(), kw = (r.kw || "").toLowerCase(), desc = (r.desc || "").toLowerCase();
+    let score = 0;
+    terms.forEach(t => { if (title.includes(t)) score += 3; if (kw.includes(t)) score += 2; if (desc.includes(t)) score += 1; });
+    return { r, score, i };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.i - b.i).map(x => x.r);
+}
+const crMark = (text, terms) => {
+  const t = terms.filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!t.length) return esc(text);
+  return String(text).split(new RegExp("(" + t.join("|") + ")", "ig")).map((p, i) => i % 2 ? `<b>${esc(p)}</b>` : esc(p)).join("");
+};
+const crCrumb = url => { try { const u = new URL(url); return [u.origin].concat(u.pathname.split("/").filter(Boolean).map(s => decodeURIComponent(s))).join(" \u203a "); } catch (e) { return url; } };
+
+/* ---- bookmarks ---- */
+const CR_DEFAULT_BM = () => [
+  { title: "My Homepage", url: HOME },
+  { title: "Guestbook", url: HOME + "guestbook.html" },
+  { title: "Cool Links", url: HOME + "links.html" },
+  { title: "YouTube", url: "http://www.youtube.com" },
+  { title: "GitHub", url: GITHUB_URL || "http://www.github.com" },
+  { title: "AltaVista", url: "http://www.altavista.com" },
+];
+const crBms = () => { const b = store.get("crBookmarks", null); return Array.isArray(b) ? b.filter(x => x && x.url) : CR_DEFAULT_BM(); };
+const CR_BUS = new Set();
+const crNotify = what => CR_BUS.forEach(fn => fn(what));
+const crSaveBms = list => { store.set("crBookmarks", list); crNotify("bm"); };
+
+/* ---- history ---- */
+const crHist = () => { const h = store.get("crHistory", []); return Array.isArray(h) ? h : []; };
+function crAddHist(url, title) {
+  const h = crHist();
+  if (h[0] && h[0].url === url && Date.now() - h[0].t < 60000) { h[0].title = title; h[0].t = Math.max(Date.now(), h[0].t + 1); }
+  else h.unshift({ url, title, t: Math.max(Date.now(), h[0] ? h[0].t + 1 : 0) });
+  store.set("crHistory", h.slice(0, 300));
+}
+const CR_RECORD = { home: 1, about: 1, guestbook: 1, links: 1, "404": 1, youtube: 1, github: 1, search: 1, web: 1 };
+const crDayKey = t => { const d = new Date(t); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+function crDayLabel(t) {
+  const d = new Date(t), n = new Date();
+  const diff = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  const full = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return diff === 0 ? "Today - " + full : diff === 1 ? "Yesterday - " + full : full;
+}
+
+/* ---- glyphs (flat Material paths, kept local to the Chrome app) ---- */
+const CR_PATHS = {
+  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
+  fwd: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+  reload: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z",
+  page: "M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm7 7V3.5L18.5 9z",
+  star: "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z",
+  starO: "M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28z",
+  more: "M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2",
+  download: "M19 9h-4V3H9v6H5l7 7zM5 18v2h14v-2z",
+  settings: "M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6",
+  history: "M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z",
+  info: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z",
+  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1z",
+  globe: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39",
+  check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  chev2: "M6.41 6 5 7.41 9.58 12 5 16.59 6.41 18l6-6zM13 6l-1.41 1.41L16.17 12l-4.58 4.59L13 18l6-6z",
+  right: "M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z",
+  up: "M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z",
+  dn: "M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z",
+  incog: "M12 3C9.3 3 7.4 4.2 7.4 4.2L6 9h12l-1.4-4.8S14.7 3 12 3M2 10.5v1.5h20v-1.5zM6.5 13A3.5 3.5 0 1 0 10 16.5c0-.5-.1-.9-.3-1.3h4.6c-.2.4-.3.8-.3 1.3a3.5 3.5 0 1 0 3.5-3.5c-.8 0-1.4.2-2 .6-.9-.4-4.3-.4-5.4 0-.6-.4-1.2-.6-2-.6",
+  folder: "M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z",
+};
+const crIco = (name, size = 20, color = "") => `<svg class="cr-svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"${color ? ` style="color:${color}"` : ""} aria-hidden="true"><path d="${CR_PATHS[name] || UI_PATHS[name] || ""}"/></svg>`;
+const crChromeLogo = (s = 48) => `<svg class="cr-logo-mark" viewBox="0 0 48 48" width="${s}" height="${s}" aria-hidden="true"><path d="M24 24 4.95 13A22 22 0 0 1 43.05 13z" fill="#ea4335"/><path d="M24 24 43.05 13A22 22 0 0 1 24 46z" fill="#fbbc04"/><path d="M24 24 24 46A22 22 0 0 1 4.95 13z" fill="#34a853"/><circle cx="24" cy="24" r="10.5" fill="#fff"/><circle cx="24" cy="24" r="8" fill="#1a73e8"/></svg>`;
+const crLogo = brand => brand === "Google"
+  ? `<span class="cr-logo cr-logo--g" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></span>`
+  : `<span class="cr-logo cr-logo--t" style="color:${CR_ENGINES[brand].color}">${esc(brand)}</span>`;
+
+// favicon for a URL: app icons for YouTube/GitHub, flat glyphs for Chrome's own pages, a coloured letter for the rest
+function crFav(url, size = 16) {
+  const r = routeOf(url);
+  if (r === "youtube") return icon("youtube", size);
+  if (r === "github") return icon("github", size);
+  if (r === "newtab" || r === "blank") return crIco("globe", size, "#9aa0a6");
+  if (r === "history") return crIco("history", size, "#5f6368");
+  if (r === "bookmarks") return crIco("star", size, "#f9ab00");
+  if (r === "downloads") return crIco("download", size, "#5f6368");
+  if (r === "settings") return crIco("settings", size, "#5f6368");
+  if (r === "version" || r === "error") return crIco("info", size, "#5f6368");
+  if (r === "search") return crIco("search", size, CR_ENGINES[crBrandOf(url)].color);
+  if (["home", "about", "guestbook", "links", "404"].includes(r)) return crIco("page", size, "#1a73e8");
+  const h = crHost(url);
+  return `<span class="cr-fav-l" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .62)}px;background:hsl(${crHue(h)} 52% 44%)">${esc((h[0] || "?").toUpperCase())}</span>`;
+}
+
+const CR_TILES = [
+  { key: "home", label: "My Homepage", url: HOME, color: "#1a73e8" },
+  { key: "google.com", label: "Google, 1998", url: "http://www.google.com", color: "#4285f4" },
+  { key: "yahoo.com", label: "Yahoo!", url: "http://www.yahoo.com", color: "#720e9e" },
+  { key: "spacejam.com", label: "Space Jam", url: "http://www.spacejam.com", color: "#1a237e" },
+  { key: "apple.com", label: "Apple", url: "http://www.apple.com", color: "#5f6368" },
+  { key: "amazon.com", label: "Amazon", url: "http://www.amazon.com", color: "#e68a00" },
+  { key: "yt", label: "YouTube", url: "http://www.youtube.com", ic: "youtube" },
+  { key: "gh", label: "GitHub", url: "http://www.github.com", ic: "github" },
+  { key: "discord", label: "Discord", url: "", ic: "discord", app: "discord" },
+];
+// most-visited sites from real history first, then the default shortcuts
+function crTiles() {
+  const map = new Map();
+  crHist().forEach(e => {
+    const r = routeOf(e.url);
+    let key, label, url;
+    if (["home", "about", "guestbook", "links", "404"].includes(r)) { key = "home"; label = "My Homepage"; url = HOME; }
+    else if (r === "youtube") { key = "yt"; label = "YouTube"; url = "http://www.youtube.com"; }
+    else if (r === "github") { key = "gh"; label = "GitHub"; url = GITHUB_URL || "http://www.github.com"; }
+    else if (r === "web") { const h = crHost(e.url); key = h; label = crCap(h.split(".")[0]); try { url = new URL(e.url).origin + "/"; } catch (x) { url = "http://" + h; } }
+    else return;
+    const m = map.get(key) || { key, label, url, n: 0, t: e.t };
+    m.n++;
+    map.set(key, m);
+  });
+  const out = Array.from(map.values()).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 10).map(m => {
+    const d = CR_TILES.find(x => x.key === m.key);
+    if (d) return m.key === "gh" ? { ...d, url: m.url } : d;
+    return { key: m.key, label: m.label, url: m.url, color: `hsl(${crHue(m.key)} 52% 38%)` };
+  });
+  const seen = new Set(out.map(t => t.key));
+  CR_TILES.forEach(d => { if (out.length < 10 && !seen.has(d.key)) out.push(d); });
+  return out;
+}
+const crTile = t => `<button type="button" class="nt__tile" ${t.app ? `data-app="${esc(t.app)}"` : `data-go="${esc(t.url)}"`} title="${esc(t.label)}"><span class="nt__fav"${t.ic ? "" : ` style="color:${t.color}"`}>${t.ic ? icon(t.ic, 26) : esc(t.label[0].toUpperCase())}</span><span class="nt__lbl">${esc(t.label)}</span></button>`;
+
+/* ---- list renderers used by the History and Bookmarks pages ---- */
+function crHistList(q) {
+  const terms = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+  const list = crHist().filter(e => terms.every(t => (e.title + " " + e.url).toLowerCase().includes(t))).slice(0, 200);
+  if (!list.length) return `<div class="cp__empty">${terms.length ? "No search results found" : "Your browsing history appears here"}</div>`;
+  let out = "", day = null;
+  list.forEach(e => {
+    const k = crDayKey(e.t);
+    if (k !== day) { if (day !== null) out += "</div>"; day = k; out += `<h3 class="hist__day">${esc(crDayLabel(e.t))}</h3><div class="hist__card">`; }
+    out += `<div class="hist__row" data-t="${e.t}"><label class="hist__chk"><input type="checkbox" data-sel aria-label="Select ${esc(e.title)}"></label><span class="hist__time">${esc(fmtTime(new Date(e.t)))}</span><span class="hist__fav">${crFav(e.url, 16)}</span><a class="hist__title" data-go="${esc(e.url)}" title="${esc(e.url)}">${esc(e.title)}</a><span class="hist__host">${esc(crHost(e.url))}</span><button type="button" class="hist__rm" data-act="rm-hist" data-t="${e.t}" aria-label="Remove from history" title="Remove from history">${crIco("close", 16)}</button></div>`;
+  });
+  return out + "</div>";
+}
+function crBmList(q, edit = -1) {
+  const terms = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+  const all = crBms();
+  const rows = all.map((b, i) => ({ b, i })).filter(x => terms.every(t => (x.b.title + " " + x.b.url).toLowerCase().includes(t)));
+  if (!rows.length) return `<div class="cp__empty">${terms.length ? "No bookmarks found" : "No bookmarks"}</div>`;
+  return `<div class="hist__card bm__card">${rows.map(({ b, i }) => i === edit
+    ? `<form class="bm__edit" data-form="bm-save" data-i="${i}"><input class="cp__in" name="title" value="${esc(b.title)}" aria-label="Name" maxlength="120"><input class="cp__in" name="url" value="${esc(b.url)}" aria-label="URL" maxlength="500"><button type="submit" class="cp__btn cp__btn--blue">Save</button><button type="button" class="cp__btn" data-act="bm-cancel">Cancel</button></form>`
+    : `<div class="hist__row bm__row"><span class="hist__fav">${crFav(b.url, 16)}</span><a class="hist__title" data-go="${esc(b.url)}" title="${esc(b.url)}">${esc(b.title)}</a><span class="hist__host">${esc(b.url)}</span><span class="bm__acts"><button type="button" class="hist__rm" data-act="bm-edit" data-i="${i}" aria-label="Edit ${esc(b.title)}" title="Edit">${ui("edit", 16)}</button><button type="button" class="hist__rm" data-act="bm-del" data-i="${i}" aria-label="Delete ${esc(b.title)}" title="Delete">${ui("trash", 16)}</button></span></div>`).join("")}</div>`;
+}
+
+const CR_ZOOMS = [25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500];
+const crSad = (s = 72) => `<svg class="cr-sad" viewBox="0 0 48 48" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5h16l10 10v28H12z"/><path d="M28 5v10h10"/><path d="M19 26h.01M29 26h.01" stroke-width="3.4"/><path d="M19 37c2.5-3.5 7.5-3.5 10 0"/></svg>`;
+
 const PAGES = {
   blank: () => `<div class="ie-page"></div>`,
   home: () => {
@@ -1155,206 +1334,818 @@ const PAGES = {
       </ul>
       <p class="gc__small">This site is a proud member of the <b>Windows 98 Webring</b></p>
     </div>`,
-  youtube: () => `<div class="ie-page"><h1>Opening YouTube...</h1><p>YouTube opened in its own window, where the videos actually play.</p><p><a data-app="youtube">Show YouTube</a> &middot; <a data-nav="back">Go back</a></p></div>`,
+  youtube: () => `<div class="cr-msg"><div class="cr-msg__ic">${icon("youtube", 48)}</div><h1>Opening YouTube</h1><p>YouTube opened in its own window, where the videos actually play.</p><p class="cr-msg__btns"><button type="button" class="cp__btn cp__btn--blue" data-app="youtube">Show YouTube</button><button type="button" class="cp__btn" data-nav="back">Go back</button></p></div>`,
   web: url => {
     const year = store.get("crYear", 1998);
-    const host = url.replace(/^https?:\/\//i, "").split(/[/?#]/)[0].replace(/^www\./i, "");
+    const host = crHost(url);
     return `<div class="tm">
       <div class="tm__bar">
-        <span class="tm__badge">TIME MACHINE</span>
-        <span><b>${esc(host)}</b> as it looked around <b>${year}</b>, from the Internet Archive</span>
+        <span class="tm__badge">Time Machine</span>
+        <span class="tm__txt"><b>${esc(host)}</b> as it looked around <b>${year}</b>, from the Internet Archive</span>
         <a href="https://web.archive.org/web/${year}0601000000*/${esc(url)}" target="_blank" rel="noopener">All snapshots</a>
         <a href="${esc(url)}" target="_blank" rel="noopener">Live site</a>
       </div>
       <iframe class="tm__frame" src="https://web.archive.org/web/${year}0601000000if_/${esc(url)}" title="${esc(host)} in ${year}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
-      <div class="tm__loading"><span class="tm__spin"></span>Dialing the Internet Archive...</div>
+      <div class="tm__loading"><span class="tm__spin"></span>Contacting the Internet Archive...</div>
     </div>`;
   },
-  newtab: () => `<div class="nt">
-      <div class="nt__logo" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></div>
-      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search, or type a website like google.com" aria-label="Search" autocomplete="off" spellcheck="false"></form>
-      <div class="nt__tiles">${CR_TILES.map(([label, url, ic, app, col]) => `<a class="nt__tile" ${app ? `data-app="${app}"` : `data-go="${esc(url)}"`}><span class="nt__fav"${col ? ` style="color:${col}"` : ""}>${col ? esc(label[0]) : icon(ic, 24)}</span><span class="nt__lbl">${esc(label)}</span></a>`).join("")}</div>
-    </div>`,
-  github: url => `<div class="ie-page">
-      <h1>Opening GitHub...</h1>
-      <p>GitHub opened in its own window.</p>
-      <p><a data-app="github">Show GitHub</a> &middot; <a href="${esc(url)}" target="_blank" rel="noopener">Open github.com in a real browser</a> &middot; <a data-nav="back">Go back</a></p></div>`,
-  search: url => {
-    let q = "";
-    try { q = new URL(url).searchParams.get("q") || ""; } catch (e) {}
-    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const results = terms.length ? SEARCH_INDEX().filter(r => terms.some(t => (r.title + " " + r.kw + " " + r.desc).toLowerCase().includes(t))) : [];
-    return `<div class="ie-page">
-      <h1>AltaVista Search</h1>
-      <form class="search-box" data-form="search"><input class="field" name="q" value="${esc(q)}" placeholder="Search the web"><button class="btn btn--sm" type="submit">Search</button></form>
-      ${q ? (results.length ? results.map(r => `<div class="result"><a ${r.project !== undefined ? `data-project="${r.project}"` : `data-go="${esc(r.url)}"`}>${esc(r.title)}</a><br>${esc(r.desc)}<small>${esc(r.url)}</small></div>`).join("")
-          : `<p>No results on this site for <b>${esc(q)}</b>.</p>`) + (q ? `<p class="result"><a data-go="http://www.${esc(q.toLowerCase().replace(/[^a-z0-9-]/g, ""))}.com">Visit www.${esc(q.toLowerCase().replace(/[^a-z0-9-]/g, ""))}.com in the Time Machine</a><small>See how it looked back in the day</small></p>` : "") : `<p class="ie-page__muted">Tip: try searching for "projects" or "${esc(FIRST)}".</p>`}
+  newtab: (url, ctx = {}) => {
+    if (ctx.incog) return `<div class="nt nt--incog">
+      <div class="nt__inc-ic">${crIco("incog", 72)}</div>
+      <h1>You've gone Incognito</h1>
+      <p class="nt__inc-lead">Now you can browse privately, and other people who use this device won't see your activity. However, downloads and bookmarks will be saved.</p>
+      <div class="nt__inc-cols">
+        <div><h2>Chrome won't save:</h2><ul><li>Your browsing history</li><li>Cookies and site data</li><li>Information entered in forms</li></ul></div>
+        <div><h2>Your activity might still be visible to:</h2><ul><li>Websites you visit</li><li>Your employer or school</li><li>Your internet service provider</li></ul></div>
+      </div></div>`;
+    const brand = crEngine();
+    return `<div class="nt">
+      <div class="nt__logo">${crLogo(brand)}</div>
+      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search ${esc(brand)} or type a URL" aria-label="Search" autocomplete="off" spellcheck="false"></form>
+      <div class="nt__tiles">${crTiles().map(crTile).join("")}</div>
+      <button type="button" class="nt__custom" data-go="chrome://settings">${ui("edit", 16)}<span>Customize Chrome</span></button>
     </div>`;
+  },
+  github: url => `<div class="cr-msg"><div class="cr-msg__ic">${icon("github", 48)}</div><h1>Opening GitHub</h1><p>GitHub opened in its own window.</p>
+      <p class="cr-msg__btns"><button type="button" class="cp__btn cp__btn--blue" data-app="github">Show GitHub</button><a class="cp__btn" href="${esc(url)}" target="_blank" rel="noopener">Open github.com in a real browser</a><button type="button" class="cp__btn" data-nav="back">Go back</button></p></div>`,
+  search: url => {
+    let tab = "";
+    try { tab = new URL(url).searchParams.get("tbm") || ""; } catch (e) {}
+    const q = crQuery(url).trim();
+    const brand = crBrandOf(url);
+    if (!q) return `<div class="nt nt--search">
+      <div class="nt__logo">${crLogo(brand)}</div>
+      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search ${esc(brand)} or type a URL" aria-label="Search" autocomplete="off" spellcheck="false"></form>
+      <p class="nt__tip">Try searching for "projects" or "${esc(FIRST)}".</p></div>`;
+    const tabHref = t => { try { const u = new URL(url); if (t) u.searchParams.set("tbm", t); else u.searchParams.delete("tbm"); return u.href; } catch (e) { return url; } };
+    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const res = crSearchResults(q);
+    const slug = q.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    const secs = (0.18 + (crHue(q) % 40) / 100).toFixed(2);
+    const attrs = r => r.project !== undefined ? `data-project="${r.project}"` : r.app ? `data-app="${esc(r.app)}"` : `data-go="${esc(r.url)}"`;
+    const none = what => `<div class="sr__none"><p>Your search - <b>${esc(q)}</b> - did not match any ${what}.</p><p>Suggestions:</p><ul><li>Make sure all words are spelled correctly.</li><li>Try different keywords.</li><li>Try more general keywords.</li><li>Try fewer keywords.</li></ul></div>`;
+    let main;
+    if (tab === "isch") {
+      const imgs = res.filter(r => r.img);
+      main = imgs.length ? `<div class="sr__imgs">${imgs.map(r => `<a class="sr__img" ${attrs(r)}><img src="${esc(r.img)}" data-fallback="${esc(initials(r.title))}" alt=""><span>${esc(r.title)}</span><small>${esc(crHost(r.url))}</small></a>`).join("")}</div>` : none("image results");
+    } else if (tab === "nws") {
+      main = none("news results");
+    } else {
+      main = (res.length
+        ? `<div class="sr__stats">About ${res.length} result${res.length > 1 ? "s" : ""} (${secs} seconds)</div>` + res.map(r => `<div class="sr__item">
+            <div class="sr__site"><span class="sr__ic">${crFav(r.url, 16)}</span><span class="sr__sn"><span class="sr__name">${esc(crCap(crHost(r.url).split(".")[0]))}</span><span class="sr__crumb">${esc(crCrumb(r.url))}</span></span></div>
+            <a class="sr__title" ${attrs(r)}>${esc(r.title)}</a>
+            <div class="sr__desc">${crMark(r.desc || "", terms)}</div></div>`).join("")
+        : none("documents"))
+        + (slug ? `<div class="sr__tm"><span class="sr__tm-ic">${crIco("history", 22)}</span><div><a class="sr__title sr__title--sm" data-go="http://www.${esc(slug)}.com">Visit www.${esc(slug)}.com in the Time Machine</a><div class="sr__desc">See how it looked back in ${store.get("crYear", 1998)}, from the Internet Archive.</div></div></div>` : "");
+    }
+    return `<div class="sr">
+      <div class="sr__head">
+        <div class="sr__logo" data-go="chrome://newtab" title="Home">${crLogo(brand)}</div>
+        <form class="sr__box" data-form="search"><span class="sr__box-ic">${ui("search", 20)}</span><input name="q" value="${esc(q)}" aria-label="Search" autocomplete="off" spellcheck="false"><button type="button" class="sr__clear" data-act="sr-clear" aria-label="Clear" title="Clear">${ui("close", 20)}</button></form>
+      </div>
+      <nav class="sr__tabs" aria-label="Search categories"><a class="${!tab ? "is-on" : ""}" data-go="${esc(tabHref(""))}">All</a><a class="${tab === "isch" ? "is-on" : ""}" data-go="${esc(tabHref("isch"))}">Images</a><a class="${tab === "nws" ? "is-on" : ""}" data-go="${esc(tabHref("nws"))}">News</a></nav>
+      <div class="sr__main">${main}</div>
+      <footer class="sr__foot">Results come from this portfolio. Website addresses open in the Time Machine.</footer>
+    </div>`;
+  },
+  history: () => `<div class="cp cp--history">
+    <header class="cp__head"><span class="cp__brand">History</span>
+      <label class="cp__find">${ui("search", 20)}<input data-hsearch type="search" placeholder="Search history" autocomplete="off" aria-label="Search history"></label>
+      <div class="cp__selbar"><span><b data-selcount>0</b> selected</span><button type="button" class="cp__btn cp__btn--ghost" data-act="hist-cancel">Cancel</button><button type="button" class="cp__btn cp__btn--ghost" data-act="hist-delete">Delete</button></div>
+    </header>
+    <div class="cp__body">
+      <nav class="cp__nav" aria-label="History"><a class="is-on" data-go="chrome://history">${crIco("history", 20)}<span>History</span></a><a data-act="clear-data" role="button" tabindex="0">${ui("trash", 20)}<span>Clear browsing data</span></a></nav>
+      <main class="cp__main"><div class="hist" data-hist>${crHistList("")}</div></main>
+    </div></div>`,
+  bookmarks: () => {
+    const n = crBms().length;
+    return `<div class="cp cp--bm">
+    <header class="cp__head"><span class="cp__brand">Bookmarks</span>
+      <label class="cp__find">${ui("search", 20)}<input data-bsearch type="search" placeholder="Search bookmarks" autocomplete="off" aria-label="Search bookmarks"></label></header>
+    <div class="cp__body">
+      <nav class="cp__nav" aria-label="Folders"><a class="is-on">${ui("folder", 20)}<span>Bookmarks bar</span></a></nav>
+      <main class="cp__main">
+        <div class="bm__top"><span class="bm__count">${n} bookmark${n === 1 ? "" : "s"}</span><button type="button" class="cp__btn cp__btn--blue" data-act="bm-add-form">Add new bookmark</button></div>
+        <form class="bm__add" data-form="bm-add" hidden><input class="cp__in" name="title" placeholder="Name" aria-label="Name" maxlength="120"><input class="cp__in" name="url" placeholder="URL (like google.com)" aria-label="URL" maxlength="500"><button type="submit" class="cp__btn cp__btn--blue">Add</button><button type="button" class="cp__btn" data-act="bm-add-form">Cancel</button></form>
+        <div data-bm>${crBmList("")}</div>
+      </main>
+    </div></div>`;
+  },
+  downloads: () => `<div class="cp cp--dl">
+    <header class="cp__head"><span class="cp__brand">Downloads</span>
+      <label class="cp__find">${ui("search", 20)}<input type="search" placeholder="Search downloads" autocomplete="off" aria-label="Search downloads"></label></header>
+    <div class="cp__body"><main class="cp__main"><div class="cp__empty">No downloads</div></main></div></div>`,
+  settings: () => {
+    const sel = (k, vals, cur) => `<select class="cp__sel" data-set="${k}" aria-label="${k}">${vals.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+    const sw = (k, on) => `<label class="sw"><input type="checkbox" data-set="${k}"${on ? " checked" : ""}><span class="sw__t"></span></label>`;
+    const row = (t, s, c) => `<div class="set__row"><div class="set__txt"><div class="set__t">${t}</div>${s ? `<div class="set__s">${s}</div>` : ""}</div><div class="set__ctl">${c}</div></div>`;
+    return `<div class="cp cp--set">
+    <header class="cp__head"><span class="cp__brand">Settings</span>
+      <label class="cp__find">${ui("search", 20)}<input data-ssearch type="search" placeholder="Search settings" autocomplete="off" aria-label="Search settings"></label></header>
+    <div class="cp__body">
+      <nav class="cp__nav" aria-label="Settings"><a class="is-on" data-go="chrome://settings">${crIco("settings", 20)}<span>Settings</span></a><a data-go="chrome://history">${crIco("history", 20)}<span>History</span></a><a data-go="chrome://bookmarks">${crIco("star", 20)}<span>Bookmarks</span></a><a data-go="chrome://downloads">${crIco("download", 20)}<span>Downloads</span></a><a data-go="chrome://version">${crIco("info", 20)}<span>About Chrome</span></a></nav>
+      <main class="cp__main">
+        <section class="set"><h2>Appearance</h2><div class="set__card">
+          ${row("Show bookmarks bar", "Shows your bookmarks under the address bar.", sw("bar", store.get("crBar", true)))}
+          ${row("Page zoom", "The zoom level new tabs start with.", sel("zoom", [[75, "75%"], [90, "90%"], [100, "100%"], [110, "110%"], [125, "125%"], [150, "150%"]], store.get("crZoom", 100)))}
+        </div></section>
+        <section class="set"><h2>Search engine</h2><div class="set__card">
+          ${row("Search engine used in the address bar", "Searches typed in the address bar are branded with this engine. Results come from this portfolio.", sel("engine", Object.keys(CR_ENGINES).map(k => [k, k]), crEngine()))}
+        </div></section>
+        <section class="set"><h2>Time Machine</h2><div class="set__card">
+          ${row("Default Time Machine year", "Website addresses you type open as they looked in this year.", sel("year", Array.from({ length: 15 }, (_, i) => [1996 + i, String(1996 + i)]), store.get("crYear", 1998)))}
+        </div></section>
+        <section class="set"><h2>Privacy and security</h2><div class="set__card">
+          ${row("Clear browsing data", "Clears your browsing history.", `<button type="button" class="cp__btn" data-act="clear-data">Clear data</button>`)}
+        </div></section>
+        <section class="set"><h2>Reset settings</h2><div class="set__card">
+          ${row("Restore settings to their original defaults", "Also restores the default bookmarks.", `<button type="button" class="cp__btn" data-act="reset-settings">Reset settings</button>`)}
+        </div></section>
+        <section class="set"><h2>About Chrome</h2><div class="set__card">
+          ${row("Chrome 98", "Version 98.0.4758.102 (Official Build)", `<button type="button" class="cp__btn" data-go="chrome://version">Details</button>`)}
+        </div></section>
+        <p class="cp__empty cp__empty--set" hidden>No settings found</p>
+      </main>
+    </div></div>`;
+  },
+  version: () => {
+    const rows = [
+      ["Chrome", "98.0.4758.102 (Official Build) (32-bit)"],
+      ["OS", "Windows 98 Second Edition 4.10.2222 A"],
+      ["JavaScript", "V8 (whatever your real browser is running)"],
+      ["User Agent", navigator.userAgent],
+      ["Command Line", "\"C:\\Program Files\\Chrome 98\\chrome.exe\" --time-machine"],
+      ["Executable Path", "C:\\Program Files\\Chrome 98\\chrome.exe"],
+      ["Profile Path", `C:\\WINDOWS\\Application Data\\Chrome\\${esc(SLUG)}`],
+      ["Time Machine", `Internet Archive, ${store.get("crYear", 1998)}`],
+    ];
+    return `<div class="cp cp--ver"><div class="ver">
+      <div class="ver__head">${crChromeLogo(64)}<div><h1>About Version</h1><p>Chrome 98 &middot; Windows 98 Edition</p></div></div>
+      <table class="ver__tbl">${rows.map(([k, v]) => `<tr><th>${k}</th><td>${k === "User Agent" || k.includes("Path") || k === "Command Line" ? esc(v) : v}</td></tr>`).join("")}</table>
+    </div></div>`;
   },
   "404": url => `<div class="gc"><h1>404 Not Found</h1><p>The page <b>${esc(url)}</b> has moved to a new neighborhood.</p><p><a data-go="${HOME}">Go to the homepage</a></p></div>`,
-  error: url => `<div class="ie-page">
-      <h1>The page cannot be displayed</h1>
-      <p>The page you are looking for is currently unavailable. The Web site might be experiencing technical difficulties, or it's 1998 and it doesn't exist yet.</p>
-      <hr>
-      <p>Please try the following:</p>
-      <ul>
-        <li>Click the <a data-nav="reload">Refresh</a> button, or try again later.</li>
-        <li>Open the <a data-go="${HOME}">home page</a>, and then look for links to the information you want.</li>
-        <li>Check your dial-up connection. Is someone on the phone?</li>
-      </ul>
-      <p class="ie-page__muted">Cannot find server or DNS Error<br>Chrome 98 &middot; ${esc(url)}</p>
-    </div>`,
+  error: url => {
+    const internal = /^chrome:/i.test(url), host = crHost(url);
+    return `<div class="cr-msg cr-msg--err">
+      <div class="cr-msg__ic">${crSad(72)}</div>
+      <h1>${internal ? "This page isn't available" : "This site can't be reached"}</h1>
+      <p>${internal ? `<b>${esc(url)}</b> doesn't exist in this version of Chrome.` : `<b>${esc(host || url)}</b>'s server IP address could not be found.`}</p>
+      <p class="cr-msg__h">Try:</p>
+      <ul><li>${internal ? "Opening the <a data-go=\"chrome://settings\">settings</a> or <a data-go=\"chrome://history\">history</a> page" : "Checking the connection"}</li><li>Checking the address for typos</li><li>Going back to the <a data-go="${HOME}">home page</a></li></ul>
+      <p class="cr-msg__code">${internal ? "ERR_INVALID_URL" : "ERR_NAME_NOT_RESOLVED"}</p>
+      <p class="cr-msg__btns"><button type="button" class="cp__btn cp__btn--blue" data-nav="reload">Reload</button></p>
+    </div>`;
+  },
 };
-const PAGE_TITLES = { web: "Time Machine", newtab: "New Tab", home: `${NAME}'s Homepage`, about: "About Me", guestbook: "Guestbook", links: "Cool Links", search: "AltaVista Search", youtube: "YouTube", github: "GitHub", error: "Cannot find server", "404": "404 Not Found", blank: "about:blank" };
+const PAGE_TITLES = { web: "Time Machine", newtab: "New Tab", home: `${NAME}'s Homepage`, about: "About Me", guestbook: "Guestbook", links: "Cool Links", search: "Search", youtube: "YouTube", github: "GitHub", error: "Can't reach this page", "404": "404 Not Found", blank: "about:blank", history: "History", bookmarks: "Bookmarks", downloads: "Downloads", settings: "Settings", version: "About Version" };
+function crPageTitle(page, url) {
+  if (page === "search") { const q = crQuery(url); return q ? `${q} - ${crBrandOf(url)} Search` : crBrandOf(url); }
+  if (page === "web") return `${crHost(url)} (${store.get("crYear", 1998)})`;
+  return PAGE_TITLES[page] || url;
+}
 
-const CR_BOOKMARKS = () => [
-  ["My Homepage", HOME, "page"],
-  ["Guestbook", HOME + "guestbook.html", "page"],
-  ["Cool Links", HOME + "links.html", "page"],
-  ["YouTube", "http://www.youtube.com", "youtube"],
-  ["GitHub", GITHUB_URL || "http://www.github.com", "github"],
-  ["AltaVista", "http://www.altavista.com", "page"],
-];
-// Chrome toolbar glyphs (flat Material paths), kept local to the Chrome app
-const CR_PATHS = {
-  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
-  fwd: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
-  reload: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z",
-  page: "M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm7 7V3.5L18.5 9z",
-};
-const crIco = (name, size = 20) => `<svg class="cr-svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${CR_PATHS[name]}"/></svg>`;
-const crBmIcon = ic => CR_PATHS[ic] ? crIco(ic, 16) : icon(ic, 16);
-const CR_TILES = [
-  ["My Homepage", HOME, "about", "", "#1a73e8"],
-  ["Google, 1998", "http://www.google.com", "chrome", "", "#4285f4"],
-  ["Yahoo!", "http://www.yahoo.com", "chrome", "", "#720e9e"],
-  ["Space Jam", "http://www.spacejam.com", "chrome", "", "#1a237e"],
-  ["Apple", "http://www.apple.com", "chrome", "", "#5f6368"],
-  ["Amazon", "http://www.amazon.com", "chrome", "", "#ff9900"],
-  ["YouTube", "http://www.youtube.com", "youtube"],
-  ["GitHub", "http://www.github.com", "github"],
-  ["Discord", "", "discord", "discord"],
-];
+/* ---- flat popup menus (Chrome menu, tab and bookmark context menus) ---- */
+const CR_POP = { stack: [], off: null };
+function crPopClose(from = 0) {
+  while (CR_POP.stack.length > from) { const p = CR_POP.stack.pop(); p.el.remove(); if (p.onClose) p.onClose(); }
+  if (!CR_POP.stack.length && CR_POP.off) { CR_POP.off(); CR_POP.off = null; }
+}
+function crPop(items, x, y, o = {}) {
+  const level = o.level || 0;
+  crPopClose(level);
+  const el = document.createElement("div");
+  el.className = "cr-menu" + (o.dark ? " cr-menu--dark" : "");
+  el.setAttribute("role", "menu");
+  const hasCk = items.some(it => it.checked !== undefined);
+  items.forEach(it => {
+    if (it.sep) { const s = document.createElement("div"); s.className = "cr-menu__sep"; s.setAttribute("role", "separator"); el.appendChild(s); return; }
+    if (it.zoom) {
+      const r = document.createElement("div");
+      r.className = "cr-menu__zoom";
+      r.innerHTML = `<span class="cr-menu__zl">Zoom</span><span class="cr-menu__zb"><button type="button" data-z="-1" aria-label="Zoom out">&minus;</button><span class="cr-menu__zv">${it.zoom.get()}%</span><button type="button" data-z="1" aria-label="Zoom in">+</button></span>`;
+      r.addEventListener("click", e => { const b = e.target.closest("[data-z]"); if (!b) return; it.zoom.step(+b.dataset.z); $(".cr-menu__zv", r).textContent = it.zoom.get() + "%"; });
+      r.addEventListener("pointerenter", () => crPopClose(level + 1));
+      el.appendChild(r);
+      return;
+    }
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "cr-menu__item";
+    b.setAttribute("role", it.checked !== undefined ? "menuitemcheckbox" : "menuitem");
+    if (it.checked !== undefined) b.setAttribute("aria-checked", String(!!it.checked));
+    b.disabled = !!it.disabled;
+    b.innerHTML = `${hasCk ? `<span class="cr-menu__ck">${it.checked ? crIco("check", 16) : ""}</span>` : ""}${it.icon ? `<span class="cr-menu__ic">${it.icon}</span>` : ""}<span class="cr-menu__label"></span>${it.hint ? `<span class="cr-menu__hint"></span>` : ""}${it.sub ? `<span class="cr-menu__arrow">${crIco("right", 18)}</span>` : ""}`;
+    $(".cr-menu__label", b).textContent = it.label;
+    if (it.hint) $(".cr-menu__hint", b).textContent = it.hint;
+    if (it.sub) {
+      b.setAttribute("aria-haspopup", "true");
+      const openSub = focus => { const r = b.getBoundingClientRect(); const m = crPop(it.sub, r.right - 4, r.top - 8, { level: level + 1, dark: o.dark, flip: r.left }); if (focus) { const f = $(".cr-menu__item:not(:disabled)", m); if (f) f.focus(); } };
+      b.addEventListener("pointerenter", () => openSub(false));
+      b.addEventListener("click", e => { e.stopPropagation(); openSub(e.detail === 0); });
+    } else {
+      b.addEventListener("pointerenter", () => crPopClose(level + 1));
+      b.addEventListener("click", e => { e.stopPropagation(); crPopClose(0); if (it.action) it.action(); });
+    }
+    el.appendChild(b);
+  });
+  document.body.appendChild(el);
+  const r = el.getBoundingClientRect();
+  let left = o.alignRight ? x - r.width : x;
+  if (left + r.width > window.innerWidth - 4) left = o.flip != null ? o.flip - r.width : window.innerWidth - r.width - 4;
+  const top = Math.max(4, Math.min(y, window.innerHeight - 36 - r.height));
+  el.style.left = Math.max(4, left) + "px";
+  el.style.top = top + "px";
+  CR_POP.stack.push({ el, onClose: o.onClose, anchor: o.anchor });
+  if (!CR_POP.off) {
+    const down = e => { if (CR_POP.stack.some(p => p.el.contains(e.target) || (p.anchor && p.anchor.contains(e.target)))) return; crPopClose(0); };
+    const key = e => {
+      if (!CR_POP.stack.length) return;
+      const top = CR_POP.stack[CR_POP.stack.length - 1].el;
+      if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); crPopClose(0); return; }
+      const its = $$(".cr-menu__item:not(:disabled)", top), i = its.indexOf(document.activeElement);
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault(); e.stopPropagation();
+        if (!its.length) return;
+        const d = e.key === "ArrowDown" ? 1 : -1;
+        its[i < 0 ? (d > 0 ? 0 : its.length - 1) : (i + d + its.length) % its.length].focus();
+      } else if (e.key === "ArrowRight" && i >= 0 && its[i].getAttribute("aria-haspopup")) { e.preventDefault(); e.stopPropagation(); its[i].click(); }
+      else if (e.key === "ArrowLeft" && CR_POP.stack.length > 1) { e.preventDefault(); e.stopPropagation(); crPopClose(CR_POP.stack.length - 1); }
+    };
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("keydown", key, true);
+    CR_POP.off = () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key, true); };
+  }
+  return el;
+}
+let crIncN = 0;
 function openChrome(o = {}) {
-  const had = WM.has("chrome");
-  const w = WM.open("chrome", {
-    title: "Chrome 98", icon: "chrome", w: 800, h: 600, from: o.from, status: ["Done"],
+  const incog = !!o.incognito;
+  const wid = incog ? "chrome-inc-" + (++crIncN) : "chrome";
+  const had = !incog && WM.has("chrome");
+  const w = WM.open(wid, {
+    title: incog ? "Chrome 98 (Incognito)" : "Chrome 98", icon: "chrome", className: "cr-win" + (incog ? " cr-win--incog" : ""), w: 860, h: 620, from: o.from,
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `
-        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New Tab" aria-label="New Tab">${ui("plus", 18)}</button></div>
+        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New tab" aria-label="New tab">${crIco("plus", 18)}</button></div>
         <div class="cr-bar">
           <button type="button" class="cr-ico" data-nav="back" title="Back" aria-label="Back">${crIco("back")}</button>
           <button type="button" class="cr-ico" data-nav="fwd" title="Forward" aria-label="Forward">${crIco("fwd")}</button>
-          <button type="button" class="cr-ico" data-nav="reload" title="Reload" aria-label="Reload">${crIco("reload")}</button>
-          <form class="addressbar cr-omni">${ui("search", 16)}<input id="addr-chrome" class="addressbar__input" spellcheck="false" autocomplete="off" placeholder="Search or type a URL" aria-label="Address and search bar"></form>
-          <label class="cr-year" title="Which year the Time Machine shows websites from. Type any website (like google.com) to see how it looked back in the day."><span>Year</span><select class="field">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
+          <button type="button" class="cr-ico" data-nav="reload" title="Reload this page" aria-label="Reload this page">${crIco("reload")}</button>
+          <form class="addressbar cr-omni" autocomplete="off">
+            <span class="cr-omni__id">${crIco("search", 16)}</span>
+            <input id="addr-${wid}" class="addressbar__input" spellcheck="false" autocomplete="off" role="combobox" aria-expanded="false" placeholder="Search ${esc(crEngine())} or type a URL" aria-label="Address and search bar">
+            <button type="button" class="cr-zoom" hidden title="Reset zoom" aria-label="Reset zoom">${ui("search", 16)}<span>100%</span></button>
+            <button type="button" class="cr-star" hidden title="Bookmark this tab" aria-label="Bookmark this tab"></button>
+            <div class="cr-sugg" role="listbox" hidden></div>
+          </form>
+          <label class="cr-year" title="Which year the Time Machine shows websites from. Type any website (like google.com) to see how it looked back in the day."><span>Year</span><select class="field" aria-label="Time Machine year">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
+          ${incog ? `<span class="cr-incog">${crIco("incog", 18)}<span>Incognito</span></span>` : ""}
+          <button type="button" class="cr-ico" data-menu title="Customize and control Chrome" aria-label="Customize and control Chrome" aria-haspopup="true" aria-expanded="false">${crIco("more")}</button>
+          <div class="cr-bubble" role="dialog" aria-label="Bookmark" hidden></div>
         </div>
-        <div class="cr-bookmarks">${CR_BOOKMARKS().map(([label, url, ic]) => `<button type="button" data-go="${esc(url)}" title="${esc(url)}">${crBmIcon(ic)}<span>${esc(label)}</span></button>`).join("")}</div>
-        <div class="browser__view sunken-box"><div class="browser__doc"></div></div>`;
-      const input = $(".addressbar__input", body), doc = $(".browser__doc", body), view = $(".browser__view", body), list = $(".cr-tabs__list", body);
-      const bBack = $('[data-nav="back"]', body), bFwd = $('[data-nav="fwd"]', body);
-      const tabs = [];
-      let active = null, tid = 0;
-      const sync = () => { bBack.disabled = !active || active.idx <= 0; bFwd.disabled = !active || active.idx >= active.hist.length - 1; };
-      const drawTabs = () => {
-        list.innerHTML = tabs.map(t => `<div class="cr-tab${t === active ? " is-active" : ""}" data-tab="${t.id}" role="tab" title="${esc(t.title)}">${icon(t.icon || "chrome", 16)}<span>${esc(t.title)}</span><button type="button" data-close="${t.id}" aria-label="Close tab"><svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button></div>`).join("");
+        <div class="cr-bookmarks" role="toolbar" aria-label="Bookmarks"></div>
+        <div class="cr-stage">
+          <div class="browser__view"></div>
+          <div class="cr-find" role="search" hidden>
+            <input class="cr-find__in" placeholder="Find in page" aria-label="Find in page" autocomplete="off" spellcheck="false">
+            <span class="cr-find__n" aria-live="polite"></span>
+            <button type="button" data-f="prev" title="Previous match (Shift+Enter)" aria-label="Previous match">${crIco("up", 20)}</button>
+            <button type="button" data-f="next" title="Next match (Enter)" aria-label="Next match">${crIco("dn", 20)}</button>
+            <button type="button" data-f="close" title="Close (Esc)" aria-label="Close find bar">${crIco("close", 18)}</button>
+          </div>
+          <div class="cr-status" hidden></div>
+        </div>`;
+      const input = $(".addressbar__input", body), view = $(".browser__view", body), list = $(".cr-tabs__list", body), stage = $(".cr-stage", body);
+      const omni = $(".cr-omni", body), sugg = $(".cr-sugg", body), star = $(".cr-star", body), zoomBtn = $(".cr-zoom", body), idIc = $(".cr-omni__id", body);
+      const bBack = $('[data-nav="back"]', body), bFwd = $('[data-nav="fwd"]', body), bReload = $('[data-nav="reload"]', body);
+      const bar = $(".cr-bar", body), bmBar = $(".cr-bookmarks", body), bubble = $(".cr-bubble", body), statusEl = $(".cr-status", body);
+      const menuBtn = $("[data-menu]", body), yearSel = $(".cr-year select", body);
+      const findBar = $(".cr-find", body), findIn = $(".cr-find__in", body), findN = $(".cr-find__n", body);
+      const tabs = [], closedTabs = [];
+      let active = null, tid = 0, closed = false, hover = "";
+      const curUrl = () => (active && active.hist[active.idx]) || "";
+      const isNT = u => u === "chrome://newtab";
+      const focusOmni = () => { input.focus(); input.select(); };
+
+      /* ----- toolbar state ----- */
+      const setBubble = () => { const msg = hover || (active && active.loading ? active.loadMsg : ""); statusEl.hidden = !msg; statusEl.textContent = msg || ""; };
+      const bmIndex = url => crBms().findIndex(b => crSame(b.url, url));
+      const syncStar = () => {
+        const url = curUrl(), r = url ? routeOf(url) : "newtab", can = r !== "newtab" && r !== "blank";
+        const on = can && bmIndex(url) >= 0;
+        star.hidden = !can;
+        star.classList.toggle("is-on", on);
+        star.innerHTML = crIco(on ? "star" : "starO", 18);
+        star.title = on ? "Edit bookmark" : "Bookmark this tab";
+        star.setAttribute("aria-pressed", String(on));
       };
-      const showTitle = () => win.setTitle(`${active.title} - Chrome 98`);
-      // archived pages load inside an iframe: show progress until it finishes
-      const watchFrame = () => {
-        const f = $(".tm__frame", doc);
+      const syncZoom = () => { const z = active ? active.zoom : 100; zoomBtn.hidden = z === 100; $("span", zoomBtn).textContent = z + "%"; };
+      const sync = () => {
+        bBack.disabled = !active || active.idx <= 0;
+        bFwd.disabled = !active || active.idx >= active.hist.length - 1;
+        const ld = !!(active && active.loading);
+        bReload.innerHTML = crIco(ld ? "close" : "reload");
+        bReload.title = ld ? "Stop loading this page" : "Reload this page";
+        bReload.setAttribute("aria-label", bReload.title);
+        bReload.dataset.nav = ld ? "stop" : "reload";
+        win.el.classList.toggle("is-loading", ld);
+        syncStar(); syncZoom(); setBubble();
+      };
+      const setAddr = url => {
+        input.value = isNT(url) ? "" : url;
+        const r = url ? routeOf(url) : "newtab";
+        idIc.innerHTML = crIco(r === "newtab" ? "search" : /^https:/i.test(url) ? "lock" : "info", 16);
+      };
+      const showTitle = () => win.setTitle(`${active ? active.title : "New Tab"} - Chrome 98${incog ? " (Incognito)" : ""}`);
+      const applyZoom = t => { t.pane.style.zoom = t.zoom === 100 ? "" : String(t.zoom / 100); };
+      const stepZoom = d => {
+        if (!active) return;
+        const z = active.zoom;
+        active.zoom = d === 0 ? 100 : d > 0 ? (CR_ZOOMS.find(x => x > z) || 500) : ([...CR_ZOOMS].reverse().find(x => x < z) || 25);
+        applyZoom(active); syncZoom();
+      };
+
+      /* ----- tab strip (elements are kept, so dragging and animations survive redraws) ----- */
+      const drawTabs = () => {
+        Array.from(list.children).forEach(c => { if (!tabs.some(t => t.el === c)) c.remove(); });
+        tabs.forEach((t, i) => {
+          let el = t.el;
+          if (!el) {
+            el = t.el = document.createElement("div");
+            el.className = "cr-tab";
+            el.setAttribute("role", "tab");
+            el.tabIndex = -1;
+            el.innerHTML = `<span class="cr-tab__fav"></span><span class="cr-tab__t"></span><button type="button" class="cr-tab__x" tabindex="-1" aria-label="Close tab" title="Close">${crIco("close", 14)}</button>`;
+            if (t.fresh && !reduceMotion()) { el.classList.add("is-new"); setTimeout(() => el.classList.remove("is-new"), 200); }
+            t.fresh = false;
+          }
+          if (list.children[i] !== el) list.insertBefore(el, list.children[i] || null);
+          const url = t.hist[t.idx] || "";
+          el.classList.toggle("is-active", t === active);
+          el.setAttribute("aria-selected", String(t === active));
+          el.tabIndex = t === active ? 0 : -1;
+          el.dataset.tab = t.id;
+          el.title = t.title;
+          const fk = (t.loading ? "L" : "F") + url;
+          if (el.dataset.fav !== fk) { el.dataset.fav = fk; $(".cr-tab__fav", el).innerHTML = t.loading ? `<span class="cr-spin"></span>` : crFav(url || "chrome://newtab", 16); }
+          $(".cr-tab__t", el).textContent = t.title;
+        });
+      };
+
+      /* ----- find in page ----- */
+      let marks = [], findAt = -1;
+      const clearMarks = () => {
+        marks.forEach(m => { const p = m.parentNode; if (p) { p.replaceChild(document.createTextNode(m.textContent), m); p.normalize(); } });
+        marks = []; findAt = -1;
+      };
+      const setHit = i => {
+        marks.forEach(m => m.classList.remove("is-on"));
+        findAt = marks.length ? (i + marks.length) % marks.length : -1;
+        if (findAt >= 0) { marks[findAt].classList.add("is-on"); marks[findAt].scrollIntoView({ block: "center" }); }
+        findN.textContent = findIn.value ? `${marks.length ? findAt + 1 : 0}/${marks.length}` : "";
+        findBar.classList.toggle("is-none", !!findIn.value && !marks.length);
+      };
+      const runFind = () => {
+        clearMarks();
+        const q = findIn.value;
+        if (!q || !active) { setHit(0); return; }
+        const walker = document.createTreeWalker(active.pane, NodeFilter.SHOW_TEXT, { acceptNode: n => n.nodeValue.trim() && !n.parentElement.closest("script,style,textarea,iframe") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        const lq = q.toLowerCase();
+        nodes.forEach(n => {
+          const txt = n.nodeValue, low = txt.toLowerCase();
+          let i = low.indexOf(lq);
+          if (i < 0) return;
+          const frag = document.createDocumentFragment();
+          let last = 0;
+          while (i >= 0) {
+            frag.appendChild(document.createTextNode(txt.slice(last, i)));
+            const m = document.createElement("mark");
+            m.className = "cr-hit";
+            m.textContent = txt.slice(i, i + q.length);
+            frag.appendChild(m); marks.push(m);
+            last = i + q.length; i = low.indexOf(lq, last);
+          }
+          frag.appendChild(document.createTextNode(txt.slice(last)));
+          n.parentNode.replaceChild(frag, n);
+        });
+        setHit(0);
+      };
+      const openFind = () => {
+        const s = String(window.getSelection() || "").trim();
+        if (s && s.length < 80 && !/\n/.test(s)) findIn.value = s;
+        findBar.hidden = false;
+        findIn.focus(); findIn.select();
+        runFind();
+      };
+      const closeFind = () => { findBar.hidden = true; clearMarks(); findBar.classList.remove("is-none"); };
+      findIn.addEventListener("input", runFind);
+      findIn.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); setHit(findAt + (e.shiftKey ? -1 : 1)); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeFind(); }
+      });
+      findBar.addEventListener("click", e => {
+        const b = e.target.closest("[data-f]");
+        if (!b) return;
+        if (b.dataset.f === "close") closeFind(); else setHit(findAt + (b.dataset.f === "prev" ? -1 : 1));
+      });
+
+      /* ----- pages, tabs and navigation ----- */
+      const watchFrame = t => {
+        const f = $(".tm__frame", t.pane);
         if (!f) return;
-        win.el.classList.add("is-loading");
-        win.setStatus(["Contacting web.archive.org...", ""]);
-        const done = () => { if (!f.isConnected) return; win.el.classList.remove("is-loading"); f.parentElement.classList.add("is-ready"); win.setStatus(["Done", ""]); };
+        t.loading = true; t.loadMsg = "Waiting for web.archive.org...";
+        t.frameDone = false;
+        const done = () => {
+          if (t.frameDone || closed) return;
+          t.frameDone = true; clearTimeout(t.ft); t.loading = false;
+          if (f.isConnected) f.parentElement.classList.add("is-ready");
+          if (t === active) sync();
+          drawTabs();
+        };
         f.addEventListener("load", done);
-        setTimeout(done, 20000);
+        t.ft = setTimeout(done, 20000);
       };
       const select = t => {
-        if (active) active.scroll = view.scrollTop;
+        closeBubble(true); closeSugg();
         active = t;
-        doc.innerHTML = t.html;
-        view.scrollTop = t.scroll || 0;
-        watchFrame();
-        input.value = t.hist[t.idx] === "chrome://newtab" ? "" : (t.hist[t.idx] || "");
-        win.el.classList.toggle("is-loading", !!t.loading);
+        tabs.forEach(x => { x.pane.hidden = x !== t; });
+        setAddr(curUrl());
         sync(); drawTabs(); showTitle();
+        if (!findBar.hidden) runFind();
       };
-      const load = (t, url) => {
+      const load = (t, url, record = false) => {
         const my = t.token = (t.token || 0) + 1;
-        t.loading = true;
-        if (t === active) { input.value = url === "chrome://newtab" ? "" : url; win.setStatus([`Opening page ${url}...`]); win.el.classList.add("is-loading"); }
-        setTimeout(() => {
-          if (my !== t.token || !WM.has("chrome")) return;
+        clearTimeout(t.timer); clearTimeout(t.ft);
+        const fast = reduceMotion() || /^(chrome|about):/i.test(url);
+        t.loading = !fast; t.loadMsg = `Waiting for ${crHost(url) || "page"}...`;
+        if (t === active) { setAddr(url); sync(); }
+        drawTabs();
+        t.timer = setTimeout(() => {
+          if (my !== t.token || closed) return;
           const page = routeOf(url);
-          t.html = PAGES[page](url);
-          t.title = PAGE_TITLES[page] || url;
-          t.icon = page === "youtube" ? "youtube" : page === "github" ? "github" : "chrome";
+          t.page = page;
+          t.pane.innerHTML = PAGES[page](url, { incog });
+          t.pane.scrollTop = 0;
+          t.title = crPageTitle(page, url);
           t.loading = false;
-          t.scroll = 0;
-          if (t === active) {
-            doc.innerHTML = t.html;
-            view.scrollTop = 0;
-            win.el.classList.remove("is-loading");
-            win.setStatus(["Done"]);
-            watchFrame();
-            showTitle();
-            if (page === "newtab") { const q = $(".nt__search input", doc); if (q) q.focus(); }
-          }
+          if (!incog && record && CR_RECORD[page]) crAddHist(url, t.title);
+          watchFrame(t);
+          if (t === active) { sync(); showTitle(); if (!findBar.hidden) runFind(); }
           drawTabs();
+          if (page === "newtab" && t === active) {
+            const q = $(".nt__search input", t.pane);
+            if (t.omni || !q) focusOmni(); else q.focus();
+            t.omni = false;
+          }
           if (page === "youtube") openApp("youtube");
           if (page === "github") openApp("github");
-        }, reduceMotion() || url === "chrome://newtab" ? 0 : 250 + Math.random() * 350);
+        }, fast ? 0 : 250 + Math.random() * 350);
       };
       const navigate = (raw, t = active) => {
+        if (!t) return;
         const url = normUrl(raw);
+        if (t.idx >= 0 && t.hist[t.idx] === url) { load(t, url); return; }
         t.hist.splice(t.idx + 1);
         t.hist.push(url);
         t.idx = t.hist.length - 1;
-        if (t === active) sync();
-        load(t, url);
+        load(t, url, true);
       };
-      const newTab = (url, focus = true) => {
-        const t = { id: ++tid, hist: [], idx: -1, title: "New Tab", html: "", scroll: 0 };
-        tabs.push(t);
+      const newTab = (url, focus = true, at, omniFocus = false) => {
+        const pane = document.createElement("div");
+        pane.className = "browser__doc cr-pane";
+        pane.hidden = true;
+        view.appendChild(pane);
+        const t = { id: ++tid, hist: [], idx: -1, title: "New Tab", pane, zoom: +store.get("crZoom", 100) || 100, loading: false, fresh: true, omni: omniFocus };
+        tabs.splice(at == null ? tabs.length : at, 0, t);
+        applyZoom(t);
         if (focus || !active) select(t); else drawTabs();
         navigate(url || "chrome://newtab", t);
         return t;
       };
       const closeTab = t => {
         const i = tabs.indexOf(t);
+        if (i < 0) return;
+        if (!incog && t.idx >= 0 && !isNT(t.hist[t.idx])) { closedTabs.push({ hist: t.hist.slice(), idx: t.idx }); if (closedTabs.length > 10) closedTabs.shift(); }
+        t.token++; clearTimeout(t.timer); clearTimeout(t.ft);
+        t.pane.remove();
         tabs.splice(i, 1);
         if (!tabs.length) { win.close(); return; }
-        if (active === t) { active = null; select(tabs[Math.max(0, i - 1)]); } else drawTabs();
+        if (active === t) { active = null; select(tabs[Math.min(i, tabs.length - 1)]); } else drawTabs();
+      };
+      const reopenTab = () => {
+        const c = closedTabs.pop();
+        if (!c) return;
+        const t = newTab(c.hist[c.idx]);
+        t.hist = c.hist.slice(); t.idx = c.idx;
+        sync();
+      };
+      const duplicateTab = t => {
+        const n = newTab(t.hist[t.idx], true, tabs.indexOf(t) + 1);
+        n.hist = t.hist.slice(); n.idx = t.idx; n.zoom = t.zoom;
+        applyZoom(n); sync();
       };
       const nav = a => {
         const t = active;
-        if (a === "back" && t.idx > 0) { t.idx--; sync(); load(t, t.hist[t.idx]); }
-        else if (a === "fwd" && t.idx < t.hist.length - 1) { t.idx++; sync(); load(t, t.hist[t.idx]); }
+        if (!t) return;
+        if (a === "back" && t.idx > 0) { t.idx--; load(t, t.hist[t.idx]); }
+        else if (a === "fwd" && t.idx < t.hist.length - 1) { t.idx++; load(t, t.hist[t.idx]); }
         else if (a === "reload" && t.idx >= 0) load(t, t.hist[t.idx]);
         else if (a === "home") navigate(HOME);
-        else if (a === "stop") { t.token++; t.loading = false; win.el.classList.remove("is-loading"); win.setStatus(["Stopped"]); }
+        else if (a === "stop") { t.token++; clearTimeout(t.timer); clearTimeout(t.ft); t.loading = false; sync(); drawTabs(); }
+      };
+      const cycle = d => { if (tabs.length > 1) select(tabs[(tabs.indexOf(active) + d + tabs.length) % tabs.length]); };
+      const openInternal = name => {
+        const url = "chrome://" + name;
+        const t = tabs.find(x => crSame(x.hist[x.idx] || "", url));
+        if (t) select(t);
+        else if (active && isNT(curUrl())) navigate(url);
+        else newTab(url);
       };
       win.navigate = url => navigate(url);
-      win.newTab = newTab;
+      win.newTab = (url, focus) => newTab(url, focus !== false);
       win.nav = nav;
 
+      /* ----- bookmarks bar ----- */
+      let overflowIdx = [];
+      const fitBookmarks = () => {
+        const L = $(".cr-bm__list", bmBar), more = $("[data-more]", bmBar);
+        if (!L || !more) return;
+        const btns = $$(".cr-bm", L);
+        const measure = () => { btns.forEach(b => { b.hidden = false; }); overflowIdx = []; btns.forEach((b, i) => { if (b.offsetLeft - L.offsetLeft + b.offsetWidth > L.clientWidth + 1) { b.hidden = true; overflowIdx.push(i); } }); };
+        more.hidden = true;
+        measure();
+        if (overflowIdx.length) { more.hidden = false; measure(); }
+        more.hidden = !overflowIdx.length;
+      };
+      const drawBookmarks = () => {
+        const on = store.get("crBar", true);
+        bmBar.hidden = !on;
+        if (!on) return;
+        const bms = crBms();
+        bmBar.innerHTML = `<div class="cr-bm__list">${bms.length ? bms.map((b, i) => `<button type="button" class="cr-bm" data-bm="${i}" data-go="${esc(b.url)}" title="${esc(b.title + "\n" + b.url)}">${crFav(b.url, 16)}<span>${esc(b.title)}</span></button>`).join("") : `<span class="cr-bm__hint">For quick access, bookmark pages with the star in the address bar.</span>`}</div><button type="button" class="cr-bm cr-bm--more" data-more title="Show more bookmarks" aria-label="Show more bookmarks" hidden>${crIco("chev2", 18)}</button><span class="cr-bm__sp"></span><button type="button" class="cr-bm" data-go="chrome://bookmarks" title="Bookmark manager">${crIco("folder", 16)}<span>All Bookmarks</span></button>`;
+        fitBookmarks();
+      };
+      const toggleBar = () => { store.set("crBar", !store.get("crBar", true)); crNotify("set"); };
+      bmBar.addEventListener("click", e => {
+        const more = e.target.closest("[data-more]");
+        if (more) {
+          const r = more.getBoundingClientRect(), bms = crBms();
+          crPop(overflowIdx.map(i => bms[i]).filter(Boolean).map(b => ({ label: b.title, icon: crFav(b.url, 16), action: () => navigate(b.url) })), r.left, r.bottom + 2, { dark: incog, anchor: more });
+          return;
+        }
+        const b = e.target.closest("[data-go]");
+        if (!b) return;
+        if (e.ctrlKey || e.metaKey) newTab(b.dataset.go, false); else navigate(b.dataset.go);
+      });
+      bmBar.addEventListener("auxclick", e => { const b = e.target.closest("[data-go]"); if (b && e.button === 1) { e.preventDefault(); newTab(b.dataset.go, false); } });
+      bmBar.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        const b = e.target.closest("[data-bm]");
+        const items = [];
+        if (b) {
+          const i = +b.dataset.bm;
+          items.push({ label: "Open in new tab", action: () => newTab(b.dataset.go, false) }, { sep: true },
+            { label: "Edit...", action: () => openInternal("bookmarks") },
+            { label: "Delete", action: () => { const l = crBms(); l.splice(i, 1); crSaveBms(l); } }, { sep: true });
+        }
+        items.push({ label: "Show bookmarks bar", hint: "Ctrl+Shift+B", checked: true, action: toggleBar }, { label: "Bookmark manager", hint: "Ctrl+Shift+O", action: () => openInternal("bookmarks") });
+        crPop(items, e.clientX, e.clientY, { dark: incog });
+      });
+
+      /* ----- bookmark star + bubble ----- */
+      let bubbleOff = null;
+      const closeBubble = save => {
+        if (bubble.hidden) return;
+        if (save) {
+          const inp = $("input", bubble), i = +bubble.dataset.i, bms = crBms();
+          if (bms[i] && inp && inp.value.trim() && inp.value.trim() !== bms[i].title) { bms[i].title = inp.value.trim(); crSaveBms(bms); }
+        }
+        bubble.hidden = true; bubble.innerHTML = "";
+        if (bubbleOff) { bubbleOff(); bubbleOff = null; }
+      };
+      const showBubble = (i, adding) => {
+        const b = crBms()[i];
+        if (!b) return;
+        bubble.dataset.i = i;
+        bubble.innerHTML = `<h4>${adding ? "Bookmark added" : "Edit bookmark"}</h4><label>Name<input value="${esc(b.title)}" maxlength="120" autocomplete="off"></label><div class="cr-bubble__btns"><button type="button" data-bb="remove">Remove</button><button type="button" class="is-blue" data-bb="done">Done</button></div>`;
+        bubble.hidden = false;
+        const r = star.getBoundingClientRect(), br = bar.getBoundingClientRect();
+        bubble.style.left = Math.max(8, Math.min(r.right - br.left - 300, br.width - 308)) + "px";
+        const down = e => { if (!bubble.contains(e.target) && !star.contains(e.target)) closeBubble(true); };
+        document.addEventListener("pointerdown", down, true);
+        bubbleOff = () => document.removeEventListener("pointerdown", down, true);
+        const inp = $("input", bubble);
+        inp.focus(); inp.select();
+      };
+      bubble.addEventListener("click", e => {
+        const b = e.target.closest("[data-bb]");
+        if (!b) return;
+        if (b.dataset.bb === "remove") { const l = crBms(); l.splice(+bubble.dataset.i, 1); closeBubble(false); crSaveBms(l); }
+        else closeBubble(true);
+      });
+      bubble.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); closeBubble(true); } else if (e.key === "Escape") { e.stopPropagation(); closeBubble(true); } });
+      const toggleStar = () => {
+        if (!bubble.hidden) { closeBubble(true); return; }
+        const url = curUrl(), r = url ? routeOf(url) : "newtab";
+        if (!active || r === "newtab" || r === "blank") return;
+        const bms = crBms();
+        let i = bmIndex(url);
+        const adding = i < 0;
+        if (adding) { bms.push({ title: active.title, url }); crSaveBms(bms); i = bms.length - 1; }
+        showBubble(i, adding);
+      };
+      star.addEventListener("click", toggleStar);
+      zoomBtn.addEventListener("click", () => stepZoom(0));
+
+      /* ----- address bar + suggestions ----- */
+      let suggItems = [], sel = -1, typed = "";
+      const closeSugg = () => { sugg.hidden = true; omni.classList.remove("is-open"); input.setAttribute("aria-expanded", "false"); sel = -1; suggItems = []; };
+      const drawSugg = () => {
+        sugg.innerHTML = suggItems.map((s, i) => `<div class="cr-sugg__row${i === sel ? " is-sel" : ""}" role="option" data-i="${i}" aria-selected="${i === sel}"><span class="cr-sugg__ic">${s.ic}</span><span class="cr-sugg__t">${s.html}</span></div>`).join("");
+        sugg.hidden = !suggItems.length;
+        omni.classList.toggle("is-open", !sugg.hidden);
+        input.setAttribute("aria-expanded", String(!sugg.hidden));
+      };
+      const buildSugg = q0 => {
+        const q = q0.trim();
+        if (!q) return [];
+        const lq = q.toLowerCase(), terms = lq.split(/\s+/), isUrl = crLooksLikeUrl(q);
+        const out = [{ ic: crIco(isUrl ? "globe" : "search", 18, "#5f6368"), html: `${esc(q)}<span class="cr-sugg__d"> - ${isUrl ? "Open web page" : esc(crEngine()) + " Search"}</span>`, go: q }];
+        const seen = new Set(), cand = [];
+        const add = (ic, title, u) => {
+          const t = title.toLowerCase(), k = u.replace(/\/+$/, "").toLowerCase();
+          if (seen.has(k) || !terms.every(x => (t + " " + k).includes(x))) return;
+          seen.add(k);
+          cand.push({ ic, title, u, score: t.startsWith(lq) ? 0 : t.includes(lq) ? 1 : terms.every(x => t.includes(x)) ? 2 : 3 });
+        };
+        crBms().forEach(b => add(crIco("star", 18, "#f9ab00"), b.title, b.url));
+        if (!incog) crHist().forEach(e => { if (routeOf(e.url) !== "search") add(crIco("history", 18, "#5f6368"), e.title, e.url); });
+        SEARCH_INDEX().forEach(r => { if (r.project === undefined && !r.app) add(crIco("page", 18, "#1a73e8"), r.title, r.url); });
+        cand.sort((x, y) => x.score - y.score).slice(0, 6).forEach(c => out.push({ ic: c.ic, html: `<span class="cr-sugg__tt">${crMark(c.title, terms)}</span><span class="cr-sugg__d"> - </span><span class="cr-sugg__u">${esc(c.u)}</span>`, go: c.u }));
+        return out;
+      };
+      input.addEventListener("input", () => { typed = input.value; suggItems = buildSugg(typed); sel = -1; drawSugg(); });
+      // like Chrome, the first click into the address bar selects the whole address
+      let freshFocus = false;
+      input.addEventListener("mousedown", () => { freshFocus = document.activeElement !== input; });
+      input.addEventListener("mouseup", e => { if (freshFocus) { e.preventDefault(); input.select(); freshFocus = false; } });
+      input.addEventListener("blur", () => setTimeout(closeSugg, 120));
+      input.addEventListener("keydown", e => {
+        if ((e.key === "ArrowDown" || e.key === "ArrowUp") && suggItems.length) {
+          e.preventDefault();
+          const n = suggItems.length;
+          sel = e.key === "ArrowDown" ? (sel + 1 >= n ? -1 : sel + 1) : (sel - 1 < -1 ? n - 1 : sel - 1);
+          input.value = sel < 0 ? typed : suggItems[sel].go;
+          drawSugg();
+        } else if (e.key === "Escape") {
+          e.stopPropagation();
+          if (!sugg.hidden) { input.value = typed; closeSugg(); } else { setAddr(curUrl()); input.blur(); }
+        }
+      });
+      sugg.addEventListener("mousedown", e => e.preventDefault());
+      sugg.addEventListener("click", e => { const r = e.target.closest("[data-i]"); if (r && suggItems[+r.dataset.i]) { const go = suggItems[+r.dataset.i].go; closeSugg(); input.blur(); navigate(go); } });
+      omni.addEventListener("submit", e => {
+        e.preventDefault();
+        const go = sel >= 0 && suggItems[sel] ? suggItems[sel].go : input.value;
+        closeSugg(); input.blur();
+        navigate(go);
+      });
+
+      /* ----- Chrome menu ----- */
+      const printPage = () => {
+        if (!active) return;
+        const fr = $(".tm__frame", active.pane);
+        if (fr) { try { fr.contentWindow.print(); return; } catch (e) {} }
+        const host = document.createElement("div");
+        host.id = "crPrint";
+        host.innerHTML = active.pane.innerHTML;
+        document.body.appendChild(host);
+        document.body.classList.add("cr-printing");
+        let done = false;
+        const end = () => { if (done) return; done = true; host.remove(); document.body.classList.remove("cr-printing"); window.removeEventListener("afterprint", end); };
+        window.addEventListener("afterprint", end);
+        setTimeout(end, 4000);
+        try { window.print(); } catch (e) { end(); }
+      };
+      const mainMenu = () => [
+        { label: "New tab", hint: "Ctrl+T", action: () => newTab(null, true, undefined, true) },
+        { label: "New incognito window", hint: "Ctrl+Shift+N", action: () => openChrome({ incognito: true }) },
+        { sep: true },
+        { label: "History", hint: "Ctrl+H", action: () => openInternal("history") },
+        { label: "Downloads", hint: "Ctrl+J", action: () => openInternal("downloads") },
+        { label: "Bookmarks", sub: [
+          { label: "Show bookmarks bar", hint: "Ctrl+Shift+B", checked: store.get("crBar", true), action: toggleBar },
+          { label: "Bookmark manager", hint: "Ctrl+Shift+O", action: () => openInternal("bookmarks") },
+          { label: "Bookmark this tab...", hint: "Ctrl+D", action: toggleStar },
+          ...(crBms().length ? [{ sep: true }, ...crBms().slice(0, 14).map(b => ({ label: b.title, icon: crFav(b.url, 16), action: () => navigate(b.url) }))] : []),
+        ] },
+        { sep: true },
+        { zoom: { get: () => (active ? active.zoom : 100), step: stepZoom } },
+        { sep: true },
+        { label: "Print...", hint: "Ctrl+P", action: printPage },
+        { label: "Find...", hint: "Ctrl+F", action: openFind },
+        { sep: true },
+        { label: "Settings", action: () => openInternal("settings") },
+        { label: "About Chrome 98", action: () => openInternal("version") },
+        { sep: true },
+        { label: "Exit", action: () => win.close() },
+      ];
+      menuBtn.addEventListener("click", e => {
+        if (CR_POP.stack.length && CR_POP.stack[0].anchor === menuBtn) { crPopClose(0); return; }
+        closeBubble(true);
+        const r = menuBtn.getBoundingClientRect();
+        menuBtn.setAttribute("aria-expanded", "true");
+        crPop(mainMenu(), r.right, r.bottom + 4, { alignRight: true, anchor: menuBtn, dark: incog, onClose: () => menuBtn.setAttribute("aria-expanded", "false") });
+        if (e.detail === 0) { const first = $(".cr-menu__item", CR_POP.stack[0].el); if (first) first.focus(); }
+      });
+
+      /* ----- tab strip interaction ----- */
+      let drag = null;
+      const dragMove = e => {
+        if (!drag) return;
+        if (!drag.moved) { if (Math.abs(e.clientX - drag.x0) < 6) return; drag.moved = true; drag.el.classList.add("is-drag"); list.classList.add("is-sorting"); }
+        const el = drag.el;
+        el.style.transform = "";
+        const wd = el.offsetWidth, cx = e.clientX - drag.grab + wd / 2;
+        for (let guard = 0; guard <= tabs.length; guard++) {
+          const prev = el.previousElementSibling, next = el.nextElementSibling;
+          if (prev) { const r = prev.getBoundingClientRect(); if (cx < r.left + r.width / 2) { list.insertBefore(el, prev); continue; } }
+          if (next) { const r = next.getBoundingClientRect(); if (cx > r.left + r.width / 2) { list.insertBefore(next, el); continue; } }
+          break;
+        }
+        const lr = list.getBoundingClientRect(), nat = el.getBoundingClientRect().left;
+        const left = Math.min(Math.max(e.clientX - drag.grab, lr.left), Math.max(lr.left, lr.right - wd));
+        el.style.transform = `translateX(${left - nat}px)`;
+      };
+      const dragEnd = () => {
+        document.removeEventListener("pointermove", dragMove);
+        document.removeEventListener("pointerup", dragEnd);
+        document.removeEventListener("pointercancel", dragEnd);
+        if (!drag) return;
+        const { el, moved } = drag;
+        drag = null;
+        el.classList.remove("is-drag"); el.style.transform = ""; list.classList.remove("is-sorting");
+        if (moved) { const order = Array.from(list.children); tabs.sort((a, b) => order.indexOf(a.el) - order.indexOf(b.el)); drawTabs(); }
+      };
+      list.addEventListener("pointerdown", e => {
+        if (e.button !== 0 || e.target.closest(".cr-tab__x")) return;
+        const el = e.target.closest(".cr-tab");
+        const t = el && tabs.find(x => x.el === el);
+        if (!t) return;
+        if (active !== t) select(t);
+        if (tabs.length < 2) return;
+        drag = { el, x0: e.clientX, grab: e.clientX - el.getBoundingClientRect().left, moved: false };
+        document.addEventListener("pointermove", dragMove);
+        document.addEventListener("pointerup", dragEnd);
+        document.addEventListener("pointercancel", dragEnd);
+      });
+      list.addEventListener("mousedown", e => { if (e.button === 1) e.preventDefault(); });
       list.addEventListener("click", e => {
-        const c = e.target.closest("[data-close]");
-        if (c) { e.stopPropagation(); closeTab(tabs.find(t => t.id === +c.dataset.close)); return; }
-        const tb = e.target.closest("[data-tab]");
-        if (tb) select(tabs.find(t => t.id === +tb.dataset.tab));
+        const el = e.target.closest(".cr-tab");
+        const t = el && tabs.find(x => x.el === el);
+        if (!t) return;
+        if (e.target.closest(".cr-tab__x")) { e.stopPropagation(); closeTab(t); } else if (active !== t) select(t);
       });
-      list.addEventListener("auxclick", e => { const tb = e.target.closest("[data-tab]"); if (tb && e.button === 1) closeTab(tabs.find(t => t.id === +tb.dataset.tab)); });
-      $(".cr-tabs__new", body).addEventListener("click", () => newTab());
-      $(".cr-year select", body).addEventListener("change", e => {
-        store.set("crYear", +e.target.value);
-        if (active && routeOf(active.hist[active.idx] || "") === "web") load(active, active.hist[active.idx]);
+      list.addEventListener("auxclick", e => { const el = e.target.closest(".cr-tab"); const t = el && tabs.find(x => x.el === el); if (t && e.button === 1) { e.preventDefault(); closeTab(t); } });
+      list.addEventListener("keydown", e => {
+        const el = e.target.closest(".cr-tab"), t = el && tabs.find(x => x.el === el);
+        if (t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(t); }
+        else if (t && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); cycle(e.key === "ArrowLeft" ? -1 : 1); if (active && active.el) active.el.focus(); }
       });
-      $(".addressbar", body).addEventListener("submit", e => { e.preventDefault(); navigate(input.value); });
+      list.addEventListener("contextmenu", e => {
+        const el = e.target.closest(".cr-tab"), t = el && tabs.find(x => x.el === el);
+        e.preventDefault();
+        if (!t) return;
+        const i = tabs.indexOf(t);
+        crPop([
+          { label: "New tab to the right", action: () => newTab(null, true, i + 1, true) },
+          { sep: true },
+          { label: "Reload", hint: "Ctrl+R", action: () => { if (t.idx >= 0) load(t, t.hist[t.idx]); } },
+          { label: "Duplicate", action: () => duplicateTab(t) },
+          { sep: true },
+          { label: "Close", hint: "Ctrl+W", action: () => closeTab(t) },
+          { label: "Close other tabs", disabled: tabs.length < 2, action: () => tabs.slice().forEach(x => { if (x !== t) closeTab(x); }) },
+          { label: "Close tabs to the right", disabled: i >= tabs.length - 1, action: () => tabs.slice(i + 1).forEach(closeTab) },
+          { sep: true },
+          { label: "Reopen closed tab", hint: "Ctrl+Shift+T", disabled: !closedTabs.length, action: reopenTab },
+        ], e.clientX, e.clientY, { dark: incog });
+      });
+      $(".cr-tabs__new", body).addEventListener("click", () => newTab(null, true, undefined, true));
+
+      /* ----- toolbar ----- */
+      yearSel.addEventListener("change", () => {
+        store.set("crYear", +yearSel.value);
+        crNotify("set");
+        if (active && routeOf(curUrl()) === "web") load(active, curUrl());
+      });
       $$(".cr-bar [data-nav]", body).forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
-      $(".cr-bookmarks", body).addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { if (e.ctrlKey || e.metaKey) newTab(b.dataset.go, false); else navigate(b.dataset.go); } });
+
+      /* ----- page content (one pane per tab, so tabs keep their scroll, forms and archived pages) ----- */
       const follow = (e, background) => {
         const t = e.target.closest("[data-go],[data-app],[data-nav],[data-project]");
         if (!t) return false;
@@ -1365,33 +2156,210 @@ function openChrome(o = {}) {
         else if (t.dataset.project !== undefined) openProject(+t.dataset.project);
         return true;
       };
-      doc.addEventListener("click", e => follow(e, e.ctrlKey || e.metaKey));
-      doc.addEventListener("auxclick", e => { if (e.button === 1) follow(e, true); });
-      doc.addEventListener("submit", e => {
+      const confirmBox = (title, text, ok) => new Promise(res => {
+        const ov = document.createElement("div");
+        ov.className = "cr-dlg-ov";
+        ov.innerHTML = `<div class="cr-dlg" role="alertdialog" aria-label="${esc(title)}"><h3>${esc(title)}</h3><p>${esc(text)}</p><div class="cr-dlg__btns"><button type="button" data-r="0">Cancel</button><button type="button" class="is-blue" data-r="1">${esc(ok)}</button></div></div>`;
+        const done = v => { ov.remove(); res(v); };
+        ov.addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (b) done(b.dataset.r === "1"); else if (e.target === ov) done(false); });
+        ov.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); done(false); } });
+        stage.appendChild(ov);
+        $('[data-r="1"]', ov).focus();
+      });
+      const selUpdate = t => {
+        const n = $$("[data-sel]:checked", t.pane).length, head = $(".cp__head", t.pane);
+        if (head) { head.classList.toggle("is-sel", n > 0); const c = $("[data-selcount]", head); if (c) c.textContent = n; }
+      };
+      const histRefresh = t => { const box = $("[data-hist]", t.pane), s = $("[data-hsearch]", t.pane); if (box) { box.innerHTML = crHistList(s ? s.value : ""); selUpdate(t); } };
+      const bmRefresh = (t, edit = -1) => {
+        const box = $("[data-bm]", t.pane), s = $("[data-bsearch]", t.pane);
+        if (!box) return;
+        box.innerHTML = crBmList(s ? s.value : "", edit);
+        const n = crBms().length, c = $(".bm__count", t.pane);
+        if (c) c.textContent = `${n} bookmark${n === 1 ? "" : "s"}`;
+        if (edit >= 0) { const f = $(".bm__edit input", box); if (f) f.focus(); }
+      };
+      const rerender = t => {
+        const url = t.hist[t.idx], st = t.pane.scrollTop;
+        t.pane.innerHTML = PAGES[routeOf(url)](url, { incog });
+        t.pane.scrollTop = st;
+      };
+      const act = el => {
+        const a = el.dataset.act, t = active;
+        if (a === "clear-data") confirmBox("Clear browsing data", "This clears your browsing history. Your bookmarks and settings stay as they are.", "Clear data").then(ok => { if (ok) { store.del("crHistory"); crNotify("hist"); } });
+        else if (a === "rm-hist") { store.set("crHistory", crHist().filter(e => String(e.t) !== el.dataset.t)); crNotify("hist"); }
+        else if (a === "hist-cancel") { $$("[data-sel]", t.pane).forEach(c => { c.checked = false; }); selUpdate(t); }
+        else if (a === "hist-delete") { const ts = new Set($$("[data-sel]:checked", t.pane).map(c => c.closest("[data-t]").dataset.t)); store.set("crHistory", crHist().filter(e => !ts.has(String(e.t)))); crNotify("hist"); }
+        else if (a === "bm-add-form") { const f = $(".bm__add", t.pane); f.hidden = !f.hidden; if (!f.hidden) f.elements.title.focus(); }
+        else if (a === "bm-edit") bmRefresh(t, +el.dataset.i);
+        else if (a === "bm-cancel") bmRefresh(t);
+        else if (a === "bm-del") { const l = crBms(); l.splice(+el.dataset.i, 1); crSaveBms(l); }
+        else if (a === "reset-settings") confirmBox("Reset settings", "Bookmarks bar, zoom, search engine and Time Machine year go back to their defaults, and the default bookmarks come back.", "Reset settings").then(ok => {
+          if (!ok) return;
+          ["crBar", "crZoom", "crEngine", "crYear", "crBookmarks"].forEach(k => store.del(k));
+          crNotify("bm"); crNotify("set");
+          if (active) rerender(active);
+        });
+        else if (a === "sr-clear") { const inp = $("input", el.parentElement); inp.value = ""; inp.focus(); }
+      };
+      view.addEventListener("click", e => {
+        const a = e.target.closest("[data-act]");
+        if (a) { e.preventDefault(); act(a); return; }
+        follow(e, e.ctrlKey || e.metaKey);
+      });
+      view.addEventListener("keydown", e => { const a = e.target.closest("[data-act]"); if (a && a.getAttribute("role") === "button" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); act(a); } });
+      view.addEventListener("auxclick", e => { if (e.button === 1) follow(e, true); });
+      view.addEventListener("change", e => {
+        const s = e.target.closest("[data-set]");
+        if (s) {
+          const k = s.dataset.set;
+          if (k === "bar") store.set("crBar", s.checked);
+          else if (k === "zoom") store.set("crZoom", +s.value);
+          else if (k === "engine") store.set("crEngine", s.value);
+          else if (k === "year") store.set("crYear", +s.value);
+          crNotify("set");
+        } else if (e.target.matches("[data-sel]") && active) selUpdate(active);
+      });
+      view.addEventListener("input", e => {
+        const el = e.target;
+        if (!active) return;
+        if (el.matches("[data-hsearch]")) histRefresh(active);
+        else if (el.matches("[data-bsearch]")) bmRefresh(active);
+        else if (el.matches("[data-ssearch]")) {
+          const q = el.value.toLowerCase().trim();
+          let any = false;
+          $$(".set", active.pane).forEach(sec => {
+            const head = $("h2", sec).textContent.toLowerCase();
+            let vis = false;
+            $$(".set__row", sec).forEach(r => { const m = !q || head.includes(q) || r.textContent.toLowerCase().includes(q); r.hidden = !m; if (m) vis = true; });
+            sec.hidden = !vis;
+            if (vis) any = true;
+          });
+          const none = $(".cp__empty--set", active.pane);
+          if (none) none.hidden = any;
+        }
+      });
+      view.addEventListener("submit", e => {
         const f = e.target.closest("form[data-form]");
         if (!f) return;
         e.preventDefault();
-        if (f.dataset.form === "guestbook") {
+        const kind = f.dataset.form;
+        if (kind === "guestbook") {
           const msg = f.elements.msg.value.trim();
           if (!msg) { msgBox({ title: "Guestbook", icon: "warning", text: "Write a message first!" }); return; }
           const gb = store.get("guestbook", GUESTBOOK_SEED);
           gb.unshift({ name: f.elements.name.value.trim() || "Anonymous", msg, date: fmtDate() });
           store.set("guestbook", gb.slice(0, 50));
-          load(active, active.hist[active.idx]);
-        } else if (f.dataset.form === "search") {
+          load(active, curUrl());
+        } else if (kind === "search") {
           const q = f.elements.q.value.trim();
-          if (q) navigate(/^(https?:\/\/|www\.)|\.(com|org|net|io|app|dev)(\/|$)/i.test(q) ? q : `http://www.altavista.com/search?q=${encodeURIComponent(q)}`);
+          if (q) navigate(crLooksLikeUrl(q) ? q : crSearchUrl(q, crBrandOf(curUrl())));
+        } else if (kind === "bm-add") {
+          const u = f.elements.url.value.trim();
+          if (!u) { f.elements.url.focus(); return; }
+          const url = normUrl(u), l = crBms();
+          l.push({ title: f.elements.title.value.trim() || crHost(url) || url, url });
+          f.reset(); f.hidden = true;
+          crSaveBms(l);
+        } else if (kind === "bm-save") {
+          const i = +f.dataset.i, l = crBms();
+          if (!l[i]) return;
+          const u = f.elements.url.value.trim();
+          if (!u) { f.elements.url.focus(); return; }
+          const url = normUrl(u);
+          l[i] = { title: f.elements.title.value.trim() || crHost(url) || url, url };
+          crSaveBms(l);
         }
       });
-      doc.addEventListener("pointerover", e => {
-        const a = e.target.closest("[data-go], a[href]");
-        if (a && !win.el.classList.contains("is-loading")) win.setStatus([a.dataset.go || a.href]);
+      view.addEventListener("pointerover", e => { const a = e.target.closest("[data-go], a[href]"); if (a) { hover = a.dataset.go || a.href; setBubble(); } });
+      view.addEventListener("pointerout", e => {
+        if (e.target.closest("[data-go], a[href]") && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("[data-go], a[href]"))) { hover = ""; setBubble(); }
       });
-      doc.addEventListener("pointerout", e => {
-        if (e.target.closest("[data-go], a[href]") && !win.el.classList.contains("is-loading")) win.setStatus(["Done"]);
+      view.addEventListener("contextmenu", e => {
+        if (e.target.closest("input,textarea,select")) return;
+        e.preventDefault();
+        const link = e.target.closest("[data-go]");
+        const t = active, items = [];
+        if (link && link.dataset.go) items.push(
+          { label: "Open link in new tab", action: () => newTab(link.dataset.go, false) },
+          { label: "Copy link address", action: () => { try { navigator.clipboard.writeText(link.dataset.go); } catch (x) {} } },
+          { sep: true });
+        items.push(
+          { label: "Back", hint: "Alt+Left", disabled: !t || t.idx <= 0, action: () => nav("back") },
+          { label: "Forward", hint: "Alt+Right", disabled: !t || t.idx >= t.hist.length - 1, action: () => nav("fwd") },
+          { label: "Reload", hint: "Ctrl+R", action: () => nav("reload") },
+          { sep: true },
+          { label: "Bookmark this page...", hint: "Ctrl+D", action: toggleStar },
+          { label: "Print...", hint: "Ctrl+P", action: printPage },
+          { label: "Find...", hint: "Ctrl+F", action: openFind });
+        crPop(items, e.clientX, e.clientY, { dark: incog });
       });
+
+      /* ----- keyboard (routed here by the desktop while this window is active) ----- */
+      win.onKey = e => {
+        if (closed) return;
+        const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), stop = () => { e.preventDefault(); e.stopPropagation(); };
+        if (e.key === "Escape") {
+          if (!findBar.hidden) { stop(); closeFind(); }
+          else if (active && active.loading && document.activeElement !== input) { stop(); nav("stop"); }
+          return;
+        }
+        if (e.altKey && !c) {
+          if (e.key === "ArrowLeft") { stop(); nav("back"); }
+          else if (e.key === "ArrowRight") { stop(); nav("fwd"); }
+          else if (e.key === "Home") { stop(); nav("home"); }
+          else if (k === "d") { stop(); focusOmni(); }
+          return;
+        }
+        if (e.key === "F5") { stop(); nav("reload"); return; }
+        if (e.key === "F6") { stop(); focusOmni(); return; }
+        if (e.key === "F3") { stop(); if (findBar.hidden) openFind(); else setHit(findAt + (e.shiftKey ? -1 : 1)); return; }
+        if (!c) return;
+        if (e.key === "Tab" || e.key === "PageDown" || e.key === "PageUp") { stop(); cycle(e.key === "PageUp" || (e.key === "Tab" && e.shiftKey) ? -1 : 1); }
+        else if (k === "t") { stop(); if (e.shiftKey) reopenTab(); else newTab(null, true, undefined, true); }
+        else if (k === "n" && e.shiftKey) { stop(); openChrome({ incognito: true }); }
+        else if (k === "w" || k === "f4") { stop(); if (active) closeTab(active); }
+        else if (k === "l") { stop(); focusOmni(); }
+        else if (k === "r") { stop(); nav("reload"); }
+        else if (k === "f") { stop(); openFind(); }
+        else if (k === "g" && !findBar.hidden) { stop(); setHit(findAt + (e.shiftKey ? -1 : 1)); }
+        else if (k === "d") { stop(); toggleStar(); }
+        else if (k === "h") { stop(); openInternal("history"); }
+        else if (k === "j") { stop(); openInternal("downloads"); }
+        else if (k === "o" && e.shiftKey) { stop(); openInternal("bookmarks"); }
+        else if (k === "b" && e.shiftKey) { stop(); toggleBar(); }
+        else if (k === "p") { stop(); printPage(); }
+        else if (e.key === "=" || e.key === "+") { stop(); stepZoom(1); }
+        else if (e.key === "-" || e.key === "_") { stop(); stepZoom(-1); }
+        else if (e.key === "0") { stop(); stepZoom(0); }
+        else if (/^[1-9]$/.test(e.key)) { stop(); const n = +e.key; select(n === 9 ? tabs[tabs.length - 1] : tabs[n - 1] || active); }
+      };
+
+      /* ----- shared data changes (bookmarks, history, settings) ----- */
+      const onBus = what => {
+        if (closed) return;
+        if (what === "bm") { drawBookmarks(); syncStar(); tabs.forEach(t => { if (t.page === "bookmarks") bmRefresh(t); }); }
+        else if (what === "set") { drawBookmarks(); yearSel.value = String(store.get("crYear", 1998)); input.placeholder = `Search ${crEngine()} or type a URL`; }
+        else if (what === "hist") tabs.forEach(t => { if (t.page === "history") histRefresh(t); });
+      };
+      CR_BUS.add(onBus);
+      const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => fitBookmarks()) : null;
+      if (ro) ro.observe(bmBar);
+      win.cleanup = () => {
+        closed = true;
+        CR_BUS.delete(onBus);
+        if (ro) ro.disconnect();
+        dragEnd();
+        if (bubbleOff) { bubbleOff(); bubbleOff = null; }
+        crPopClose(0);
+        tabs.forEach(t => { t.token++; clearTimeout(t.timer); clearTimeout(t.ft); });
+        if (win.el) win.el.classList.remove("is-loading");
+      };
+
+      drawBookmarks();
       newTab(o.url || "chrome://newtab");
     },
+    onClose(win) { if (win.cleanup) win.cleanup(); },
   });
   if (had && o.url && w.newTab) w.newTab(o.url);
 }
