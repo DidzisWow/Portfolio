@@ -4412,6 +4412,15 @@ const ALIASES = {
   sol: "solitaire", cards: "solitaire", klondike: "solitaire", nibbles: "snake",
   clock: "datetime", time: "datetime", date: "datetime", timedate: "datetime", calendar: "datetime",
 };
+// Extension point: files in apps/ register themselves (window.W98_APPS) before this script runs.
+// Each entry: { key, label, group: "games" | "programs", aliases: [], open(opts, W98) }.
+// The icon is images/<key>.svg. W98 is the small toolkit apps may use.
+const W98 = window.W98 = { WM, store, Sound, msgBox, icon, ui, esc, $, $$, sleep, pick, NAME, FIRST, ROLE, C };
+const EXT_APPS = (window.W98_APPS || []).filter(a => a && a.key && typeof a.open === "function" && !APPS[a.key]);
+EXT_APPS.forEach(a => {
+  APPS[a.key] = { label: a.label || a.key, icon: a.icon, open: o => a.open(o || {}, W98) };
+  (a.aliases || []).forEach(al => { ALIASES[String(al).toLowerCase()] = a.key; });
+});
 function resolveApp(name) {
   const n = String(name || "").trim().toLowerCase().replace(/\.(exe|com|bat|txt|cpl|lnk)$/, "");
   if (APPS[n] && !(n === "resume" && !RESUME)) return n;
@@ -4436,7 +4445,7 @@ function openApp(key, opts = {}) {
 /* ==========================================================================
    DESKTOP (draggable icons, rubber-band select, right-click menu)
    ========================================================================== */
-const DESKTOP_ORDER = ["about", "projects", "skills", "contact", "resume", "bin", "terminal", "chrome", "youtube", "spotify", "discord", "github", "minesweeper", "solitaire", "snake", "paint"].filter(k => !APPS[k].hidden);
+const DESKTOP_ORDER = ["about", "projects", "skills", "contact", "resume", "bin", "terminal", "chrome", "youtube", "spotify", "discord", "github", "minesweeper", "solitaire", "snake", "paint"].concat(EXT_APPS.map(a => a.key)).filter(k => !APPS[k].hidden);
 const CELL = { w: 80, h: 76 };
 let iconOrder = DESKTOP_ORDER.slice();
 
@@ -4633,8 +4642,8 @@ function initDesktop() {
 const StartMenu = {
   el: null, btn: null, fly: null,
   SUBS: {
-    programs: ["chrome", "youtube", "spotify", "discord", "github", "terminal", "notepad", "paint"],
-    games: ["minesweeper", "solitaire", "snake"],
+    programs: ["chrome", "youtube", "spotify", "discord", "github", "terminal", "notepad", "paint"].concat(EXT_APPS.filter(a => a.group !== "games").map(a => a.key)),
+    games: ["minesweeper", "solitaire", "snake"].concat(EXT_APPS.filter(a => a.group === "games").map(a => a.key)),
     settings: ["display", "datetime", "welcome"],
   },
   init() {
