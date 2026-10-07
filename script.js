@@ -1786,102 +1786,341 @@ function importBackup(file, done) {
   r.readAsText(file);
 }
 const backupBar = () => `<span class="media-backup"><button type="button" data-export>Export backup</button><label class="media-backup__imp">Import backup<input type="file" accept="application/json,.json" data-import hidden></label></span>`;
+// ---- Spotify window helpers: glyphs, iFrame API loader, browse categories ----
+BACKUP_KEYS.push("spRecent", "spLikes", "spLists", "spHidden");
+const SP_ICONS = {
+  heart: "M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z",
+  heartO: "M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3m-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05",
+  pause: "M6 19h4V5H6zm8-14v14h4V5z",
+  prev: "M6 6h2v12H6zm3.5 6 8.5 6V6z",
+  next: "M6 18l8.5-6L6 6zM16 6v12h2V6z",
+  shuffle: "M10.59 9.17 5.41 4 4 5.41l5.17 5.17zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04z",
+  repeat: "M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z",
+  repeat1: "M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2zm-4-2V9h-1l-2 1v1h1.5v4z",
+  vol: "M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77",
+  volLow: "M18.5 12A4.5 4.5 0 0 0 16 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02M5 9v6h4l5 5V4L9 9z",
+  volMute: "M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63m2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71M4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9 9 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4 9.91 6.09 12 8.18z",
+  more: "M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2",
+  check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  link: "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5",
+  list: "M3 18h6v-2H3zM3 6v2h18V6zm0 7h12v-2H3z",
+  plusList: "M14 10H3v2h11zm0-4H3v2h11zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2zM3 16h7v-2H3z",
+  chev: "M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z",
+  open: "M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3zM19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z",
+  pin: "M16 9V4l1-1V2H7v1l1 1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3",
+};
+const spi = (name, size = 20) => SP_ICONS[name]
+  ? `<svg class="ui-i" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${SP_ICONS[name]}"/></svg>`
+  : ui(name, size);
+const spEq = '<em class="sp__eq" aria-hidden="true"><i></i><i></i><i></i></em>';
+const spFmt = ms => { const s = Math.max(0, Math.floor((+ms || 0) / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+// Spotify's iFrame API is loaded once for the whole page; resolves to null if it can't be reached.
+let SP_API = null, SP_API_P = null;
+function spLoadApi() {
+  if (SP_API) return Promise.resolve(SP_API);
+  if (SP_API_P) return SP_API_P;
+  SP_API_P = new Promise(resolve => {
+    let done = false;
+    const fin = api => { if (done) return; done = true; if (api) SP_API = api; else SP_API_P = null; resolve(api || null); };
+    try {
+      window.onSpotifyIframeApiReady = api => fin(api);
+      const s = document.createElement("script");
+      s.src = "https://open.spotify.com/embed/iframe-api/v1";
+      s.async = true;
+      s.onerror = () => fin(null);
+      (document.head || document.documentElement).appendChild(s);
+    } catch (e) { fin(null); }
+  });
+  return SP_API_P;
+}
+// "Browse all" tiles: flat colour + a filter over your library (by type, or by words in the title).
+const SP_BROWSE = [
+  { k: "songs", name: "Songs", color: "#8d67ab", types: ["track"] },
+  { k: "albums", name: "Albums", color: "#1e3264", types: ["album"] },
+  { k: "artists", name: "Artists", color: "#e8115b", types: ["artist"] },
+  { k: "podcasts", name: "Podcasts", color: "#148a08", types: ["show", "episode"] },
+  { k: "playlists", name: "Playlists", color: "#477d95", types: ["playlist"] },
+  { k: "mine", name: "Made by you", color: "#dc148c", own: true },
+  { k: "liked", name: "Liked", color: "#7358ff", liked: true },
+  { k: "pop", name: "Pop", color: "#ba5d07", words: ["pop", "hits", "top"] },
+  { k: "rock", name: "Rock", color: "#e13300", words: ["rock", "metal", "punk", "grunge", "classics"] },
+  { k: "chill", name: "Chill", color: "#0d73ec", words: ["chill", "lofi", "lo-fi", "piano", "peaceful", "ambient", "sleep", "relax", "calm"] },
+  { k: "focus", name: "Focus", color: "#006450", words: ["focus", "study", "work", "lofi", "piano", "beats"] },
+  { k: "90s", name: "90s", color: "#509bf5", words: ["90s", "1990", "nineties"] },
+  { k: "2000s", name: "2000s", color: "#503750", words: ["2000s", "00s", "2000"] },
+  { k: "party", name: "Party", color: "#8c1932", words: ["party", "dance", "all out", "club"] },
+];
 function openSpotify(o = {}) {
   WM.open("spotify", {
-    title: "Spotify", icon: "spotify", w: 980, h: 600, from: o.from,
+    title: "Spotify", icon: "spotify", w: 1000, h: 660, from: o.from,
+    onResize: w => w.sync && w.sync(),
     render(body, win) {
       body.classList.add("body--flush");
-      const mine = () => store.get("spLib", []);
-      const lib = () => mine().map(x => ({ ...x, mine: true })).concat(SP_DEFAULTS);
+      const arr = x => Array.isArray(x) ? x : [];
+      const str = x => typeof x === "string";
+      const mine = () => arr(store.get("spLib", []));
+      let recents = [], likeSet = new Set(), lists = [], hidden = new Set();
+      const loadState = () => {
+        recents = arr(store.get("spRecent", [])).filter(str);
+        likeSet = new Set(arr(store.get("spLikes", [])).filter(str));
+        hidden = new Set(arr(store.get("spHidden", [])).filter(str));
+        lists = arr(store.get("spLists", [])).filter(l => l && str(l.id) && Array.isArray(l.items)).map(l => ({ id: l.id, name: String(l.name || "Playlist"), items: l.items.filter(str), ts: +l.ts || 0 }));
+      };
+      loadState();
+      const saveRecents = () => store.set("spRecent", recents);
+      const saveLikes = () => store.set("spLikes", Array.from(likeSet));
+      const saveLists = () => store.set("spLists", lists);
+      const saveHidden = () => store.set("spHidden", Array.from(hidden));
+      const lastMode = store.get("spMode", {}) || {};
+      const mode = { shuffle: !!lastMode.shuffle, repeat: ["off", "all", "one"].includes(lastMode.repeat) ? lastMode.repeat : "off" };
+      let vol = +store.get("spVol", 0.8); if (!(vol >= 0 && vol <= 1)) vol = 0.8;
+      let muted = false;
+      let sortBy = store.get("spSort", "recent") === "alpha" ? "alpha" : "recent";
+      let chip = "", filter = "";
+
+      const customOf = l => ({ type: "playlist", id: l.id, title: l.name, custom: true, mine: true, items: l.items });
+      const lib = () => lists.slice().reverse().map(customOf).concat(mine().map(x => ({ ...x, mine: true })), SP_DEFAULTS.filter(x => !hidden.has(x.id)));
       const find = id => lib().find(x => x.id === id);
+      const isList = id => lists.some(l => l.id === id);
+      const SINGLE = /^(track|episode)$/;
       const artCache = () => store.get("spArt", {});
       const artOf = it => it.thumb || artCache()[it.id] || "";
       const KIND = { track: "Song", album: "Album", playlist: "Playlist", artist: "Artist", episode: "Episode", show: "Podcast" };
       const hue = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+      const urlOf = it => `https://open.spotify.com/${it.type}/${it.id}`;
+      const uriOf = it => `spotify:${it.type}:${it.id}`;
       const local = [];   // audio files picked from this computer; they only last until the window closes
-      let localIdx = -1, filter = "";
+      let localIdx = -1;
       const hist = [{ page: "home" }]; let pos = 0;
       const tried = new Set();
-      win.cleanup = () => local.forEach(f => URL.revokeObjectURL(f.url));
+      let destroyed = false;
 
       body.innerHTML = `
         <div class="sp">
-          <aside class="sp__side">
-            <nav class="sp__panel sp__nav">
-              <button type="button" data-go="home">${ui("home", 24)}<span>Home</span></button>
-              <button type="button" data-go="add">${ui("search", 24)}<span>Add music</span></button>
-              <button type="button" data-go="local">${ui("folder", 24)}<span>Your files</span></button>
-            </nav>
-            <section class="sp__panel sp__libpanel">
-              <header><span>${ui("library", 22)}Your Library</span><button type="button" data-go="add" title="Add music" aria-label="Add music">${ui("plus", 18)}</button></header>
-              <input class="sp__filter" type="search" placeholder="Search in Your Library" aria-label="Search in Your Library">
-              <div class="sp__lib"></div>
-            </section>
-          </aside>
-          <main class="sp__panel sp__main">
-            <div class="sp__top"><button type="button" class="sp__nav-btn" data-hist="-1" aria-label="Back">${ui("back", 22)}</button><button type="button" class="sp__nav-btn" data-hist="1" aria-label="Forward">${ui("fwd", 22)}</button></div>
-            <div class="sp__view"></div>
-          </main>
+          <div class="sp__cols">
+            <aside class="sp__side">
+              <nav class="sp__panel sp__nav">
+                <button type="button" data-go="home">${ui("home", 24)}<span>Home</span></button>
+                <button type="button" data-go="search">${ui("search", 24)}<span>Search</span></button>
+              </nav>
+              <section class="sp__panel sp__libpanel">
+                <header><span>${ui("library", 22)}Your Library</span><button type="button" data-create title="Create" aria-label="Create" aria-haspopup="menu">${ui("plus", 18)}</button></header>
+                <div class="sp__chips" role="group" aria-label="Filter your library">${[["playlist", "Playlists"], ["track", "Songs"], ["album", "Albums"], ["artist", "Artists"], ["podcast", "Podcasts"]].map(([k, l]) => `<button type="button" class="sp__chip" data-chip="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
+                <div class="sp__lbar">
+                  <input class="sp__filter" type="search" placeholder="Search in Your Library" aria-label="Search in Your Library">
+                  <button type="button" class="sp__sort" data-sort aria-haspopup="menu"><span>Recents</span>${spi("list", 16)}</button>
+                </div>
+                <div class="sp__lib"></div>
+              </section>
+            </aside>
+            <main class="sp__panel sp__main">
+              <div class="sp__top">
+                <button type="button" class="sp__nav-btn" data-hist="-1" aria-label="Back">${ui("back", 22)}</button>
+                <button type="button" class="sp__nav-btn" data-hist="1" aria-label="Forward">${ui("fwd", 22)}</button>
+                <label class="sp__sbox" hidden>${ui("search", 22)}<input class="sp__sinput" type="search" placeholder="What do you want to play?" aria-label="Search" autocomplete="off"></label>
+              </div>
+              <div class="sp__view"></div>
+            </main>
+          </div>
+          <footer class="sp__bar" aria-label="Now playing">
+            <div class="sp__np">
+              <span class="sp__np-art"></span>
+              <span class="sp__np-txt"><button type="button" class="sp__np-title" data-np-open></button><small class="sp__np-sub"></small></span>
+              <button type="button" class="sp__ibtn sp__heart" data-like-now data-size="20" aria-pressed="false" aria-label="Save to Liked Songs" disabled>${spi("heartO", 20)}</button>
+            </div>
+            <div class="sp__ctl">
+              <div class="sp__btns">
+                <button type="button" class="sp__ibtn" data-act="shuffle" aria-label="Shuffle" aria-pressed="false">${spi("shuffle", 20)}</button>
+                <button type="button" class="sp__ibtn" data-act="prev" aria-label="Previous">${spi("prev", 22)}</button>
+                <button type="button" class="sp__pp" data-act="toggle" aria-label="Play">${spi("play", 20)}</button>
+                <button type="button" class="sp__ibtn" data-act="next" aria-label="Next">${spi("next", 22)}</button>
+                <button type="button" class="sp__ibtn" data-act="repeat" aria-label="Repeat" aria-pressed="false">${spi("repeat", 20)}</button>
+              </div>
+              <div class="sp__prog">
+                <span class="sp__t" data-t="pos">0:00</span>
+                <div class="sp__seek sp__seek--pos is-off" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><i></i><b></b></div>
+                <span class="sp__t" data-t="dur">0:00</span>
+              </div>
+            </div>
+            <div class="sp__vol">
+              <button type="button" class="sp__ibtn" data-act="mute" aria-label="Mute">${spi("vol", 20)}</button>
+              <div class="sp__seek sp__seek--vol" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><i></i><b></b></div>
+            </div>
+          </footer>
+          <div class="sp__clip"><div class="sp__host is-parked"></div></div>
+          <div class="sp__ctx" role="menu" hidden></div>
+          <div class="sp__toast" role="status" aria-live="polite" hidden></div>
         </div>`;
-      const mainEl = $(".sp__main", body), view = $(".sp__view", body), libEl = $(".sp__lib", body);
+      const root = $(".sp", body), mainEl = $(".sp__main", body), view = $(".sp__view", body), libEl = $(".sp__lib", body);
+      const filterEl = $(".sp__filter", body), topEl = $(".sp__top", body), sbox = $(".sp__sbox", body), sinput = $(".sp__sinput", body);
+      const clip = $(".sp__clip", body), host = $(".sp__host", body), ctxEl = $(".sp__ctx", body), toastEl = $(".sp__toast", body);
+      const npArt = $(".sp__np-art", body), npTitle = $(".sp__np-title", body), npSub = $(".sp__np-sub", body);
+      const ppBtn = $('[data-act="toggle"]', body), seekEl = $(".sp__seek--pos", body), volEl = $(".sp__seek--vol", body);
+      const tPos = $('[data-t="pos"]', body), tDur = $('[data-t="dur"]', body), sortLabel = $(".sp__sort span", body);
 
+      /* ---------------------------------------------------------- covers, rows, cards */
       const cover = (it, cls = "") => {
+        if (it.custom) {
+          const kids = it.items.map(find).filter(Boolean);
+          if (kids.length >= 4) return `<span class="sp__cover sp__cover--mosaic ${cls}">${kids.slice(0, 4).map(k => cover(k, "sp__cover--cell")).join("")}</span>`;
+          if (kids.length) return cover(kids[0], cls);
+          return `<span class="sp__cover ${cls}">${ui("note", 24)}</span>`;
+        }
         const a = artOf(it);
         return `<span class="sp__cover ${cls}" data-art="${esc(it.id)}"${a ? ` style="background-image:url('${esc(a)}')"` : ""}>${a ? "" : ui("note", 24)}</span>`;
       };
+      const likedCover = (cls = "") => `<span class="sp__cover sp__cover--liked ${cls}">${spi("heart", cls ? 64 : 22)}</span>`;
       const setArt = (id, url) => $$(`[data-art="${CSS.escape(id)}"]`, body).forEach(el => { el.style.backgroundImage = `url('${url.replace(/'/g, "%27")}')`; el.innerHTML = ""; });
       // real cover art comes from Spotify's oEmbed endpoint when online; cached so it only loads once
       const fetchArt = it => {
         if (artOf(it) || tried.has(it.id)) return;
         tried.add(it.id);
-        fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${it.type}/${it.id}`)}`)
+        fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(urlOf(it))}`)
           .then(r => r.ok ? r.json() : null)
-          .then(j => { if (j && j.thumbnail_url) { const c = artCache(); c[it.id] = j.thumbnail_url; store.set("spArt", c); setArt(it.id, j.thumbnail_url); } })
+          .then(j => { if (j && j.thumbnail_url) { const c = artCache(); c[it.id] = j.thumbnail_url; store.set("spArt", c); if (!destroyed) setArt(it.id, j.thumbnail_url); } })
           .catch(() => {});
       };
-      const sub = it => `${KIND[it.type] || "Music"}${it.mine ? " &bull; You" : it.type === "playlist" ? " &bull; Spotify" : ""}`;
-
-      const drawLib = () => {
-        const q = filter.toLowerCase(), cur = hist[pos];
-        const list = lib().filter(it => !q || it.title.toLowerCase().includes(q));
-        libEl.innerHTML = list.length ? list.map(it => `
-          <button type="button" class="sp__lrow${cur.page === "item" && cur.id === it.id ? " is-on" : ""}" data-open="${esc(it.id)}">
-            ${cover(it)}<span><b>${esc(it.title)}</b><small>${sub(it)}</small></span>
-          </button>`).join("") : `<p class="sp__empty">Nothing matches "${esc(filter)}".</p>`;
-        $$(".sp__nav [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === cur.page));
-        $$(".sp__nav-btn", body).forEach(b => { const t = pos + +b.dataset.hist; b.disabled = t < 0 || t >= hist.length; });
-      };
+      const artScan = () => { const seen = new Set(); $$("[data-art]", root).forEach(el => { const id = el.dataset.art; if (seen.has(id)) return; seen.add(id); const it = find(id); if (it && !it.custom) fetchArt(it); }); };
+      const sub = it => it.custom ? `Playlist &bull; You` : `${KIND[it.type] || "Music"}${it.mine ? " &bull; You" : it.type === "playlist" ? " &bull; Spotify" : ""}`;
+      const subText = it => sub(it).replace(/&bull;/g, "•");
+      const likeBtn = (id, cls = "") => { const on = likeSet.has(id); return `<button type="button" class="sp__ibtn sp__heart${on ? " is-on" : ""} ${cls}" data-like="${esc(id)}" data-size="${cls ? 32 : 20}" aria-pressed="${on}" aria-label="${on ? "Remove from Liked Songs" : "Save to Liked Songs"}" title="${on ? "Remove from Liked Songs" : "Save to Liked Songs"}">${spi(on ? "heart" : "heartO", cls ? 32 : 20)}</button>`; };
+      const moreBtn = (id, cls = "") => `<button type="button" class="sp__ibtn ${cls}" data-more="${esc(id)}" aria-haspopup="menu" aria-label="More options" title="More options">${spi("more", cls ? 32 : 20)}</button>`;
       const card = it => `
         <button type="button" class="sp__card" data-open="${esc(it.id)}">
-          <span class="sp__cardart">${cover(it)}<i class="sp__go">${ui("play", 22)}</i></span>
+          <span class="sp__cardart">${cover(it)}<i class="sp__go" data-play="${esc(it.id)}" title="Play">${ui("play", 22)}</i></span>
           <b>${esc(it.title)}</b><small>${sub(it)}</small>
         </button>`;
+      const row = (it, o = {}) => {
+        const isCur = cur.kind === "spotify" && cur.id === it.id;
+        return `
+        <div class="sp__row${isCur ? " is-playing" : ""}${o.n ? " sp__row--n" : ""}" data-open="${esc(it.id)}"${o.pl ? ` data-inpl="${esc(o.pl)}"` : ""} role="button" tabindex="0">
+          ${o.n ? `<span class="sp__idx"><i>${o.n}</i>${spEq}</span>` : ""}
+          <span class="sp__rmain"><span class="sp__rcov">${cover(it)}<button type="button" class="sp__rplay" data-play="${esc(it.id)}" aria-label="Play ${esc(it.title)}">${spi("play", 18)}</button></span><span class="sp__rtxt"><b>${esc(it.title)}</b><small>${sub(it)}</small></span></span>
+          ${likeBtn(it.id)}${moreBtn(it.id)}
+        </div>`;
+      };
+      const heroPlay = id => {
+        const on = playing() && cur.kind === "spotify" && (cur.id === id || queue.from === id);
+        return `<button type="button" class="sp__bigplay" data-hero-play="${esc(id)}" aria-label="${on ? "Pause" : "Play"}">${spi(on ? "pause" : "play", 28)}</button>`;
+      };
       const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
+      const likedIds = () => Array.from(likeSet).reverse().filter(find);
+      const listIds = id => id === "liked" ? likedIds() : arr((lists.find(l => l.id === id) || {}).items).filter(find);
 
+      /* ---------------------------------------------------------- search */
+      const runSearch = q => {
+        const terms = q.toLowerCase().split(/\s+/).filter(Boolean), full = terms.join(" ");
+        if (!terms.length) return [];
+        return lib().map(it => {
+          const t = it.title.toLowerCase(), hay = `${t} ${(KIND[it.type] || "").toLowerCase()} ${it.mine ? NAME.toLowerCase() + " you" : "spotify"}`;
+          if (!terms.every(w => hay.includes(w))) return null;
+          const s = t === full ? 100 : t.startsWith(full) ? 80 : t.split(/\s+/).some(w => w.startsWith(terms[0])) ? 60 : t.includes(full) ? 50 : t.includes(terms[0]) ? 40 : 10;
+          return { it, s };
+        }).filter(Boolean).sort((a, b) => b.s - a.s).map(x => x.it);
+      };
+      const catItems = c => lib().filter(it => {
+        if (c.types) return c.types.includes(it.type);
+        if (c.own) return !!it.mine;
+        if (c.liked) return likeSet.has(it.id);
+        const t = it.title.toLowerCase();
+        return c.words.some(w => t.includes(w));
+      });
+      const GROUPS = [["playlist", "Playlists"], ["album", "Albums"], ["artist", "Artists"], ["show", "Podcasts"]];
+      const groups = (list, bare) => {
+        const songs = list.filter(x => SINGLE.test(x.type)), head = l => bare ? "" : `<h2 class="sp__h">${l}</h2>`;
+        return (songs.length ? `${head("Songs")}<div class="sp__rows">${songs.map(x => row(x)).join("")}</div>` : "")
+          + GROUPS.map(([t, label]) => { const g = list.filter(x => x.type === t); return g.length ? `${head(label)}<div class="sp__shelf">${g.map(card).join("")}</div>` : ""; }).join("");
+      };
+      const emptyHint = text => `<p class="sp__empty">${text}</p><p class="sp__empty"><button type="button" class="sp__link" data-go="add">Add music from a Spotify link</button></p>`;
+
+      /* ---------------------------------------------------------- pages */
       const pages = {
         home() {
-          const items = lib(), mineList = items.filter(i => i.mine), pop = items.filter(i => !i.mine);
+          const items = lib(), cust = items.filter(i => i.custom), mineList = items.filter(i => i.mine && !i.custom), pop = items.filter(i => !i.mine);
+          const rec = recents.map(find).filter(Boolean);
+          const quick = [];
+          rec.concat(items).forEach(x => { if (quick.length < 5 && !quick.some(y => y.id === x.id)) quick.push(x); });
           mainEl.style.setProperty("--c", "hsl(220,18%,24%)");
           return `
             <h1 class="sp__hello">${hello()}</h1>
-            <div class="sp__quick">${items.slice(0, 6).map(it => `<button type="button" data-open="${esc(it.id)}">${cover(it)}<b>${esc(it.title)}</b></button>`).join("")}</div>
+            <div class="sp__quick">
+              <button type="button" data-go="liked">${likedCover()}<b>Liked Songs</b></button>
+              ${quick.map(it => `<button type="button" data-open="${esc(it.id)}">${cover(it)}<b>${esc(it.title)}</b></button>`).join("")}
+            </div>
+            ${rec.length ? `<h2 class="sp__h">Recently played</h2><div class="sp__shelf">${rec.slice(0, 6).map(card).join("")}</div>` : ""}
+            ${cust.length ? `<h2 class="sp__h">Your playlists</h2><div class="sp__shelf">${cust.map(card).join("")}</div>` : ""}
             ${mineList.length ? `<h2 class="sp__h">Your music</h2><div class="sp__shelf">${mineList.map(card).join("")}</div>` : ""}
             <h2 class="sp__h">Popular playlists</h2>
             <div class="sp__shelf">${pop.map(card).join("")}</div>
-            <p class="sp__note">Music plays through Spotify's own player. Log in to Spotify in this browser for full songs; otherwise you get 30-second previews.</p>`;
+            <p class="sp__note">Music plays through Spotify's own player. Log in to Spotify in this browser for full songs; otherwise you get 30-second previews.</p>
+            <p class="sp__note"><button type="button" class="sp__link" data-go="add">Add a song, album, playlist or podcast from a Spotify link</button></p>`;
         },
         item(s) {
           const it = find(s.id);
           if (!it) return pages.home();
-          const small = /^(track|episode)$/.test(it.type);
+          if (it.custom) return pages.playlist(it);
+          const small = SINGLE.test(it.type), live = apiState !== "fail";
           mainEl.style.setProperty("--c", `hsl(${hue(it.title)},38%,30%)`);
           return `
             <div class="sp__hero">
               ${cover(it, "sp__cover--hero")}
               <div><small>${KIND[it.type] || "Music"}</small><h1>${esc(it.title)}</h1><p>${it.mine ? esc(NAME) : "Spotify"}</p></div>
             </div>
-            <iframe class="sp__embed${small ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?utm_source=generator&theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            <div class="sp__acts">${live ? heroPlay(it.id) : ""}${likeBtn(it.id, "sp__ibtn--lg")}${moreBtn(it.id, "sp__ibtn--lg")}</div>
+            ${live
+              ? `<div class="sp__slot${small ? " sp__slot--small" : ""}" data-slot="${esc(it.id)}"><p>Press play and Spotify's own player appears here${small ? "" : ", with the full track list"}.</p></div>`
+              : `<iframe class="sp__embed${small ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?utm_source=generator&theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`}
             ${it.mine ? `<button type="button" class="sp__link" data-rm="${esc(it.id)}">Remove from Your Library</button>` : ""}`;
+        },
+        playlist(it) {
+          const items = it.items.map(find).filter(Boolean), live = apiState !== "fail";
+          const sugg = lib().filter(x => !x.custom && !it.items.includes(x.id)).slice(0, 6);
+          mainEl.style.setProperty("--c", `hsl(${hue(it.title)},30%,28%)`);
+          return `
+            <div class="sp__hero">
+              ${cover(it, "sp__cover--hero")}
+              <div><small>Playlist</small><h1 data-rename="${esc(it.id)}" role="button" tabindex="0" title="Rename playlist">${esc(it.title)}</h1><p>${esc(NAME)} &bull; ${items.length} item${items.length === 1 ? "" : "s"}</p></div>
+            </div>
+            <div class="sp__acts">${items.length && live ? heroPlay(it.id) : ""}${moreBtn(it.id, "sp__ibtn--lg")}</div>
+            ${items.length ? `<div class="sp__rows" data-ctx="${esc(it.id)}">${items.map((x, i) => row(x, { n: i + 1, pl: it.id })).join("")}</div>` : `<p class="sp__empty sp__empty--left">This playlist is empty. Add something from the suggestions below, or use <b>Add to playlist</b> in the menu of any song, album or podcast.</p>`}
+            ${sugg.length ? `<h2 class="sp__h">Let's find something for your playlist</h2>
+            <div class="sp__sugg">${sugg.map(x => `<div class="sp__srow">${cover(x)}<span><b>${esc(x.title)}</b><small>${sub(x)}</small></span><button type="button" class="sp__pill-btn" data-pladd="${esc(x.id)}" data-pl="${esc(it.id)}">Add</button></div>`).join("")}</div>` : ""}`;
+        },
+        liked() {
+          const items = likedIds().map(find).filter(Boolean), live = apiState !== "fail";
+          mainEl.style.setProperty("--c", "hsl(255,45%,34%)");
+          return `
+            <div class="sp__hero">
+              ${likedCover("sp__cover--hero")}
+              <div><small>Playlist</small><h1>Liked Songs</h1><p>${esc(NAME)} &bull; ${items.length} liked item${items.length === 1 ? "" : "s"}</p></div>
+            </div>
+            <div class="sp__acts">${items.length && live ? heroPlay("liked") : ""}</div>
+            ${items.length ? `<div class="sp__rows" data-ctx="liked">${items.map((x, i) => row(x, { n: i + 1 })).join("")}</div>` : `<p class="sp__empty sp__empty--left">Songs you like will appear here. Tap the heart on anything you play to save it.</p>`}`;
+        },
+        search(s) {
+          const q = (s.q || "").trim();
+          mainEl.style.setProperty("--c", "#121212");
+          if (!q) return `<h2 class="sp__h sp__h--first">Browse all</h2><div class="sp__tiles">${SP_BROWSE.map(c => `<button type="button" class="sp__tile" data-cat="${c.k}" style="--tc:${c.color}"><span>${c.name}</span><i>${ui("note", 36)}</i></button>`).join("")}</div>`;
+          const link = spParse(q), known = link && find(link.id), list = known ? [known] : runSearch(q);
+          const linkCard = link && !find(link.id) ? `<div class="sp__linkcard">${ui("search", 22)}<span><b>That looks like a Spotify ${KIND[link.type].toLowerCase()} link</b><small>Add it to Your Library to play it here.</small></span><button type="button" class="sp__pill-btn" data-addlink="${link.type}:${link.id}">Add to Your Library</button></div>` : "";
+          if (!list.length && linkCard) return linkCard;
+          if (!list.length) return `<div class="sp__none"><h2>No results found for "${esc(q)}"</h2><p>Please make sure your words are spelled correctly, or use fewer or different keywords. Search covers everything in Your Library.</p></div>`;
+          const top = list[0], songs = list.filter(x => SINGLE.test(x.type)).slice(0, 4), rest = list.filter(x => !SINGLE.test(x.type));
+          return `${linkCard}
+            <div class="sp__sgrid">
+              <section><h2 class="sp__h sp__h--first">Top result</h2>
+                <div class="sp__top1" data-open="${esc(top.id)}" role="button" tabindex="0">${cover(top)}<b>${esc(top.title)}</b><span class="sp__pill">${KIND[top.type] || "Music"}</span><button type="button" class="sp__go sp__go--btn" data-play="${esc(top.id)}" aria-label="Play ${esc(top.title)}">${ui("play", 22)}</button></div>
+              </section>
+              ${songs.length ? `<section><h2 class="sp__h sp__h--first">Songs</h2><div class="sp__rows">${songs.map(x => row(x)).join("")}</div></section>` : `<section></section>`}
+            </div>
+            ${GROUPS.map(([t, label]) => { const g = rest.filter(x => x.type === t); return g.length ? `<h2 class="sp__h">${label}</h2><div class="sp__shelf">${g.map(card).join("")}</div>` : ""; }).join("")}`;
+        },
+        cat(s) {
+          const c = SP_BROWSE.find(x => x.k === s.k);
+          if (!c) return pages.search({ q: "" });
+          mainEl.style.setProperty("--c", c.color);
+          const list = catItems(c);
+          return `<h1 class="sp__title sp__title--big">${c.name}</h1>${list.length ? groups(list, !!c.types) : emptyHint(`Nothing in ${c.name.toLowerCase()} yet. Everything you add or like shows up here.`)}`;
         },
         add() {
           mainEl.style.setProperty("--c", "hsl(150,30%,22%)");
@@ -1903,76 +2142,642 @@ function openSpotify(o = {}) {
               <div><small>Local files</small><h1>Your files</h1><p>${local.length} song${local.length === 1 ? "" : "s"} &bull; this session only</p></div>
             </div>
             <label class="sp__btn sp__pick">Choose audio files<input type="file" accept="audio/*" multiple hidden data-files></label>
-            <audio class="sp__audio" controls></audio>
-            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}"><i>${i + 1}</i><span>${esc(f.name)}</span></button>`).join("")}</div>
+            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${cur.kind === "local" && i === localIdx ? " is-on" : ""}" data-track="${i}"><i>${i + 1}</i><span>${esc(f.name)}</span></button>`).join("")}</div>
             <p class="sp__note">Files stay on this computer. They aren't uploaded and disappear when you close Spotify.</p>`;
         },
       };
-      const playLocal = i => {
-        localIdx = i;
-        const a = $(".sp__audio", view);
-        if (!a) return;
-        a.src = local[i].url; a.play().catch(() => {});
-        $$(".sp__track", view).forEach((b, k) => b.classList.toggle("is-on", k === i));
-      };
-      const draw = () => {
-        const s = hist[pos];
-        view.innerHTML = pages[s.page](s);
-        mainEl.scrollTop = 0;
-        if (s.page === "local") {
-          const a = $(".sp__audio", view);
-          if (localIdx >= 0 && local[localIdx]) a.src = local[localIdx].url;
-          a.addEventListener("ended", () => { if (localIdx + 1 < local.length) playLocal(localIdx + 1); });
-        }
-        drawLib();
-        lib().forEach(it => { if (view.querySelector(`[data-art="${CSS.escape(it.id)}"]`) || libEl.querySelector(`[data-art="${CSS.escape(it.id)}"]`)) fetchArt(it); });
-      };
-      const go = s => { hist.length = pos + 1; hist.push(s); pos++; draw(); };
 
-      $(".sp__filter", body).addEventListener("input", e => { filter = e.target.value.trim(); drawLib(); });
+      /* ---------------------------------------------------------- history / drawing */
+      const syncNav = () => {
+        const p = hist[pos].page;
+        $$(".sp__nav [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === p || (b.dataset.go === "search" && p === "cat")));
+        $$(".sp__nav-btn", body).forEach(b => { const t = pos + +b.dataset.hist; b.disabled = t < 0 || t >= hist.length; });
+      };
+      const libList = () => {
+        const q = filter.toLowerCase();
+        const types = { playlist: ["playlist"], track: ["track"], album: ["album"], artist: ["artist"], podcast: ["show", "episode"] };
+        let list = lib().filter(it => (!chip || types[chip].includes(it.type)) && (!q || it.title.toLowerCase().includes(q)));
+        if (sortBy === "alpha") list.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+        else { const rank = it => { const k = recents.indexOf(it.id); return k < 0 ? 1e6 : k; }; list = list.map((it, i) => [it, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]); }
+        return list;
+      };
+      const drawLib = () => {
+        const q = filter.toLowerCase(), c = hist[pos], y = libEl.scrollTop;
+        const list = libList(), n = likeSet.size;
+        const pins = [];
+        if ((!chip || chip === "playlist") && (!q || "liked songs".includes(q)))
+          pins.push(`<button type="button" class="sp__lrow${c.page === "liked" ? " is-on" : ""}" data-go="liked">${likedCover()}<span><b>Liked Songs</b><small>Playlist &bull; ${n} liked item${n === 1 ? "" : "s"}</small></span></button>`);
+        if (!chip && (!q || "your files local files".includes(q)))
+          pins.push(`<button type="button" class="sp__lrow${c.page === "local" ? " is-on" : ""}" data-go="local"><span class="sp__cover">${ui("folder", 24)}</span><span><b>Your files</b><small>${local.length} local song${local.length === 1 ? "" : "s"}</small></span></button>`);
+        const rows = list.map(it => `
+          <button type="button" class="sp__lrow${c.page === "item" && c.id === it.id ? " is-on" : ""}${cur.kind === "spotify" && cur.id === it.id ? " is-playing" : ""}" data-open="${esc(it.id)}">
+            ${cover(it)}<span><b>${esc(it.title)}</b><small>${sub(it)}</small></span>${spEq}
+          </button>`);
+        libEl.innerHTML = pins.concat(rows).join("") || `<p class="sp__empty">${q ? `Nothing matches "${esc(filter)}".` : "Nothing here yet."}</p>`;
+        libEl.scrollTop = y;
+        $$(".sp__chip", body).forEach(b => { const on = b.dataset.chip === chip; b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", on); });
+        sortLabel.textContent = sortBy === "alpha" ? "A to Z" : "Recents";
+      };
+      const touchRecent = id => { recents = [id].concat(recents.filter(x => x !== id)).slice(0, 40); saveRecents(); };
+      const paint = () => { drawLib(); syncNav(); syncPlay(); artScan(); placeHost(); requestAnimationFrame(() => { if (!destroyed) placeHost(); }); };
+      const draw = keep => {
+        const s = hist[pos], y = mainEl.scrollTop;
+        closeCtx();
+        view.innerHTML = (pages[s.page] || pages.home)(s);
+        mainEl.scrollTop = keep ? y : 0;
+        const onSearch = s.page === "search" || s.page === "cat";
+        sbox.hidden = !onSearch;
+        if (onSearch && sinput.value !== (s.q || "")) sinput.value = s.q || "";
+        paint();
+      };
+      const go = s => { hist.length = pos + 1; hist.push(s); pos++; if (s.page === "item") touchRecent(s.id); draw(); };
+      const goItem = id => go({ page: "item", id });
+
+      /* ---------------------------------------------------------- toast + context menu */
+      let toastT = 0;
+      const toast = msg => { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 2600); };
+      let ctxPos = { x: 0, y: 0 };
+      function closeCtx() { if (ctxEl.hidden) return; ctxEl.hidden = true; ctxEl.innerHTML = ""; ctxEl._items = null; }
+      const showCtx = (items, x, y) => {
+        ctxPos = { x, y };
+        ctxEl._items = items;
+        ctxEl.innerHTML = items.map((it, i) => it.sep ? `<hr>` : `<button type="button" role="menuitem" data-ci="${i}"${it.disabled ? " disabled" : ""}><span class="sp__ci">${it.icon ? spi(it.icon, 18) : ""}</span><span class="sp__cl">${esc(it.label)}</span>${it.checked ? `<span class="sp__cc">${spi("check", 18)}</span>` : it.more ? `<span class="sp__cc sp__cc--more">${ui("fwd", 16)}</span>` : ""}</button>`).join("");
+        ctxEl.hidden = false;
+        const rr = root.getBoundingClientRect(), w = ctxEl.offsetWidth, h = ctxEl.offsetHeight;
+        ctxEl.style.left = Math.max(4, Math.min(x - rr.left, rr.width - w - 4)) + "px";
+        ctxEl.style.top = Math.max(4, Math.min(y - rr.top, rr.height - h - 4)) + "px";
+        const first = $("button:not(:disabled)", ctxEl); if (first) first.focus({ preventScroll: true });
+      };
+      ctxEl.addEventListener("click", e => {
+        const b = e.target.closest("[data-ci]");
+        if (!b || !ctxEl._items) return;
+        const it = ctxEl._items[+b.dataset.ci];
+        if (!it || !it.act) return;
+        e.stopPropagation();
+        const keep = it.act();
+        if (keep !== "keep") closeCtx();
+      });
+      ctxEl.addEventListener("keydown", e => {
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+        e.preventDefault();
+        const bs = $$("button:not(:disabled)", ctxEl), i = bs.indexOf(document.activeElement);
+        (bs[(i + (e.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length] || bs[0]).focus();
+      });
+      const copyLink = it => {
+        const url = urlOf(it), done = () => toast("Link copied to clipboard");
+        const legacy = () => { const ta = document.createElement("textarea"); ta.value = url; ta.style.cssText = "position:fixed;left:-99px;top:0;opacity:0"; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} ta.remove(); ok ? done() : toast(url); };
+        try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, legacy); return; } } catch (e) {}
+        legacy();
+      };
+
+      /* ---------------------------------------------------------- playlists, likes, library edits */
+      const newList = name => {
+        let n = lists.length + 1; while (lists.some(l => l.name === `My Playlist #${n}`)) n++;
+        const l = { id: "my_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name || `My Playlist #${n}`, items: [], ts: Date.now() };
+        lists.push(l); saveLists();
+        return l;
+      };
+      const createPlaylist = () => { const l = newList(); goItem(l.id); startRename(l.id); };
+      const addToList = (lid, id) => {
+        const l = lists.find(x => x.id === lid), it = find(id);
+        if (!l || !it || it.custom) return;
+        if (l.items.includes(id)) { toast(`Already in ${l.name}`); return; }
+        l.items.push(id); saveLists();
+        toast(`Added to ${l.name}`);
+        drawLib();
+        const c = hist[pos];
+        if (c.page === "item" && c.id === lid) draw(true);
+      };
+      const removeFromList = (lid, id) => {
+        const l = lists.find(x => x.id === lid); if (!l) return;
+        l.items = l.items.filter(x => x !== id); saveLists();
+        toast(`Removed from ${l.name}`);
+        draw(true);
+      };
+      const deleteList = id => {
+        const l = lists.find(x => x.id === id); if (!l) return;
+        msgBox({ title: "Spotify", icon: "warning", text: `Delete "${l.name}" from Your Library?`, buttons: ["Delete", "Cancel"], defaultIndex: 1 }).then(r => {
+          if (r !== "Delete" || destroyed) return;
+          lists = lists.filter(x => x.id !== id); saveLists();
+          recents = recents.filter(x => x !== id); saveRecents();
+          if (queue.from === id) queue.from = "";
+          go({ page: "home" });
+        });
+      };
+      const removeMine = id => {
+        if (mine().some(x => x.id === id)) store.set("spLib", mine().filter(x => x.id !== id));
+        else { hidden.add(id); saveHidden(); }
+        lists.forEach(l => { l.items = l.items.filter(x => x !== id); }); saveLists();
+        likeSet.delete(id); saveLikes();
+        recents = recents.filter(x => x !== id); saveRecents();
+        if (cur.kind === "spotify" && cur.id === id) stopAll();
+        go({ page: "home" });
+      };
+      const toggleLike = id => {
+        if (!id) return;
+        const on = !likeSet.has(id);
+        if (on) likeSet.add(id); else likeSet.delete(id);
+        saveLikes();
+        toast(on ? "Added to Liked Songs" : "Removed from Liked Songs");
+        syncLikes();
+        drawLib();
+        if (hist[pos].page === "liked") draw(true);
+      };
+      const syncLikes = () => $$("[data-like], [data-like-now]", root).forEach(b => {
+        const id = b.hasAttribute("data-like-now") ? (cur.kind === "spotify" ? cur.id : "") : b.dataset.like;
+        const on = !!id && likeSet.has(id), label = on ? "Remove from Liked Songs" : "Save to Liked Songs";
+        b.disabled = !id;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", on); b.setAttribute("aria-label", label); b.title = label;
+        b.innerHTML = spi(on ? "heart" : "heartO", +b.dataset.size || 20);
+      });
+      function startRename(id) {
+        const h = $(`[data-rename="${CSS.escape(id)}"]`, view), l = lists.find(x => x.id === id);
+        if (!h || !l || $("input", h)) return;
+        h.innerHTML = `<input class="sp__rename" maxlength="60" value="${esc(l.name)}" aria-label="Playlist name">`;
+        const inp = $("input", h); inp.focus(); inp.select();
+        let done = false;
+        const fin = ok => { if (done) return; done = true; if (ok) { const v = inp.value.trim(); if (v) l.name = v.slice(0, 60); saveLists(); } draw(true); };
+        inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); fin(true); } else if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); fin(false); } });
+        inp.addEventListener("blur", () => fin(true));
+      }
+      const pickerFor = (id, x, y) => {
+        const items = [{ label: "New playlist", icon: "plus", act: () => { const l = newList(); addToList(l.id, id); } }];
+        if (lists.length) items.push({ sep: true });
+        lists.slice().reverse().forEach(l => items.push({ label: l.name, icon: "note", checked: l.items.includes(id), act: () => addToList(l.id, id) }));
+        showCtx(items, x, y);
+        return "keep";
+      };
+      const itemMenu = (id, pl, x, y) => {
+        if (id === "liked") return [{ label: "Play", icon: "play", act: () => play("liked") }, { label: "Open", icon: "open", act: () => go({ page: "liked" }) }];
+        const it = find(id); if (!it) return [];
+        const on = playing() && cur.kind === "spotify" && cur.id === id, liked = likeSet.has(id);
+        const m = [{ label: on ? "Pause" : "Play", icon: on ? "pause" : "play", act: () => play(id) }, { label: "Open", icon: "open", act: () => goItem(id) }];
+        if (it.custom) return m.concat([{ sep: true }, { label: "Rename", icon: "edit", act: () => { goItem(id); startRename(id); } }, { label: "Delete", icon: "trash", act: () => deleteList(id) }]);
+        m.push({ sep: true }, { label: "Add to playlist", icon: "plusList", more: true, act: () => pickerFor(id, ctxPos.x, ctxPos.y) }, { label: liked ? "Remove from Liked Songs" : "Save to Liked Songs", icon: liked ? "heart" : "heartO", act: () => toggleLike(id) });
+        if (pl) m.push({ label: "Remove from this playlist", icon: "close", act: () => removeFromList(pl, id) });
+        m.push({ label: "Remove from Your Library", icon: "trash", act: () => removeMine(id) });
+        m.push({ sep: true }, { label: "Copy Spotify link", icon: "link", act: () => copyLink(it) });
+        return m;
+      };
+
+      /* ---------------------------------------------------------- player: Spotify iFrame API + local files */
+      let apiState = SP_API ? "ok" : "loading";   // loading | ok | fail
+      let lastTitle = "Spotify", ctl = null, creating = false, wantPlay = false, endedFlag = false, lastUpdate = 0, lastPos = 0, pendingPlay = null, seeking = false, volNote = false, createdAt = 0;
+      const cur = { kind: "", id: "" };           // kind: "spotify" | "local" | ""
+      const P = { paused: true, pos: 0, dur: 0, base: 0, stamp: 0, buffering: false };
+      let queue = { ids: [], i: -1, from: "" };
+      const la = new Audio();
+      la.preload = "auto";
+      const applyVol = () => { try { la.volume = muted ? 0 : vol; } catch (e) {} };
+      applyVol();
+      function playing() { return !!cur.kind && !P.paused; }
+      const stampNow = ms => { P.base = ms; P.pos = ms; P.stamp = performance.now(); };
+
+      const nowInfo = () => {
+        if (cur.kind === "local" && local[localIdx]) return { title: local[localIdx].name, sub: "Local file", art: `<span class="sp__cover">${ui("folder", 24)}</span>`, id: "" };
+        if (cur.kind === "spotify") { const it = find(cur.id); if (it) return { title: it.title, sub: subText(it), art: cover(it), id: it.id }; }
+        return null;
+      };
+      const tickUI = () => {
+        const dur = P.dur, p = Math.min(P.pos, dur || P.pos), f = dur > 0 ? Math.min(1, p / dur) : 0;
+        if (!seeking) { seekEl.style.setProperty("--p", (f * 100).toFixed(2) + "%"); tPos.textContent = spFmt(p); }
+        tDur.textContent = dur > 0 ? spFmt(dur) : "0:00";
+        seekEl.classList.toggle("is-off", !(dur > 0));
+        seekEl.setAttribute("aria-valuemax", Math.round(dur / 1000)); seekEl.setAttribute("aria-valuenow", Math.round(p / 1000));
+        seekEl.setAttribute("aria-valuetext", `${spFmt(p)} of ${spFmt(dur)}`);
+      };
+      const canSkip = () => (cur.kind === "local" && local.length > 1) || (cur.kind === "spotify" && queue.ids.length > 1);
+      const renderBar = () => {
+        const n = nowInfo();
+        npArt.innerHTML = n ? n.art : "";
+        npTitle.textContent = n ? n.title : "";
+        npTitle.disabled = !n || !n.id;
+        npSub.textContent = n ? n.sub : (apiState === "fail" ? "Spotify's player isn't available" : "");
+        root.classList.toggle("has-np", !!n);
+        const sk = canSkip();
+        $('[data-act="prev"]', body).disabled = !cur.kind;
+        $('[data-act="next"]', body).disabled = !sk;
+        ppBtn.disabled = apiState === "fail" && cur.kind !== "local";
+        $('[data-act="shuffle"]', body).classList.toggle("is-on", mode.shuffle);
+        $('[data-act="shuffle"]', body).setAttribute("aria-pressed", mode.shuffle);
+        const rp = $('[data-act="repeat"]', body);
+        rp.classList.toggle("is-on", mode.repeat !== "off"); rp.setAttribute("aria-pressed", mode.repeat !== "off");
+        rp.innerHTML = spi(mode.repeat === "one" ? "repeat1" : "repeat", 20);
+        const rl = mode.repeat === "off" ? "Enable repeat" : mode.repeat === "all" ? "Enable repeat one" : "Disable repeat";
+        rp.title = rl; rp.setAttribute("aria-label", rl);
+        volEl.classList.toggle("is-na", cur.kind === "spotify");
+        volEl.title = cur.kind === "spotify" ? "Spotify's embedded player has its own volume; this slider controls your local files" : "Volume";
+        syncLikes();
+        paintVol();
+        tickUI();
+      };
+      function syncPlay() {
+        const on = playing();
+        ppBtn.innerHTML = spi(on ? "pause" : "play", 20);
+        ppBtn.setAttribute("aria-label", on ? "Pause" : "Play");
+        root.classList.toggle("is-playing", on);
+        $$("[data-hero-play]", view).forEach(b => {
+          const id = b.dataset.heroPlay, p = on && cur.kind === "spotify" && (cur.id === id || queue.from === id);
+          b.innerHTML = spi(p ? "pause" : "play", 28); b.setAttribute("aria-label", p ? "Pause" : "Play");
+        });
+        $$(".sp__row", view).forEach(r => r.classList.toggle("is-playing", cur.kind === "spotify" && r.dataset.open === cur.id));
+        $$(".sp__lrow[data-open]", libEl).forEach(r => r.classList.toggle("is-playing", cur.kind === "spotify" && r.dataset.open === cur.id));
+        $$(".sp__track", view).forEach((b, k) => b.classList.toggle("is-on", cur.kind === "local" && k === localIdx));
+        const n = nowInfo();
+        const ttl = n && on ? `${n.title} • Spotify` : "Spotify";
+        if (ttl !== lastTitle) { lastTitle = ttl; win.setTitle(ttl); }
+      }
+      const paintVol = () => {
+        const v = muted ? 0 : vol;
+        volEl.style.setProperty("--p", (v * 100).toFixed(1) + "%");
+        volEl.setAttribute("aria-valuenow", Math.round(v * 100));
+        const mb = $('[data-act="mute"]', body);
+        mb.innerHTML = spi(v === 0 ? "volMute" : v < 0.5 ? "volLow" : "vol", 20);
+        mb.setAttribute("aria-label", v === 0 ? "Unmute" : "Mute");
+      };
+      const syncAll = () => { renderBar(); syncPlay(); placeHost(); };
+
+      /* the one persistent Spotify controller lives in .sp__host and is moved over the player slot of whichever page shows the playing item */
+      function placeHost() {
+        if (destroyed || !(ctl || creating)) return;
+        try {
+          const rr = root.getBoundingClientRect(), mr = mainEl.getBoundingClientRect(), tb = topEl.offsetHeight;
+          clip.style.cssText = `left:${mr.left - rr.left}px;top:${mr.top - rr.top + tb}px;width:${mainEl.clientWidth}px;height:${Math.max(0, mainEl.clientHeight - tb)}px`;
+          const s = hist[pos], slot = cur.kind === "spotify" && s.page === "item" && s.id === cur.id ? $(".sp__slot", view) : null;
+          if (!slot) { host.classList.add("is-parked"); host.style.cssText = ""; return; }
+          const sr = slot.getBoundingClientRect();
+          host.classList.remove("is-parked");
+          host.style.cssText = `left:${sr.left - mr.left}px;top:${sr.top - mr.top - tb}px;width:${sr.width}px;height:${sr.height}px`;
+        } catch (e) {}
+      }
+      win.sync = placeHost;
+
+      function apiFail(announce) {
+        if (destroyed) return;
+        apiState = "fail"; creating = false; pendingPlay = null; wantPlay = false;
+        if (ctl) { try { ctl.destroy(); } catch (e) {} ctl = null; }
+        host.innerHTML = ""; host.classList.add("is-parked");
+        if (cur.kind === "spotify") { cur.kind = ""; cur.id = ""; P.paused = true; P.pos = P.dur = 0; }
+        if (announce) toast("Couldn't reach Spotify's player, so the player on the page is shown instead.");
+        draw(true); renderBar();
+      }
+      const onUpdate = ev => {
+        if (cur.kind !== "spotify") return;
+        const d = (ev && ev.data) || ev || {};
+        lastUpdate = performance.now();
+        if (typeof d.isPaused === "boolean") P.paused = d.isPaused;
+        if (typeof d.duration === "number" && d.duration > 0) P.dur = d.duration;
+        if (typeof d.position === "number") stampNow(d.position);
+        P.buffering = !!d.isBuffering;
+        if (!P.paused) { wantPlay = false; endedFlag = false; }
+        const single = (find(cur.id) || {}).type;
+        if (P.paused && P.dur > 0 && SINGLE.test(single || "") && !endedFlag && (P.pos >= P.dur - 600 || (P.pos === 0 && lastPos > P.dur - 3000))) { endedFlag = true; lastPos = 0; onEnded(); return; }
+        lastPos = P.pos;
+        tickUI(); syncPlay();
+      };
+      const hookCtl = c => {
+        const on = (n, fn) => { try { c.addListener(n, fn); } catch (e) {} };
+        on("playback_update", onUpdate);
+        on("ready", () => { if (wantPlay && !destroyed) { try { c.play(); } catch (e) {} } });
+      };
+      // the embed drops play() until it has loaded, so ask again shortly after if it still hasn't started
+      const nudge = c => setTimeout(() => { if (!destroyed && wantPlay && ctl === c) { try { c.play(); } catch (e) {} } }, 1800);
+      const startSpotify = it => {
+        const uri = uriOf(it);
+        wantPlay = true; endedFlag = false; lastPos = 0;
+        if (ctl) { try { ctl.loadUri(uri); ctl.play(); nudge(ctl); } catch (e) { apiFail(true); } return; }
+        if (creating) { pendingPlay = it; return; }
+        if (!SP_API) { apiFail(true); return; }
+        creating = true; createdAt = performance.now();
+        try {
+          const mount = document.createElement("div");
+          host.innerHTML = ""; host.appendChild(mount);
+          SP_API.createController(mount, { uri, width: "100%", height: SINGLE.test(it.type) ? 152 : 352 }, c => {
+            if (destroyed) { try { c.destroy(); } catch (e) {} return; }
+            creating = false; ctl = c; hookCtl(c); nudge(c);
+            if (pendingPlay && pendingPlay.id !== it.id) { const p = pendingPlay; pendingPlay = null; try { c.loadUri(uriOf(p)); } catch (e) {} } else pendingPlay = null;
+            placeHost();
+          });
+          setTimeout(() => { if (!destroyed && creating && !ctl) apiFail(true); }, 8000);
+        } catch (e) { apiFail(true); }
+        placeHost();
+      };
+      const stopSpotify = () => { wantPlay = false; if (ctl) { try { ctl.pause(); } catch (e) {} } };
+      function stopAll() {
+        stopSpotify(); try { la.pause(); } catch (e) {}
+        cur.kind = ""; cur.id = ""; P.paused = true; P.pos = P.dur = 0; queue = { ids: [], i: -1, from: "" };
+        syncAll();
+      }
+      const defaultQueue = it => { if (!SINGLE.test(it.type)) return [it.id]; const ids = lib().filter(x => SINGLE.test(x.type)).map(x => x.id); return ids.length > 1 ? ids : [it.id]; };
+      // play(id): an item, a user playlist, or "liked". Same item again = pause / resume.
+      function play(id, ids, from) {
+        if (id === "liked" || isList(id)) {
+          if (cur.kind === "spotify" && queue.from === id) return toggle();
+          const list = listIds(id);
+          if (!list.length) { toast(id === "liked" ? "Like something and it will show up here." : "This playlist is empty. Add something first."); return; }
+          return play(list[0], list, id);
+        }
+        const it = find(id); if (!it) return;
+        if (apiState === "fail") { goItem(id); return; }
+        if (cur.kind === "spotify" && cur.id === id) return toggle();
+        touchRecent(id);
+        try { la.pause(); } catch (e) {}
+        const q = ids && ids.includes(id) ? ids : defaultQueue(it);
+        queue = { ids: q, i: q.indexOf(id), from: from || "" };
+        cur.kind = "spotify"; cur.id = id;
+        P.paused = false; P.buffering = true; P.dur = 0; stampNow(0);
+        if (apiState === "loading") { pendingPlay = it; syncAll(); drawLib(); return; }
+        startSpotify(it);
+        syncAll(); drawLib();
+      }
+      function toggle() {
+        if (cur.kind === "local") { if (la.paused) la.play().catch(() => {}); else la.pause(); return; }
+        if (cur.kind === "spotify") {
+          if (apiState === "loading") return;
+          const wasPaused = P.paused, t0 = performance.now();
+          if (ctl) { try { ctl.togglePlay(); } catch (e) {} }
+          P.paused = !wasPaused; wantPlay = !P.paused; stampNow(P.pos);
+          syncPlay();
+          // if the embed never answers (autoplay blocked, offline), fall back to what it last told us
+          if (wasPaused) setTimeout(() => { if (!destroyed && lastUpdate < t0 && cur.kind === "spotify") { P.paused = true; wantPlay = false; syncPlay(); } }, 2800);
+          return;
+        }
+        const first = lib().find(x => !x.custom) || lib()[0];
+        if (first) play(first.id);
+      }
+      function seekMs(ms) {
+        ms = Math.max(0, Math.min(ms, P.dur || ms));
+        if (cur.kind === "local") { try { la.currentTime = ms / 1000; } catch (e) {} P.pos = ms; }
+        else if (cur.kind === "spotify" && ctl) { try { ctl.seek(Math.round(ms / 1000)); } catch (e) {} endedFlag = false; stampNow(ms); }
+        tickUI();
+      }
+      function advance(dir, auto) {
+        const n = queue.ids.length;
+        if (cur.kind === "local") {
+          if (!local.length) return false;
+          let j = mode.shuffle && local.length > 1 ? (() => { let r; do { r = Math.floor(Math.random() * local.length); } while (r === localIdx); return r; })() : localIdx + dir;
+          if (j >= local.length) { if (mode.repeat === "all" || !auto) j = 0; else return false; }
+          if (j < 0) j = local.length - 1;
+          playLocal(j); return true;
+        }
+        if (!n) return false;
+        let j = queue.i;
+        for (let tries = 0; tries < n; tries++) {
+          if (mode.shuffle && n > 1) { do { j = Math.floor(Math.random() * n); } while (j === queue.i); }
+          else { j += dir; if (j >= n) { if (mode.repeat === "all" || !auto) j = 0; else return false; } if (j < 0) j = n - 1; }
+          const it = find(queue.ids[j]);
+          if (it) { wantPlay = false; const from = queue.from, ids = queue.ids; cur.id = ""; play(it.id, ids, from); return true; }
+        }
+        return false;
+      }
+      function onEnded() {
+        if (mode.repeat === "one") { seekMs(0); if (cur.kind === "local") la.play().catch(() => {}); else if (ctl) { try { ctl.play(); } catch (e) {} P.paused = false; wantPlay = true; } syncPlay(); return; }
+        if (!advance(1, true)) { P.paused = true; syncPlay(); }
+      }
+      function prev() {
+        if (P.pos > 3000 || !canSkip()) { seekMs(0); return; }
+        advance(-1, false);
+      }
+      function playLocal(i) {
+        if (!local[i]) return;
+        stopSpotify();
+        cur.kind = "local"; cur.id = ""; localIdx = i;
+        queue = { ids: [], i, from: "" };
+        la.src = local[i].url; applyVol();
+        P.paused = false; P.dur = 0; stampNow(0);
+        la.play().catch(() => {});
+        syncAll(); drawLib();
+      }
+      la.addEventListener("play", () => { if (cur.kind === "local") { P.paused = false; syncPlay(); } });
+      la.addEventListener("pause", () => { if (cur.kind === "local" && !la.ended) { P.paused = true; syncPlay(); } });
+      la.addEventListener("ended", () => { if (cur.kind === "local") onEnded(); });
+      la.addEventListener("loadedmetadata", () => { if (cur.kind === "local") { P.dur = isFinite(la.duration) ? la.duration * 1000 : 0; tickUI(); } });
+      la.addEventListener("error", () => { if (cur.kind === "local") { P.paused = true; syncPlay(); toast("Couldn't play that file."); } });
+      const timer = setInterval(() => {
+        if (destroyed) return;
+        if (cur.kind === "local") { P.pos = la.currentTime * 1000; if (isFinite(la.duration)) P.dur = la.duration * 1000; }
+        else if (cur.kind === "spotify" && !P.paused && !P.buffering) P.pos = Math.min(P.dur || Infinity, P.base + (performance.now() - P.stamp));
+        else return;
+        tickUI();
+      }, 250);
+
+      /* ---------------------------------------------------------- sliders */
+      const slider = (el, h) => {
+        const frac = ev => { const r = el.getBoundingClientRect(); return r.width ? Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)) : 0; };
+        let down = false;
+        el.addEventListener("pointerdown", ev => {
+          if (ev.button !== 0 || el.classList.contains("is-off")) return;
+          down = true; el.classList.add("is-drag");
+          try { el.setPointerCapture(ev.pointerId); } catch (e) {}
+          h.drag(frac(ev), false);
+        });
+        el.addEventListener("pointermove", ev => { if (down) h.drag(frac(ev), false); });
+        el.addEventListener("pointerup", ev => { if (!down) return; down = false; el.classList.remove("is-drag"); h.drag(frac(ev), true); });
+        el.addEventListener("pointercancel", () => { if (!down) return; down = false; el.classList.remove("is-drag"); if (h.cancel) h.cancel(); });
+        el.addEventListener("keydown", ev => {
+          const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, Home: -Infinity, End: Infinity }[ev.key];
+          if (d === undefined || el.classList.contains("is-off")) return;
+          ev.preventDefault(); h.key(d);
+        });
+      };
+      slider(seekEl, {
+        drag(f, final) { seeking = !final; if (P.dur > 0) { seekEl.style.setProperty("--p", (f * 100).toFixed(2) + "%"); tPos.textContent = spFmt(f * P.dur); if (final) seekMs(f * P.dur); } },
+        cancel() { seeking = false; tickUI(); },
+        key(d) { seekMs(d === Infinity ? P.dur : d === -Infinity ? 0 : P.pos + d * 5000); },
+      });
+      const setVol = v => {
+        vol = Math.max(0, Math.min(1, v)); muted = false; applyVol(); store.set("spVol", vol); paintVol();
+        if (cur.kind === "spotify" && !volNote) { volNote = true; toast("Spotify's embedded player has its own volume. This slider controls your local files."); }
+      };
+      slider(volEl, { drag: f => setVol(f), key: d => setVol(d === Infinity ? 1 : d === -Infinity ? 0 : vol + d * 0.05) });
+
+      /* ---------------------------------------------------------- events */
+      const saveMode = () => store.set("spMode", mode);
+      const doBar = a => {
+        if (a === "toggle") toggle();
+        else if (a === "next") advance(1, false);
+        else if (a === "prev") prev();
+        else if (a === "shuffle") { mode.shuffle = !mode.shuffle; saveMode(); renderBar(); }
+        else if (a === "repeat") { mode.repeat = mode.repeat === "off" ? "all" : mode.repeat === "all" ? "one" : "off"; saveMode(); renderBar(); }
+        else if (a === "mute") { muted = !muted && vol > 0 ? true : false; if (!muted && vol === 0) vol = 0.5; applyVol(); paintVol(); }
+      };
+      const addMusic = async (p, titleIn) => {
+        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your library." }); return; }
+        let title = titleIn, thumb = "";
+        try {
+          const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
+          if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
+        } catch (err) {}
+        if (destroyed) return;
+        store.set("spLib", [{ ...p, title: title || `Spotify ${KIND[p.type] || p.type}`, thumb }].concat(mine()));
+        Sound.play("notify");
+        goItem(p.id);
+      };
+      // backups also carry the playlists, likes and recents this window keeps
+      const importExtra = (file, done) => {
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            const d = JSON.parse(r.result);
+            store.set("spLikes", Array.from(new Set(arr(store.get("spLikes", [])).concat(arr(d.spLikes).filter(str)))));
+            store.set("spRecent", arr(store.get("spRecent", [])).concat(arr(d.spRecent).filter(str)).filter((x, i, a) => a.indexOf(x) === i).slice(0, 40));
+            const have = arr(store.get("spLists", [])), seen = new Set(have.map(l => l && l.id));
+            store.set("spLists", have.concat(arr(d.spLists).filter(l => l && str(l.id) && Array.isArray(l.items) && !seen.has(l.id))));
+            store.set("spHidden", Array.from(new Set(arr(store.get("spHidden", [])).concat(arr(d.spHidden).filter(str)))));
+          } catch (e) {}
+          done();
+        };
+        r.onerror = () => done();
+        r.readAsText(file);
+      };
+
       body.addEventListener("change", e => {
         if (e.target.matches("[data-files]")) {
           Array.from(e.target.files).forEach(f => local.push({ name: f.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(f) }));
           const first = localIdx < 0;
-          draw();
+          draw(true);
           if (first && local.length) playLocal(0);
         } else if (e.target.matches("[data-import]") && e.target.files[0]) {
-          importBackup(e.target.files[0], ok => {
+          const file = e.target.files[0];
+          importBackup(file, ok => {
             if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
-            go({ page: "home" });
+            importExtra(file, () => { if (destroyed) return; loadState(); go({ page: "home" }); });
           });
         }
       });
-      body.addEventListener("click", e => {
-        if (e.target.closest("[data-export]")) { exportBackup(); return; }
-        const h = e.target.closest("[data-hist]");
-        if (h) { const t = pos + +h.dataset.hist; if (t >= 0 && t < hist.length) { pos = t; draw(); } return; }
-        const tr = e.target.closest("[data-track]");
+      root.addEventListener("click", e => {
+        const t = e.target;
+        if (t.closest(".sp__ctx")) return;
+        closeCtx();
+        if (t.closest("[data-export]")) { exportBackup(); return; }
+        const h = t.closest("[data-hist]");
+        if (h) { const n = pos + +h.dataset.hist; if (n >= 0 && n < hist.length) { pos = n; draw(); } return; }
+        const act = t.closest("[data-act]");
+        if (act) { doBar(act.dataset.act); return; }
+        if (t.closest("[data-np-open]")) { if (cur.kind === "spotify") goItem(cur.id); return; }
+        const lk = t.closest("[data-like], [data-like-now]");
+        if (lk) { e.stopPropagation(); toggleLike(lk.hasAttribute("data-like-now") ? (cur.kind === "spotify" ? cur.id : "") : lk.dataset.like); return; }
+        const more = t.closest("[data-more]");
+        if (more) {
+          const r = more.getBoundingClientRect(), rowEl = more.closest("[data-inpl]");
+          ctxPos = { x: r.left, y: r.bottom };
+          showCtx(itemMenu(more.dataset.more, rowEl ? rowEl.dataset.inpl : "", r.left, r.bottom), r.left, r.bottom);
+          return;
+        }
+        const hp = t.closest("[data-hero-play]");
+        if (hp) { play(hp.dataset.heroPlay); return; }
+        const pl = t.closest("[data-play]");
+        if (pl) { const c = pl.closest("[data-ctx]"), lid = c ? c.dataset.ctx : ""; play(pl.dataset.play, lid ? listIds(lid) : undefined, lid); return; }
+        const cr = t.closest("[data-create]");
+        if (cr) { const r = cr.getBoundingClientRect(); showCtx([{ label: "Create a new playlist", icon: "plusList", act: createPlaylist }, { label: "Add a Spotify link", icon: "link", act: () => go({ page: "add" }) }, { label: "Play files from this computer", icon: "folder", act: () => go({ page: "local" }) }].concat(hidden.size ? [{ sep: true }, { label: "Restore Spotify playlists", icon: "plusList", act: () => { hidden.clear(); saveHidden(); toast("Spotify playlists restored"); draw(true); } }] : []), r.left, r.bottom + 4); return; }
+        const so = t.closest("[data-sort]");
+        if (so) { const r = so.getBoundingClientRect(); const pick1 = k => () => { sortBy = k; store.set("spSort", k); drawLib(); }; showCtx([{ label: "Sort by" , disabled: true }, { label: "Recents", checked: sortBy === "recent", act: pick1("recent") }, { label: "Alphabetical", checked: sortBy === "alpha", act: pick1("alpha") }], r.left - 60, r.bottom + 4); return; }
+        const ch = t.closest("[data-chip]");
+        if (ch) { chip = chip === ch.dataset.chip ? "" : ch.dataset.chip; drawLib(); return; }
+        const ct = t.closest("[data-cat]");
+        if (ct) { go({ page: "cat", k: ct.dataset.cat }); return; }
+        const al = t.closest("[data-addlink]");
+        if (al) { const [type, id] = al.dataset.addlink.split(":"); addMusic({ type, id }, ""); return; }
+        const pa = t.closest("[data-pladd]");
+        if (pa) { addToList(pa.dataset.pl, pa.dataset.pladd); return; }
+        const rn = t.closest("[data-rename]");
+        if (rn) { if (!t.closest("input")) startRename(rn.dataset.rename); return; }
+        const tr = t.closest("[data-track]");
         if (tr) { playLocal(+tr.dataset.track); return; }
-        const rm = e.target.closest("[data-rm]");
-        if (rm) { store.set("spLib", mine().filter(x => x.id !== rm.dataset.rm)); go({ page: "home" }); return; }
-        const op = e.target.closest("[data-open]");
-        if (op) { go({ page: "item", id: op.dataset.open }); return; }
-        const g = e.target.closest("[data-go]");
-        if (g && !(hist[pos].page === g.dataset.go)) go({ page: g.dataset.go });
+        const rm = t.closest("[data-rm]");
+        if (rm) { removeMine(rm.dataset.rm); return; }
+        const q = t.closest(".sp__quick button");
+        if (q && e.clientX > q.getBoundingClientRect().right - 60 && apiState !== "fail") { play(q.dataset.open || "liked"); return; }
+        const op = t.closest("[data-open]");
+        if (op) { goItem(op.dataset.open); return; }
+        const g = t.closest("[data-go]");
+        if (g) {
+          if (hist[pos].page !== g.dataset.go) go({ page: g.dataset.go, q: "" });
+          if (g.dataset.go === "search") { sinput.focus(); }
+        }
       });
-      body.addEventListener("submit", async e => {
+      root.addEventListener("keydown", e => {
+        const r = e.target.closest && e.target.closest(".sp__row, .sp__top1, [data-rename]");
+        if (r && e.target === r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); r.click(); }
+      });
+      root.addEventListener("contextmenu", e => {
+        const t = e.target;
+        if (t.closest("input, textarea, .sp__ctx")) return;
+        const el = t.closest("[data-open], [data-go='liked']");
+        if (!el) return;
+        e.preventDefault();
+        const id = el.dataset.open || "liked", rowEl = el.closest("[data-inpl]");
+        const items = itemMenu(id, rowEl ? rowEl.dataset.inpl : "");
+        if (items.length) showCtx(items, e.clientX, e.clientY);
+      });
+      body.addEventListener("submit", e => {
         const f = e.target.closest(".sp__form");
         if (!f) return;
         e.preventDefault();
         const p = spParse(f.elements.url.value);
         if (!p) { msgBox({ title: "Add music", icon: "error", text: "That doesn't look like a Spotify link. It should start with https://open.spotify.com/ and point to a song, album, playlist, artist or podcast." }); return; }
-        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your library." }); return; }
-        let title = f.elements.title.value.trim(), thumb = "";
-        try {
-          const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
-          if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
-        } catch (err) {}
-        store.set("spLib", [{ ...p, title: title || `Spotify ${KIND[p.type] || p.type}`, thumb }].concat(mine()));
-        Sound.play("notify");
-        go({ page: "item", id: p.id });
+        addMusic(p, f.elements.title.value.trim());
       });
+      filterEl.addEventListener("input", e => { filter = e.target.value.trim(); drawLib(); });
+      sinput.addEventListener("input", () => {
+        const q = sinput.value;
+        hist[pos] = { page: "search", q };
+        view.innerHTML = pages.search(hist[pos]);
+        syncNav(); artScan();
+      });
+      sinput.addEventListener("keydown", e => { if (e.key === "Escape" && sinput.value) { e.stopPropagation(); sinput.value = ""; sinput.dispatchEvent(new Event("input")); } });
+      const onKey = e => {
+        if (destroyed || WM.active !== "spotify") return;
+        const t = e.target, tag = t && t.tagName;
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === "f" || e.key === "F")) { e.preventDefault(); filterEl.focus(); filterEl.select(); return; }
+        if (e.key === "Escape" && !ctxEl.hidden) { e.preventDefault(); closeCtx(); return; }
+        const typing = t && (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable);
+        if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey && !typing && !(t && t.closest && t.closest("button, a, [role=slider], [role=button], [role=menuitem]"))) { e.preventDefault(); toggle(); }
+      };
+      const onDocDown = e => { if (!ctxEl.hidden && !ctxEl.contains(e.target)) closeCtx(); };
+      document.addEventListener("keydown", onKey);
+      document.addEventListener("pointerdown", onDocDown, true);
+      mainEl.addEventListener("scroll", placeHost, { passive: true });
+      // scrolling by hand dismisses an open menu (programmatic scrolls don't)
+      [mainEl, libEl].forEach(el => ["wheel", "touchmove"].forEach(n => el.addEventListener(n, () => { if (!ctxEl.hidden) closeCtx(); }, { passive: true })));
+      // the chips row scrolls sideways with the mouse wheel
+      $(".sp__chips", body).addEventListener("wheel", e => { if (e.deltaY && !e.deltaX) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+      let ro = null;
+      try { ro = new ResizeObserver(() => placeHost()); ro.observe(mainEl); ro.observe(view); } catch (e) {}
+
+      win.cleanup = () => {
+        destroyed = true;
+        clearInterval(timer); clearTimeout(toastT);
+        document.removeEventListener("keydown", onKey);
+        document.removeEventListener("pointerdown", onDocDown, true);
+        if (ro) ro.disconnect();
+        try { la.pause(); la.removeAttribute("src"); la.load(); } catch (e) {}
+        local.forEach(f => URL.revokeObjectURL(f.url));
+        if (ctl) { try { ctl.pause(); } catch (e) {} try { ctl.destroy(); } catch (e) {} ctl = null; }
+        host.remove();
+      };
+
+      /* ---------------------------------------------------------- start */
       draw();
+      renderBar();
+      if (!SP_API) {
+        // fall back to the plain embedded player if Spotify's iFrame API doesn't load within 4 seconds
+        Promise.race([spLoadApi(), new Promise(r => setTimeout(() => r(null), 4000))]).then(api => {
+          if (destroyed) return;
+          if (api) {
+            apiState = "ok";
+            if (pendingPlay) { const it = pendingPlay; pendingPlay = null; if (cur.kind === "spotify" && cur.id === it.id) startSpotify(it); }
+            draw(true); renderBar();
+          } else {
+            const wanted = pendingPlay; pendingPlay = null;
+            apiFail(false);
+            if (wanted) goItem(wanted.id);
+          }
+        });
+        // if it arrives late, upgrade quietly
+        spLoadApi().then(api => { if (api && !destroyed && apiState === "fail") { apiState = "ok"; draw(true); renderBar(); } });
+      }
     },
     onClose: w => w.cleanup && w.cleanup(),
   });
