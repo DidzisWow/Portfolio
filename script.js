@@ -4768,7 +4768,7 @@ async function boot() {
   const skip = () => { skipped = true; };
   bootEl.addEventListener("pointerdown", skip);
   window.addEventListener("keydown", skip);
-  const fast = session.get("booted") === "1";
+  const fast = session.get("booted") === "1" || reduceMotion();
   const wait = ms => (skipped ? Promise.resolve() : sleep(fast ? ms * 0.4 : ms));
   const type = async (s, ms = 90) => { if (skipped) return; out.textContent += s + "\n"; await wait(ms); };
 
@@ -4831,7 +4831,15 @@ async function boot() {
 /* ==========================================================================
    START
    ========================================================================== */
-document.title = `${NAME}'s Desktop - Windows 98`;
+document.title = `${NAME} - Portfolio`;
+{
+  const desc = [ROLE, C.tagline].filter(Boolean).join(". ") || "An interactive portfolio, built as a working Windows 98 desktop.";
+  const setMeta = (sel, v) => { const m = document.querySelector(sel); if (m) m.setAttribute("content", v); };
+  setMeta('meta[name="description"]', desc);
+  setMeta('meta[property="og:title"]', `${NAME} - Portfolio`);
+  setMeta('meta[property="og:description"]', desc);
+  setMeta('meta[name="apple-mobile-web-app-title"]', NAME);
+}
 WM.init();
 StartMenu.init();
 initDesktop();
