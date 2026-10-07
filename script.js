@@ -786,7 +786,7 @@ function saveAsDialog(name) {
 }
 function openNotepad(id, file, text, o = {}) {
   WM.open(id, {
-    title: `${file} - Notepad`, icon: "skills", w: 520, h: 370, from: o.from,
+    title: `${file} - Notepad`, icon: "notepad", w: 520, h: 370, from: o.from,
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `<textarea class="notepad" spellcheck="false" aria-label="${esc(file)}"></textarea>`;
@@ -4383,7 +4383,7 @@ const APPS = {
   solitaire:   { label: "Solitaire",      open: openSolitaire },
   snake:       { label: "Snake",          open: openSnake },
   paint:       { label: "Paint",          open: openPaint },
-  notepad:     { label: "Notepad",            icon: "skills",   open: openNewNote,   hidden: true },
+  notepad:     { label: "Notepad",            icon: "notepad",  open: openNewNote,   hidden: true },
   display:     { label: "Display Properties", icon: "monitor",  open: openDisplay,   hidden: true },
   datetime:    { label: "Date/Time",          icon: "clock",    open: openDateTime,  hidden: true },
   run:         { label: "Run",                icon: "terminal", open: openRun,       hidden: true },
@@ -4413,7 +4413,7 @@ function resolveApp(name) {
   return null;
 }
 function appInfo(k) {
-  if (k.startsWith("doc:")) { const d = docsAll().find(x => x.id === k.slice(4)) || {}; return { label: d.name || "Document", icon: "skills" }; }
+  if (k.startsWith("doc:")) { const d = docsAll().find(x => x.id === k.slice(4)) || {}; return { label: d.name || "Document", icon: "notepad" }; }
   if (k.startsWith("file:")) { const f = binFile(k.slice(5)) || {}; return { label: f.name || k.slice(5), icon: f.icon || "skills" }; }
   const a = APPS[k] || {};
   return { label: a.label || k, icon: k === "bin" ? (binState().bin.length ? "binfull" : "bin") : (a.icon || k) };
