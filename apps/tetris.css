@@ -1,1 +1,94 @@
 /* tetris app styles */
+.window[data-id="tetris"]{ min-width:0; }
+.window[data-id="tetris"] .window__body{ flex:1 1 auto; min-height:0; }
+
+.tet{
+  --col:100px;
+  display:flex; flex-direction:column; gap:8px; height:100%; padding:8px;
+  background:var(--surface); -webkit-user-select:none; user-select:none;
+}
+.tet__main{ display:grid; flex:1 1 auto; grid-template-columns:var(--col) auto var(--col); grid-template-areas:"l well r"; gap:8px; justify-content:center; }
+.tet__col{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+.tet__col--l{ grid-area:l; }
+.tet__col--r{ grid-area:r; }
+.tet__well{ grid-area:well; position:relative; align-self:start; }
+
+.tet__panel{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.tet__lab{ padding-left:1px; }
+.tet__scr{ display:block; padding:2px; background:#000; box-shadow:var(--sunken); }
+.tet__scr canvas{ display:block; }
+.tet__val{
+  padding:3px 6px 3px; color:#fff; text-align:right; white-space:nowrap; overflow:hidden;
+  font:bold 14px/1.25 "Lucida Console","Courier New",monospace;
+}
+.tet__stats{ display:flex; flex-direction:column; gap:8px; margin-top:auto; }
+
+/* key reference, in the Win98 etched-box style */
+.tet__keys{
+  display:grid; grid-template-columns:auto 1fr; align-items:center; gap:4px 6px;
+  margin:auto 0 0; padding:7px 6px; box-shadow:var(--etched); font-size:10px; line-height:1.2;
+}
+.tet__keys dt, .tet__keys dd{ margin:0; min-width:0; }
+.tet__keys kbd{
+  display:block; min-width:40px; padding:2px 3px 1px; text-align:center; font:inherit; color:#000;
+  background:var(--surface); box-shadow:var(--thin-out);
+}
+
+/* paused / game over / start: a classic dithered dim and a small gray dialog */
+.tet__veil{
+  display:none; position:absolute; inset:2px; pointer-events:none;
+  background:repeating-conic-gradient(rgba(0,0,0,.55) 0 25%, transparent 0 50%) 0 0 / 2px 2px;
+}
+.tet.is-dlg:not([data-state="ready"]) .tet__veil{ display:block; }
+.tet__dlg{
+  display:none; position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+  width:calc(100% - 24px); max-width:204px; padding:12px 12px 9px; text-align:center;
+  background:var(--surface); box-shadow:var(--window);
+}
+.tet.is-dlg .tet__dlg{ display:block; }
+.tet__h{ display:block; font-size:13px; }
+.tet__dlg p{ margin:7px 0 0; line-height:1.45; white-space:pre-line; }
+.tet__dlg small{ display:block; margin-top:8px; color:#404040; }
+.tet__btns{ display:flex; justify-content:center; gap:6px; margin-top:11px; }
+.tet__btns .btn{ min-width:70px; padding:0 8px; }
+
+/* on-screen controls: phones and touch devices only */
+.tet__touch{ display:none; gap:6px; flex:0 0 auto; }
+.tet__touch button{
+  flex:1 1 0; min-width:0; height:50px; padding:0; border:0; color:#000; touch-action:none;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--surface); box-shadow:var(--raised); font:bold 11px/1 var(--font); cursor:default;
+  -webkit-user-select:none; user-select:none;
+}
+.tet__touch button.is-down{ box-shadow:var(--pressed); }
+.tet__touch button.is-down > *{ transform:translate(1px,1px); }
+.tet__touch svg{ width:24px; height:24px; fill:currentColor; pointer-events:none; }
+.tet__touch svg.is-flip{ transform:scaleX(-1); }
+.tet__touch button.is-down svg.is-flip{ transform:scaleX(-1) translate(1px,1px); }
+.tet__gap{ flex:0 0 6px; }
+@media (max-width:700px), (pointer:coarse){
+  .tet__touch{ display:flex; }
+}
+
+/* phones: playfield on the left, hold / next / score in a slim column on the right */
+@media (max-width:700px){
+  .tet{ --col:86px; padding:6px; gap:6px; }
+  .tet__main{ grid-template-columns:auto var(--col); grid-template-rows:auto 1fr; grid-template-areas:"well r" "well l"; gap:6px; align-content:start; }
+  .tet__col{ gap:6px; }
+  .tet__keys, .tet__best{ display:none; }
+  .tet__val{ font-size:13px; padding:2px 5px; }
+  .tet__stats{ gap:6px; }
+  .tet__dlg{ padding:10px 8px 8px; width:calc(100% - 12px); }
+  .tet__dlg p{ margin-top:5px; }
+  .tet__btns{ flex-direction:column; align-items:center; gap:5px; }
+  .tet__touch button{ height:52px; }
+}
+
+/* high scores dialog */
+.tet-hs__box{ padding:0; min-height:60px; }
+.tet-hs__t{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.tet-hs__t th{ padding:3px 8px; text-align:right; font-weight:bold; background:var(--surface); box-shadow:var(--raised); }
+.tet-hs__t td{ padding:2px 8px; text-align:right; }
+.tet-hs__t th:first-child, .tet-hs__t td:first-child{ width:26px; text-align:center; }
+.tet-hs__t tbody tr:first-child{ font-weight:bold; }
+.tet-hs__none{ margin:0; padding:20px 12px; text-align:center; color:#404040; }
