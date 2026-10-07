@@ -91,6 +91,20 @@ const CONTENT = {
   // id = the part after "watch?v=" in a YouTube link. channel + cat are shown
   // on the YouTube front page (cat becomes a filter chip, e.g. "Gaming").
   // Add as many as you like.
+  //
+  // youtubeApiKey (optional): paste a YouTube Data API v3 key to turn the YouTube
+  // app into the real thing: live search results, a Trending / Explore home,
+  // real view counts, upload dates, durations, subscriber counts and channel
+  // pages. Leave it "" and the app runs fully offline on the list below.
+  //   1. console.cloud.google.com -> create a project -> enable "YouTube Data API v3"
+  //   2. APIs & Services -> Credentials -> Create credentials -> API key
+  //   3. IMPORTANT: this file is public, so restrict the key. Under "Application
+  //      restrictions" choose "Websites" (HTTP referrers) and add your own site,
+  //      e.g. https://your-name.github.io/* , and under "API restrictions" allow
+  //      only "YouTube Data API v3". A restricted key is useless on other sites.
+  //   The free quota is 10,000 units a day (a search costs 100). If the key is
+  //   wrong or the quota runs out, the app silently falls back to the list below.
+  youtubeApiKey: "",
   videos: [
     { id: "dhxHOvixOpU", title: "FRIDAY NIGHT FUNKIN' IS THE BEST MUSIC GAME. (Part 1)", channel: "CoryxKenshin", cat: "Gaming" },
     { id: "06NiFBgT3bA", title: "Friday Night Funkin' KEEPS GETTING BETTER AND BETTER (Part 2)", channel: "CoryxKenshin", cat: "Gaming" },

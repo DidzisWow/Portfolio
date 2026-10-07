@@ -1423,104 +1423,686 @@ function ytParseId(input) {
 }
 function ytColor(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `hsl(${h},55%,42%)`; }
 const ytThumb = id => `https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg`;
+
+// Flat Material glyphs (outlined where YouTube uses outlines). Falls back to UI_PATHS.
+const YT_ICONS = {
+  menu: "M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z",
+  arrow: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
+  trend: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z",
+  subsO: "M20 8H4V6h16zm-2-6H6v2h12zm4 10v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2zm-2 0H4v8h16zm-10 1.5v5l5-2.5z",
+  history: "M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z",
+  later: "M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7z",
+  list: "M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z",
+  listAdd: "M14 10H2v2h12zm0-4H2v2h12zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2zM2 16h8v-2H2z",
+  likeO: "M9 21h9c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.7v-2c0-1.1-.9-2-2-2h-6.3l.9-4.6v-.3c0-.4-.2-.8-.4-1.1L14.2 1 7.6 7.6C7.2 8 7 8.5 7 9v10c0 1.1.9 2 2 2zM9 9l4.3-4.3L12 10h9v2l-3 7H9zM1 9h4v12H1z",
+  more: "M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z",
+  check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  theater: "M19 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 10H5V8h14z",
+  speed: "M20.4 8.6l-1.2 1.9a8 8 0 0 1-.2 7.5H5.1A8 8 0 0 1 15.6 6.9l1.8-1.3A10 10 0 0 0 3.4 19a2 2 0 0 0 1.7 1h13.8a2 2 0 0 0 1.8-1 10 10 0 0 0-.3-10.4zm-9.8 6.8a2 2 0 0 0 2.8 0l5.7-8.5-8.5 5.7a2 2 0 0 0 0 2.8z",
+  moon: "M12 3a9 9 0 1 0 9 9c0-.5 0-.9-.1-1.4a5.4 5.4 0 0 1-4.4 2.3 5.4 5.4 0 0 1-3.1-9.8C12.9 3 12.5 3 12 3z",
+  keys: "M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2zm0 3h2v2h-2zM8 8h2v2H8zm0 3h2v2H8zm-1 2H5v-2h2zm0-3H5V8h2zm9 7H8v-2h8zm0-4h-2v-2h2zm0-3h-2V8h2zm3 3h-2v-2h2zm0-3h-2V8h2z",
+  sort: "M3 18h6v-2H3zM3 6v2h18V6zm0 7h12v-2H3z",
+  shuffle: "M10.6 9.2 5.4 4 4 5.4l5.2 5.2zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4zm.3 9.4-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2z",
+  game: "M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3zm4.5 2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z",
+  news: "M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-5 14H7v-2h7zm3-4H7v-2h10zm0-4H7V7h10z",
+  trophy: "M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v1c0 2.6 1.9 4.6 4.4 4.9a5 5 0 0 0 3.6 3V19H7v2h10v-2h-4v-3.1a5 5 0 0 0 3.6-3C19.1 12.6 21 10.6 21 8V7a2 2 0 0 0-2-2zM5 8V7h2v3.8C5.8 10.4 5 9.3 5 8zm14 0c0 1.3-.8 2.4-2 2.8V7h2z",
+  bulb: "M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9zm3-19a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3c1.8-1.3 3-3.4 3-5.7a7 7 0 0 0-7-7z",
+  film: "M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4z",
+  ext: "M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z",
+  acct: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM7.1 18.3c.4-.9 3-1.8 4.9-1.8s4.5.9 4.9 1.8A7.9 7.9 0 0 1 12 20c-1.9 0-3.6-.6-4.9-1.7zm11.3-1.5C17 15.1 13.5 14.5 12 14.5s-5 .6-6.4 2.3A8 8 0 0 1 4 12a8 8 0 1 1 16 0c0 1.8-.6 3.5-1.6 4.8zM12 6a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z",
+};
+const ytI = (n, s = 20) => `<svg class="ui-i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${YT_ICONS[n] || UI_PATHS[n] || ""}"/></svg>`;
+
+// Explore / Trending: [key, label, YouTube videoCategoryId, icon, library categories that match when offline]
+const YT_EXPLORE = [
+  ["now", "Now", 0, "trend", null],
+  ["music", "Music", 10, "note", ["Music"]],
+  ["gaming", "Gaming", 20, "game", ["Gaming"]],
+  ["movies", "Movies", 1, "film", ["Animation", "Classics"]],
+  ["learning", "Learning", 27, "bulb", ["Education"]],
+  ["sports", "Sports", 17, "trophy", []],
+  ["news", "News", 25, "news", []],
+];
+const YT_CAT = { 1: "Film & Animation", 2: "Autos & Vehicles", 10: "Music", 15: "Pets & Animals", 17: "Sports", 19: "Travel & Events", 20: "Gaming", 22: "People & Blogs", 23: "Comedy", 24: "Entertainment", 25: "News & Politics", 26: "Howto & Style", 27: "Education", 28: "Science & Technology", 29: "Nonprofits & Activism" };
+const YT_CATID = { Animation: 1, Music: 10, Sports: 17, Gaming: 20, Vlogs: 22, Comedy: 23, Entertainment: 24, News: 25, Education: 27, Learning: 27, Science: 28 };
+
+// Number / date formatting the way YouTube prints it (1.2M views, 3 days ago, 12:34).
+function ytNum(n) {
+  n = +n;
+  if (!isFinite(n) || n < 0) return "";
+  for (const [d, s] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (n >= d) { const v = n / d; return (v < 10 ? Math.floor(v * 10 + 1e-9) / 10 : Math.floor(v)) + s; }
+  return String(Math.floor(n));
+}
+const ytViews = n => n == null ? "" : n === 1 ? "1 view" : `${ytNum(n)} views`;
+function ytAgo(t) {
+  const ms = typeof t === "number" ? t : Date.parse(t);
+  if (!ms) return "";
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  for (const [d, u] of [[31536000, "year"], [2592000, "month"], [604800, "week"], [86400, "day"], [3600, "hour"], [60, "minute"]]) if (s >= d) { const n = Math.floor(s / d); return `${n} ${u}${n === 1 ? "" : "s"} ago`; }
+  return "Just now";
+}
+function ytDur(sec) {
+  sec = Math.round(+sec);
+  if (!(sec >= 0)) return "";
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+}
+function ytIso(d) {
+  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(d || "");
+  return m ? (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0) : 0;
+}
+// Description text -> safe HTML with links, #hashtags and clickable 1:23 timestamps.
+function ytLinkify(text) {
+  text = String(text || "");
+  const re = /(https?:\/\/[^\s<]+)|(\b(?:\d{1,2}:)?[0-5]?\d:[0-5]\d\b)|(#[\p{L}\p{N}_]+)/gu;
+  let out = "", last = 0;
+  for (const m of text.matchAll(re)) {
+    out += esc(text.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[1]) { const u = m[1].replace(/[).,;!?]+$/, ""); out += `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a>${esc(m[1].slice(u.length))}`; }
+    else if (m[2]) { const p = m[2].split(":").map(Number); out += `<button type="button" class="yt2__ts" data-seek="${p.reduce((a, b) => a * 60 + b, 0)}">${esc(m[2])}</button>`; }
+    else out += `<span class="yt2__tag">${esc(m[3])}</span>`;
+  }
+  return (out + esc(text.slice(last))).replace(/\n/g, "<br>");
+}
+
+// Optional YouTube Data API v3 (set CONTENT.youtubeApiKey). Everything here throws on failure and the app
+// falls back to the built-in library, so a missing key, a bad key or no network never shows an error.
+const ytApi = {
+  base: "https://www.googleapis.com/youtube/v3/",
+  cache: new Map(),
+  failedAt: 0,
+  key() { return typeof C.youtubeApiKey === "string" ? C.youtubeApiKey.trim() : ""; },
+  get on() { return !!this.key() && Date.now() - this.failedAt > 120000; },
+  region() { const r = ((navigator.language || "").split("-")[1] || "").toUpperCase(); return /^[A-Z]{2}$/.test(r) ? r : ""; },
+  call(ep, params) {
+    const q = new URLSearchParams(params).toString(), ck = ep + "?" + q;
+    if (this.cache.has(ck)) return this.cache.get(ck);
+    const p = fetch(`${this.base}${ep}?${q}&key=${encodeURIComponent(this.key())}`).then(r => r.ok ? r.json() : r.json().catch(() => ({})).then(j => {
+      const er = (j && j.error) || {}, e = new Error("YouTube API " + r.status);
+      e.status = r.status; e.reason = ((er.errors && er.errors[0] && er.errors[0].reason) || "") + " " + (er.message || "");
+      throw e;
+    }));
+    this.cache.set(ck, p);
+    // network trouble, a bad key or an exhausted quota pause the API for two minutes; 404/commentsDisabled do not
+    p.catch(e => { this.cache.delete(ck); if (!e.status || e.status === 401 || /quota|keyInvalid|api key|referer|accessNotConfigured|dailyLimit|rateLimit/i.test(e.reason || "")) this.failedAt = Date.now(); });
+    return p;
+  },
+  vid(it) {
+    const s = it.snippet || {}, st = it.statistics || {}, cd = it.contentDetails || {};
+    return {
+      id: typeof it.id === "string" ? it.id : "", title: s.title || "Untitled", channel: s.channelTitle || "YouTube", channelId: s.channelId || "",
+      cat: YT_CAT[s.categoryId] || "Videos", desc: s.description || "", date: s.publishedAt || "",
+      views: st.viewCount != null ? +st.viewCount : null, likes: st.likeCount != null ? +st.likeCount : null,
+      commentCount: st.commentCount != null ? +st.commentCount : null, dur: ytIso(cd.duration), live: s.liveBroadcastContent === "live",
+      embeddable: !it.status || it.status.embeddable !== false, api: true,
+    };
+  },
+  async videos(ids) {
+    ids = ids.filter(Boolean).slice(0, 50);
+    if (!ids.length) return [];
+    const j = await this.call("videos", { part: "snippet,contentDetails,statistics,status", id: ids.join(","), maxResults: 50 });
+    const map = new Map((j.items || []).map(it => [it.id, this.vid(it)]));
+    return ids.map(id => map.get(id)).filter(v => v && v.embeddable);
+  },
+  async search(q) {
+    const j = await this.call("search", { part: "snippet", type: "video", videoEmbeddable: "true", maxResults: 20, safeSearch: "moderate", q });
+    return this.videos((j.items || []).map(i => i.id && i.id.videoId));
+  },
+  async popular(catId) {
+    const p = { part: "snippet,contentDetails,statistics,status", chart: "mostPopular", maxResults: 24 };
+    if (catId) p.videoCategoryId = String(catId);
+    if (this.region()) p.regionCode = this.region();
+    const j = await this.call("videos", p);
+    return (j.items || []).map(it => this.vid(it)).filter(v => v.embeddable);
+  },
+  async related(v) {
+    const q = v.title.replace(/[|()[\]:\-–—]/g, " ").split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+    return (await this.search(q)).filter(x => x.id !== v.id);
+  },
+  async findChannel(name) {
+    const j = await this.call("search", { part: "snippet", type: "channel", maxResults: 1, q: name });
+    const it = (j.items || [])[0];
+    return it && it.snippet && it.snippet.channelId || (it && it.id && it.id.channelId) || "";
+  },
+  async channel(id) {
+    const j = await this.call("channels", { part: "snippet,statistics,contentDetails", id });
+    const it = (j.items || [])[0];
+    if (!it) throw new Error("no channel");
+    const s = it.snippet || {}, st = it.statistics || {};
+    return {
+      id, name: s.title || "", handle: s.customUrl || "", desc: s.description || "", joined: s.publishedAt || "",
+      thumb: s.thumbnails && ((s.thumbnails.medium || s.thumbnails.default || {}).url) || "",
+      subs: st.hiddenSubscriberCount ? null : st.subscriberCount != null ? +st.subscriberCount : null,
+      count: st.videoCount != null ? +st.videoCount : null, views: st.viewCount != null ? +st.viewCount : null,
+      uploads: (it.contentDetails && it.contentDetails.relatedPlaylists && it.contentDetails.relatedPlaylists.uploads) || "",
+    };
+  },
+  async uploads(playlistId) {
+    if (!playlistId) return [];
+    const j = await this.call("playlistItems", { part: "contentDetails", playlistId, maxResults: 24 });
+    return this.videos((j.items || []).map(i => i.contentDetails && i.contentDetails.videoId));
+  },
+  async comments(videoId, order) {
+    const j = await this.call("commentThreads", { part: "snippet", videoId, order: order === "time" ? "time" : "relevance", maxResults: 20, textFormat: "plainText" });
+    return (j.items || []).map(it => {
+      const c = (it.snippet && it.snippet.topLevelComment && it.snippet.topLevelComment.snippet) || {};
+      return { key: "api:" + it.id, name: String(c.authorDisplayName || "").replace(/^@/, ""), avatar: c.authorProfileImageUrl || "", t: c.textDisplay || c.textOriginal || "", likes: +c.likeCount || 0, ts: Date.parse(c.publishedAt) || 0, api: true };
+    });
+  },
+};
+// Uploads/exports for the extra YouTube data (history, playlists...). exportBackup/importBackup below only know the original keys.
+const YT_EXTRA_KEYS = ["ytHist", "ytWL", "ytPL", "ytCL", "ytMeta"];
+function ytExport() {
+  const data = { app: "w98-portfolio", saved: new Date().toISOString() };
+  BACKUP_KEYS.forEach(k => { data[k] = store.get(k, k === "ytComments" ? {} : []); });
+  YT_EXTRA_KEYS.forEach(k => { data[k] = store.get(k, k === "ytMeta" ? {} : []); });
+  downloadBlob("portfolio-media-backup.json", new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+}
+function ytImportExtra(file) {
+  return file.text().then(t => {
+    const d = JSON.parse(t);
+    if (!d || d.app !== "w98-portfolio") return;
+    const arr = k => Array.isArray(d[k]) ? d[k].filter(Boolean) : [];
+    const pl = store.get("ytPL", []), seen = new Set(pl.map(p => p.id));
+    arr("ytPL").forEach(p => { if (p.id && !seen.has(p.id) && Array.isArray(p.ids)) pl.push(p); });
+    store.set("ytPL", pl);
+    store.set("ytWL", Array.from(new Set(store.get("ytWL", []).concat(arr("ytWL").filter(x => typeof x === "string")))));
+    store.set("ytCL", Array.from(new Set(store.get("ytCL", []).concat(arr("ytCL").filter(x => typeof x === "string")))));
+    const h = store.get("ytHist", []), hs = new Set(h.map(x => x.id));
+    store.set("ytHist", h.concat(arr("ytHist").filter(x => x.id && !hs.has(x.id))).sort((a, b) => b.ts - a.ts).slice(0, 300));
+    if (d.ytMeta && typeof d.ytMeta === "object") store.set("ytMeta", Object.assign({}, d.ytMeta, store.get("ytMeta", {})));
+  }).catch(() => {});
+}
 function openYouTube(o = {}) {
-  WM.open("youtube", {
-    title: "YouTube", icon: "youtube", w: 880, h: 570, from: o.from,
+  const w = WM.open("youtube", {
+    title: "YouTube", icon: "youtube", w: 940, h: 610, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
       // videos posted from "Your channel" live in localStorage and show up under the portfolio owner's name
-      const VIDEOS = BASE_VIDEOS.concat(store.get("ytUploads", []).map(u => ({ id: u.id, title: u.title, cat: u.cat || "Videos", desc: u.desc || "", channel: NAME, mine: true })));
-      const cats = () => ["All", ...Array.from(new Set(VIDEOS.map(v => v.cat)))];
-      const channels = () => { const c = Array.from(new Set(VIDEOS.map(v => v.channel))).filter(c => c !== NAME); return [NAME, ...c]; };
-      body.innerHTML = `
-        <div class="yt2">
-          <header class="yt2__head">
-            <button type="button" class="yt2__back" title="Back" disabled>${G.back}</button>
-            <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
-            <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit" aria-label="Search">${ui("search", 20)}</button></form>
-            <button type="button" class="yt2__up" data-go="upload" title="Create">${ui("create", 22)}<span>Create</span></button>
-            <button type="button" class="yt2__me" data-channel="${esc(NAME)}" title="Your channel (${esc(NAME)})" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
-          </header>
-          <div class="yt2__wrap">
-            <nav class="yt2__side"></nav>
-            <main class="yt2__main"></main>
-          </div>
-        </div>`;
-      const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
-      // thumbnails that fail to load keep their grey box but lose the broken-image icon (error doesn't bubble, so capture it)
-      body.addEventListener("error", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-broken"); }, true);
-      const drawSide = () => {
-        side.innerHTML = `
-          <button type="button" data-go="home">${ui("home", 20)}<span>Home</span></button>
-          <button type="button" data-go="subs">${ui("subs", 20)}<span>Subscriptions</span></button>
-          <p>You</p>
-          <button type="button" data-channel="${esc(NAME)}">${ui("user", 20)}<span>Your channel</span></button>
-          <button type="button" data-go="liked">${ui("like", 20)}<span>Liked videos</span></button>
-          <button type="button" data-go="upload">${ui("up", 20)}<span>Upload video</span></button>
-          <p>Channels</p>
-          ${channels().filter(c => c !== NAME).map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i><span>${esc(c)}</span></button>`).join("")}`;
+      const VIDEOS = BASE_VIDEOS.concat(store.get("ytUploads", []).map(u => ({ id: u.id, title: u.title, cat: u.cat || "Videos", desc: u.desc || "", ts: u.ts, channel: NAME, mine: true })));
+      const pool = new Map();           // every video seen this session (library + API results), by id
+      const lib = () => { const m = new Map(); VIDEOS.forEach(v => { const p = m.get(v.id); if (!p || (v.mine && !p.mine)) m.set(v.id, v); }); return Array.from(m.values()); };
+      const syncPool = () => lib().forEach(v => pool.set(v.id, v));
+      syncPool();
+      const META = store.get("ytMeta", {}), DUR = store.get("ytDur", {}), PROG = store.get("ytProg", {}), CHAN = store.get("ytChan", {});
+      const cats = () => {
+        const c = Array.from(new Set(lib().map(v => v.cat)));
+        if (ytApi.on) ["Music", "Gaming", "Sports", "News", "Learning"].forEach(x => { if (!c.some(y => y.toLowerCase() === x.toLowerCase())) c.push(x); });
+        return c;
       };
+      const channels = () => { const c = Array.from(new Set(lib().map(v => v.channel))).filter(c => c !== NAME); return [NAME, ...c]; };
+
+      /* ---- persisted state ---- */
       const subs = () => store.get("ytSubs", []);
       const likes = () => store.get("ytLikes", []);
+      const wl = () => store.get("ytWL", []);
+      const pls = () => store.get("ytPL", []);
+      const hist = () => store.get("ytHist", []);
+      const cmts = id => (store.get("ytComments", {})[id] || []);
       const toggle = (key, val) => { const a = store.get(key, []); const i = a.indexOf(val); if (i >= 0) a.splice(i, 1); else a.push(val); store.set(key, a); return i < 0; };
-      const stack = [];
-      let endedFor = null, current = -1, autoplay = store.get("ytAuto", true);
+      let autoplay = store.get("ytAuto", true), theater = store.get("ytTheater", false), speed = +store.get("ytSpeed", 1) || 1, dark = store.get("ytDark", false);
+      let sideMode = store.get("ytSide", "");   // "" = full, "mini" = icon rail
       const origin = location.origin && location.origin !== "null" ? `&origin=${encodeURIComponent(location.origin)}` : "";
 
-      const card = (v, i) => `
-        <button type="button" class="yt2__card" data-v="${i}">
-          <span class="yt2__thumb"><img src="${ytThumb(v.id)}" alt="" loading="lazy"><b>${esc(v.cat)}</b></span>
-          <span class="yt2__info">
-            <i class="yt2__av" style="background:${ytColor(v.channel)}">${esc(v.channel[0].toUpperCase())}</i>
-            <span><strong>${esc(v.title)}</strong><small data-channel="${esc(v.channel)}">${esc(v.channel)}</small></span>
-          </span>
-        </button>`;
-      const row = (v, i, cls = "") => `
-        <button type="button" class="yt2__row ${cls}" data-v="${i}">
-          <span class="yt2__thumb"><img src="${ytThumb(v.id)}" alt="" loading="lazy"></span>
-          <span><strong>${esc(v.title)}</strong><small data-channel="${esc(v.channel)}">${esc(v.channel)}</small><small>${esc(v.cat)}</small></span>
-        </button>`;
-      const grid = list => list.length ? `<div class="yt2__grid">${list.map(i => card(VIDEOS[i], i)).join("")}</div>` : "";
-      const subBtn = ch => { const on = subs().includes(ch); return `<button type="button" class="yt2__sub${on ? " is-on" : ""}" data-sub="${esc(ch)}">${on ? "Subscribed" : "Subscribe"}</button>`; };
-      let all = VIDEOS.map((_, i) => i);
-      const cmts = id => (store.get("ytComments", {})[id] || []);
+      /* ---- video lookup ---- */
+      const ensure = v => {   // merge fresh API data into the copy we already hold
+        if (!v || !v.id) return v;
+        const cur = pool.get(v.id);
+        if (!cur) { pool.set(v.id, v); return v; }
+        if (cur !== v) {
+          ["views", "likes", "commentCount", "date", "dur", "channelId", "live"].forEach(k => { if ((cur[k] == null || cur[k] === "" || cur[k] === 0) && v[k] != null && v[k] !== "") cur[k] = v[k]; });
+          if (!cur.desc && v.desc) cur.desc = v.desc;
+        }
+        return cur;
+      };
+      const mergeList = list => list.map(ensure);
+      const vidOf = id => {
+        let v = pool.get(id);
+        if (v) return v;
+        const m = META[id];
+        v = m ? { id, title: m.t || "Video", channel: m.c || "YouTube", channelId: m.ci || "", cat: m.k || "Videos", dur: m.d || 0, fromMeta: true } : { id, title: "Video unavailable", channel: "YouTube", cat: "Videos", gone: true };
+        if (m) pool.set(id, v);
+        return v;
+      };
+      const remember = v => {   // keep enough about non-library videos to list them offline later (history, playlists, likes)
+        if (!v || !v.id || v.gone || lib().some(x => x.id === v.id)) return;
+        META[v.id] = { t: v.title, c: v.channel, ci: v.channelId || "", k: v.cat || "", d: v.dur || 0 };
+        const ks = Object.keys(META);
+        if (ks.length > 400) delete META[ks[0]];
+        store.set("ytMeta", META);
+      };
+      const durOf = v => v.dur || DUR[v.id] || 0;
+      const progOf = id => { const p = PROG[id]; return p && p[1] > 0 && p[0] >= 5 ? Math.min(100, Math.round(p[0] / p[1] * 100)) : 0; };
+      const cid = name => (CHAN[name] && CHAN[name].id) || "";
+      const cidAttr = (name, v) => { const c = (v && v.channelId) || cid(name); return c ? ` data-cid="${esc(c)}"` : ""; };
 
+      /* ---- shell ---- */
+      body.innerHTML = `
+        <div class="yt2${dark ? " yt2--dark" : ""}">
+          <header class="yt2__head">
+            <button type="button" class="yt2__burger" data-burger title="Guide" aria-label="Guide">${ytI("menu", 24)}</button>
+            <button type="button" class="yt2__back" title="Back" aria-label="Back" disabled>${ytI("arrow", 24)}</button>
+            <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
+            <form class="yt2__search" role="search" autocomplete="off">
+              <input name="q" placeholder="Search" aria-label="Search YouTube" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="ytSug">
+              <button type="submit" aria-label="Search">${ytI("search", 24)}</button>
+              <div class="yt2__sug" id="ytSug" role="listbox" hidden></div>
+            </form>
+            <button type="button" class="yt2__up" data-go="upload" title="Create">${ytI("create", 24)}<span>Create</span></button>
+            <button type="button" class="yt2__me" data-me title="${esc(NAME)}" aria-label="Account menu" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
+          </header>
+          <div class="yt2__wrap">
+            <nav class="yt2__side" aria-label="Guide"></nav>
+            <main class="yt2__main"></main>
+          </div>
+          <div class="yt2__scrim" data-scrim></div>
+        </div>`;
+      const root = $(".yt2", body), main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
+      const qInput = $(".yt2__search input", body), sug = $(".yt2__sug", body);
+      // thumbnails that fail to load keep their grey box but lose the broken-image icon (error doesn't bubble, so capture it)
+      body.addEventListener("error", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-broken"); }, true);
+      body.addEventListener("load", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-loaded"); }, true);
+      const settle = () => $$(".yt2__thumb img, img.yt2__av", body).forEach(i => { if (i.complete && i.naturalWidth) i.classList.add("is-loaded"); });
+      const timers = [];
+      const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+
+      /* ---- markup helpers ---- */
+      const avHtml = (name, big) => { const c = CHAN[name]; return c && c.thumb ? `<img class="yt2__av${big ? " yt2__av--big" : ""}" src="${esc(c.thumb)}" alt="">` : `<i class="yt2__av${big ? " yt2__av--big" : ""}" style="background:${ytColor(name)}">${esc((name || "?")[0].toUpperCase())}</i>`; };
+      const metaLine = v => {
+        const a = [];
+        if (v.views != null) a.push(ytViews(v.views));
+        const t = v.date || v.ts;
+        if (t) a.push(ytAgo(t));
+        if (!a.length && v.cat) a.push(v.cat);
+        return a.join(" • ");
+      };
+      const thumb = v => {
+        const d = durOf(v), p = progOf(v.id);
+        return `<span class="yt2__thumb"><img src="${esc(ytThumb(v.id))}" alt="" loading="lazy" draggable="false">${v.live ? `<b class="yt2__dur yt2__dur--live">LIVE</b>` : d ? `<b class="yt2__dur">${ytDur(d)}</b>` : ""}${p ? `<i class="yt2__prog"><em style="width:${p}%"></em></i>` : ""}</span>`;
+      };
+      const chBtn = v => `<button type="button" class="yt2__cn" data-channel="${esc(v.channel)}"${cidAttr(v.channel, v)}>${esc(v.channel)}</button>`;
+      const card = v => `
+        <div class="yt2__card">
+          <button type="button" class="yt2__tl" data-v="${esc(v.id)}" tabindex="-1" aria-hidden="true">${thumb(v)}</button>
+          <div class="yt2__info">
+            <button type="button" class="yt2__avb" data-channel="${esc(v.channel)}"${cidAttr(v.channel, v)} tabindex="-1" aria-hidden="true">${avHtml(v.channel)}</button>
+            <span class="yt2__txt">
+              <button type="button" class="yt2__tt" data-v="${esc(v.id)}"><strong>${esc(v.title)}</strong></button>
+              <small>${chBtn(v)}</small>
+              <small>${esc(metaLine(v))}</small>
+            </span>
+            <button type="button" class="yt2__more" data-more="${esc(v.id)}" aria-label="Action menu" title="Action menu">${ytI("more", 20)}</button>
+          </div>
+        </div>`;
+      const row = (v, op = {}) => `
+        <div class="yt2__row${op.cls ? " " + op.cls : ""}">
+          ${op.idx != null ? `<span class="yt2__idx">${op.cur ? ytI("play", 16) : op.idx}</span>` : ""}
+          <button type="button" class="yt2__tl" data-v="${esc(v.id)}" tabindex="-1" aria-hidden="true">${thumb(v)}</button>
+          <span class="yt2__txt">
+            <button type="button" class="yt2__tt" data-v="${esc(v.id)}"><strong>${esc(v.title)}</strong></button>
+            <small>${chBtn(v)}</small>
+            <small>${esc(metaLine(v))}</small>
+            ${op.desc && v.desc ? `<small class="yt2__snip">${esc(v.desc.replace(/\s+/g, " ").slice(0, 150))}</small>` : ""}
+          </span>
+          ${op.rm === "hist" ? `<button type="button" class="yt2__more" data-rmhist="${esc(v.id)}" aria-label="Remove from watch history" title="Remove from watch history">${ytI("close", 20)}</button>`
+            : op.rm === "pl" ? `<button type="button" class="yt2__more" data-plrm="${esc(v.id)}" aria-label="Remove from playlist" title="Remove from playlist">${ytI("close", 20)}</button>`
+            : `<button type="button" class="yt2__more" data-more="${esc(v.id)}" aria-label="Action menu" title="Action menu">${ytI("more", 20)}</button>`}
+        </div>`;
+      const grid = list => list.length ? `<div class="yt2__grid">${list.map(card).join("")}</div>` : "";
+      const chipsHtml = (items, cur, attr) => `<div class="yt2__chips">${items.map(([k, label]) => `<button type="button" class="yt2__chip${k === cur ? " is-on" : ""}" ${attr}="${esc(k)}">${esc(label)}</button>`).join("")}</div>`;
+      const subBtn = (ch, c) => { const on = subs().includes(ch); return `<button type="button" class="yt2__sub${on ? " is-on" : ""}" data-sub="${esc(ch)}"${c ? ` data-cid="${esc(c)}"` : ""}>${on ? "Subscribed" : "Subscribe"}</button>`; };
+      const empty = (t, sub) => `<div class="yt2__empty">${t ? `<b>${esc(t)}</b>` : ""}${sub || ""}</div>`;
+      const chRow = c => { const n = lib().filter(v => v.channel === c).length; return `<div class="yt2__chrow"><button type="button" class="yt2__chlink" data-channel="${esc(c)}"${cidAttr(c)}>${avHtml(c, true)}<span><b>${esc(c)}</b><small>${n ? `${n} video${n === 1 ? "" : "s"}` : "Channel"}</small></span></button>${subBtn(c, cid(c))}</div>`; };
+      // skeletons: flat grey blocks that pulse until the data arrives
+      const skCard = `<div class="yt2__card is-skel" aria-hidden="true"><div class="yt2__thumb"></div><div class="yt2__info"><i class="yt2__av"></i><span class="yt2__txt"><span class="yt2__sk" style="width:92%"></span><span class="yt2__sk" style="width:62%"></span></span></div></div>`;
+      const skRow = `<div class="yt2__row is-skel" aria-hidden="true"><span class="yt2__thumb"></span><span class="yt2__txt"><span class="yt2__sk" style="width:90%"></span><span class="yt2__sk" style="width:55%"></span><span class="yt2__sk" style="width:35%"></span></span></div>`;
+      const skeleton = page => page === "search" || page === "trending" ? `<div class="yt2__rows yt2__rows--wide">${skRow.repeat(5)}</div>`
+        : page === "channel" ? `<div class="yt2__banner is-skel"></div><div class="yt2__grid">${skCard.repeat(6)}</div>`
+        : `<div class="yt2__chips is-skel">${`<span class="yt2__chip"></span>`.repeat(6)}</div><div class="yt2__grid">${skCard.repeat(9)}</div>`;
+      const dayLabel = ts => {
+        const d = new Date(ts), t = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(), diff = Math.round((day(t) - day(d)) / 864e5);
+        return diff <= 0 ? "Today" : diff === 1 ? "Yesterday" : diff < 7 ? d.toLocaleDateString(undefined, { weekday: "long" }) : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() === t.getFullYear() ? undefined : "numeric" });
+      };
+      const blend = (loc, api) => {
+        const ids = new Set(loc.map(v => v.id)), a = api.filter(v => !ids.has(v.id)), out = [];
+        let li = 0;
+        for (let i = 0; i < a.length || li < loc.length; i++) { if (i % 4 === 0 && li < loc.length) out.push(loc[li++]); if (i < a.length) out.push(a[i]); }
+        return out;
+      };
+      const shuffled = a => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+
+      /* ---- playlists ---- */
+      const plInfo = id => {
+        if (id === "WL") return { id, name: "Watch later", ids: wl(), sys: true };
+        if (id === "LL") return { id, name: "Liked videos", ids: likes().slice().reverse(), sys: true };
+        const p = pls().find(x => x.id === id);
+        return p ? { id: p.id, name: p.name, ids: p.ids.slice(), upd: p.upd || p.ts, sys: false } : null;
+      };
+      const plAdd = (listId, id, on) => {
+        if (listId === "WL") { const a = wl().filter(x => x !== id); if (on) a.unshift(id); store.set("ytWL", a); }
+        else {
+          const a = pls(), p = a.find(x => x.id === listId);
+          if (!p) return;
+          p.ids = p.ids.filter(x => x !== id);
+          if (on) p.ids.push(id);
+          p.upd = Date.now();
+          store.set("ytPL", a);
+        }
+        if (on) remember(vidOf(id));
+      };
+      const plNew = (name, firstId) => {
+        const p = { id: "pl" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36), name: name.trim().slice(0, 150) || "Untitled playlist", ids: firstId ? [firstId] : [], ts: Date.now(), upd: Date.now() };
+        store.set("ytPL", pls().concat(p));
+        if (firstId) remember(vidOf(firstId));
+        return p;
+      };
+      const pushHist = v => {
+        remember(v);
+        if (store.get("ytHistOff", false)) return;
+        store.set("ytHist", [{ id: v.id, ts: Date.now() }].concat(hist().filter(x => x.id !== v.id)).slice(0, 300));
+      };
+      const pushSearch = q => store.set("ytSearches", [q].concat(store.get("ytSearches", []).filter(x => x.toLowerCase() !== q.toLowerCase())).slice(0, 20));
+
+      /* ---- navigation ---- */
+      const stack = [];
+      let tok = 0, upnext = [], nextAll = [], nextFilter = "all";
+      const apiComments = {};
+      const pl = { id: "", t: 0, d: 0, state: -1, rate: 1, vol: 100, muted: false, got: false, saved: 0, spd: false, endedFor: "" };
+      const navKey = s => {
+        if (s.page === "playlist") return s.id === "WL" ? "later" : s.id === "LL" ? "liked" : "playlists";
+        if (s.page === "channel") return s.name === NAME ? "mine" : "";
+        if (s.page === "trending" && s.k && s.k !== "now") return "ex:" + s.k;
+        return s.page;
+      };
+      const isMini = () => sideMode === "mini" && !root.classList.contains("is-narrow");
+      const drawSide = () => {
+        const s = stack[stack.length - 1] || {}, cur = navKey(s);
+        const nb = (key, label, off, on, attrs) => `<button type="button" class="${key === cur ? "is-on" : ""}" ${attrs}>${ytI(key === cur ? on : off, 24)}<span>${label}</span></button>`;
+        const home = nb("home", "Home", "homeO", "home", 'data-go="home"'), trend = nb("trending", "Trending", "trend", "trend", 'data-go="trending"'), sb = nb("subs", "Subscriptions", "subsO", "subs", 'data-go="subs"');
+        const hi = nb("history", "History", "history", "history", 'data-go="history"'), pp = nb("playlists", "Playlists", "list", "list", 'data-go="playlists"');
+        root.classList.toggle("is-mini", isMini());
+        if (isMini()) { side.innerHTML = home + trend + sb + hi + pp; return; }
+        const sl = subs(), list = sl.length ? sl : channels().filter(c => c !== NAME), present = new Set(lib().map(v => v.cat));
+        const ex = YT_EXPLORE.filter(x => x[0] !== "now" && (ytApi.on || (x[4] || []).some(c => present.has(c))));
+        side.innerHTML = `${home}${trend}${sb}<hr>
+          <p>You ${ytI("fwd", 16)}</p>${hi}${pp}${nb("mine", "Your channel", "acct", "acct", `data-channel="${esc(NAME)}"`)}${nb("later", "Watch later", "later", "later", 'data-go="playlist" data-id="WL"')}${nb("liked", "Liked videos", "likeO", "like", 'data-go="playlist" data-id="LL"')}<hr>
+          <p>${sl.length ? "Subscriptions" : "Channels"}</p>
+          ${list.map(c => `<button type="button" class="${s.page === "channel" && s.name === c ? "is-on" : ""}" data-channel="${esc(c)}"${cidAttr(c)}>${avHtml(c)}<span>${esc(c)}</span></button>`).join("")}
+          ${ex.length ? `<hr><p>Explore</p>${ex.map(x => nb("ex:" + x[0], x[1], x[3], x[3], `data-go="trending" data-k="${x[0]}"`)).join("")}` : ""}
+          <hr><button type="button" data-pa="keys">${ytI("keys", 24)}<span>Keyboard shortcuts</span></button>`;
+      };
+
+      /* ---- player ---- */
+      const cmd = (func, args = []) => {
+        const f = $(".yt2__player iframe", main);
+        if (f && f.contentWindow) try { f.contentWindow.postMessage(JSON.stringify({ event: "command", func, args }), "*"); } catch (e) {}
+      };
+      const saveProg = force => {
+        if (!pl.id || !(pl.d > 0)) return;
+        if (!force && Date.now() - pl.saved < 5000) return;
+        pl.saved = Date.now();
+        if (pl.state === 0 || pl.t >= pl.d - 8) delete PROG[pl.id];
+        else if (pl.t >= 5) { PROG[pl.id] = [Math.floor(pl.t), Math.floor(pl.d)]; const k = Object.keys(PROG); if (k.length > 300) delete PROG[k[0]]; }
+        else return;
+        store.set("ytProg", PROG);
+      };
+      const mountPlayer = v => {
+        const box = $(".yt2__player", main);
+        if (!box) return;
+        const p = PROG[v.id], start = p && p[0] > 10 && p[1] && p[0] < p[1] - 10 ? p[0] : 0;
+        Object.assign(pl, { id: v.id, t: start, d: 0, state: -1, rate: 1, got: false, saved: Date.now(), spd: false, endedFor: "" });
+        box.classList.add("is-loading");
+        box.innerHTML = `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&playsinline=1&enablejsapi=1${start ? "&start=" + start : ""}${origin}" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+        const ifr = $("iframe", box);
+        const listen = () => { try { ifr.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*"); } catch (e) {} };
+        ifr.addEventListener("load", () => { box.classList.remove("is-loading"); listen(); later(() => { if (!pl.got) listen(); }, 700); later(() => { if (!pl.got) listen(); }, 2500); });
+      };
+      const leaveWatch = () => { if (pl.id) { saveProg(true); pl.id = ""; } };
+      const seek = d => { if (!pl.id) return; const t = Math.max(0, Math.min(pl.d || 1e9, pl.t + d)); pl.t = t; cmd("seekTo", [t, true]); };
+      const seekTo = t => { if (!pl.id) return; pl.t = t; cmd("seekTo", [t, true]); };
+      const playPause = () => { if (pl.state === 1 || pl.state === 3) cmd("pauseVideo"); else cmd("playVideo"); };
+      const setSpeed = r => {
+        speed = Math.max(.25, Math.min(2, r));
+        store.set("ytSpeed", speed);
+        cmd("setPlaybackRate", [speed]);
+        const l = $(".yt2__spd", main);
+        if (l) l.textContent = speed === 1 ? "" : speed + "x";
+      };
+      const setTheater = on => {
+        theater = !!on;
+        store.set("ytTheater", theater);
+        const wEl = $(".yt2__watch", main);
+        if (wEl) wEl.classList.toggle("is-theater", theater);
+        const b = $("[data-theater]", main);
+        if (b) { b.classList.toggle("is-on", theater); b.setAttribute("aria-pressed", theater); b.title = theater ? "Default view (t)" : "Theater mode (t)"; }
+        sizeStage();
+        if (wEl) main.scrollTop = 0;
+      };
+      const sizeStage = () => root.style.setProperty("--ytmh", Math.max(240, main.clientHeight - 24) + "px");
+      const fullscreen = () => {
+        if (document.fullscreenElement) { document.exitFullscreen(); return; }
+        const t = $(".yt2__player iframe", main) || $(".yt2__player", main);
+        if (t && t.requestFullscreen) t.requestFullscreen().catch(() => {});
+      };
+      const nextOf = (s, force) => {
+        if (s.list) {
+          const ids = s.order || (plInfo(s.list) || { ids: [] }).ids, i = ids.indexOf(s.id);
+          return i >= 0 && ids[i + 1] ? { page: "watch", id: ids[i + 1], list: s.list, ...(s.order ? { order: s.order } : {}) } : null;
+        }
+        return (autoplay || force) && upnext[0] ? { page: "watch", id: upnext[0] } : null;
+      };
+
+      /* ---- popups (menus), modal dialogs, search suggestions ---- */
+      let pop = null;
+      const closePop = () => { if (pop) { pop.anchor.classList.remove("is-open"); pop.el.remove(); pop = null; } };
+      const openPop = (anchor, html, cls, op = {}) => {
+        if (pop && pop.anchor === anchor) { closePop(); return null; }
+        closePop();
+        const el = document.createElement("div");
+        el.className = "yt2__pop " + (cls || "");
+        el.setAttribute("role", "menu");
+        el.innerHTML = html;
+        root.appendChild(el);
+        const r = anchor.getBoundingClientRect(), b = root.getBoundingClientRect();
+        let x = (op.right ? r.right - el.offsetWidth : r.left) - b.left, y = r.bottom - b.top + 4;
+        x = Math.max(8, Math.min(x, b.width - el.offsetWidth - 8));
+        if (y + el.offsetHeight > b.height - 8) y = Math.max(8, r.top - b.top - el.offsetHeight - 4);
+        el.style.left = x + "px"; el.style.top = y + "px";
+        pop = { el, anchor, ...op };
+        anchor.classList.add("is-open");
+        const f = $("button, input", el);
+        if (f && op.focus !== false) f.focus({ preventScroll: true });
+        return el;
+      };
+      root.addEventListener("pointerdown", e => { if (pop && !pop.el.contains(e.target) && !pop.anchor.contains(e.target)) closePop(); }, true);
+      root.addEventListener("keydown", e => {
+        if (!pop || !pop.el.contains(document.activeElement)) return;
+        const items = $$("button, input[type=checkbox]", pop.el), i = items.indexOf(document.activeElement);
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus(); }
+        else if (e.key === "Escape") { const a = pop.anchor; closePop(); a.focus(); e.stopPropagation(); }
+      });
+      const modal = (inner, cls) => {
+        closePop();
+        const m = document.createElement("div");
+        m.className = "yt2__modal";
+        m.innerHTML = `<div class="yt2__dlg ${cls || ""}" role="dialog" aria-modal="true">${inner}</div>`;
+        root.appendChild(m);
+        const close = () => m.remove();
+        m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-dx]")) close(); });
+        m.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); close(); } });
+        const f = $("input, .yt2__dbtn--ok", m) || $("button", m);
+        if (f) f.focus();
+        return { m, close };
+      };
+      const askName = (title, value, okLabel, cb) => {
+        const d = modal(`<form><h3>${esc(title)}</h3><label>Name<input name="n" maxlength="150" value="${esc(value)}" placeholder="Choose a title" autocomplete="off"></label><div class="yt2__dact"><button type="button" class="yt2__dbtn" data-dx>Cancel</button><button type="submit" class="yt2__dbtn yt2__dbtn--ok">${esc(okLabel)}</button></div></form>`);
+        const inp = $("input", d.m);
+        inp.select();
+        $("form", d.m).addEventListener("submit", e => { e.preventDefault(); const n = inp.value.trim(); if (!n) return; d.close(); cb(n); });
+      };
+      const SHORTCUTS = [["k or Space", "Play / pause"], ["j / l", "Back / forward 10 seconds"], ["← / →", "Back / forward 5 seconds"], ["↑ / ↓", "Volume up / down"], ["m", "Mute"], ["0 - 9", "Jump to 0% - 90% of the video"], ["f", "Full screen"], ["t", "Theater mode"], ["< / >", "Slower / faster"], ["Shift + N", "Next video"], ["/", "Search"], ["?", "This list"]];
+      const showKeys = () => modal(`<h3>Keyboard shortcuts</h3><table class="yt2__keys"><tbody>${SHORTCUTS.map(([k, d]) => `<tr><td>${k.split(" ").map(x => /^(or|\/|-)$/.test(x) ? ` ${x} ` : `<kbd>${esc(x)}</kbd>`).join("")}</td><td>${esc(d)}</td></tr>`).join("")}</tbody></table><div class="yt2__dact"><button type="button" class="yt2__dbtn yt2__dbtn--ok" data-dx>Close</button></div>`, "yt2__dlg--keys");
+      const setDark = on => { dark = !!on; store.set("ytDark", dark); root.classList.toggle("yt2--dark", dark); };
+
+      // search suggestions: recent searches + completions built from the titles, channels and categories in the library
+      let sugItems = [], sugSel = -1;
+      const completions = q => {
+        const qs = q.toLowerCase(), qw = qs.split(/\s+/).length, freq = new Map();
+        const cands = [];
+        pool.forEach(v => { cands.push(v.title, v.channel, v.cat); });
+        cands.forEach(c => {
+          const ws = String(c).split(/\s+/);
+          for (let i = 0; i < ws.length; i++) {
+            if (!ws.slice(i).join(" ").toLowerCase().startsWith(qs)) continue;
+            const t = ws.slice(i, i + qw + 2).join(" ").replace(/^[\s,:;|\-–—()[\]]+|[\s,:;|\-–—()[\]]+$/g, "");
+            const k = t.toLowerCase();
+            if (k.startsWith(qs) && k.length > qs.length) freq.set(k, { t: t.toLowerCase(), n: ((freq.get(k) || {}).n || 0) + 1 });
+            break;
+          }
+        });
+        return Array.from(freq.values()).sort((a, b) => b.n - a.n || a.t.length - b.t.length).map(x => x.t);
+      };
+      const buildSug = q => {
+        const out = [], seen = new Set(), add = (t, kind) => { const k = t.toLowerCase(); if (t && !seen.has(k)) { seen.add(k); out.push({ t, kind }); } };
+        const sh = store.get("ytSearches", []), qs = q.trim().toLowerCase();
+        if (!qs) sh.slice(0, 8).forEach(t => add(t, "hist"));
+        else { sh.filter(t => t.toLowerCase().includes(qs)).slice(0, 4).forEach(t => add(t, "hist")); completions(q.trim()).slice(0, 10).forEach(t => add(t, "sug")); }
+        return out.slice(0, 10);
+      };
+      const hideSug = () => { sug.hidden = true; sugSel = -1; qInput.setAttribute("aria-expanded", "false"); };
+      const showSug = () => {
+        sugItems = buildSug(qInput.value);
+        sugSel = -1;
+        if (!sugItems.length) { hideSug(); return; }
+        const q = qInput.value.trim();
+        sug.innerHTML = sugItems.map((x, i) => {
+          const pre = x.kind === "sug" ? esc(x.t.slice(0, q.length)) + `<b>${esc(x.t.slice(q.length))}</b>` : esc(x.t);
+          return `<div class="yt2__si" role="option" id="ytSug${i}" data-si="${i}">${ytI(x.kind === "hist" ? "history" : "search", 20)}<span>${pre}</span>${x.kind === "hist" ? `<em class="yt2__sx" data-sx="${i}" title="Remove from search history">Remove</em>` : ""}</div>`;
+        }).join("");
+        sug.hidden = false;
+        qInput.setAttribute("aria-expanded", "true");
+      };
+      const markSug = () => { $$(".yt2__si", sug).forEach((el, i) => { el.classList.toggle("is-sel", i === sugSel); if (i === sugSel) qInput.setAttribute("aria-activedescendant", el.id); }); };
+      const runSearch = q => { q = q.trim(); if (!q) return; pushSearch(q); qInput.value = q; hideSug(); qInput.blur(); go({ page: "search", q }); };
+
+      /* ---- pages ---- */
       const views = {
         home(s) {
-          const cat = s.cat || "All";
-          const list = all.filter(i => cat === "All" || VIDEOS[i].cat === cat);
-          return `
-            <div class="yt2__chips">${cats().map(c => `<button type="button" class="yt2__chip${c === cat ? " is-on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>
-            ${grid(list)}`;
+          const cat = s.cat || "All", sl = subs(), seen = new Set(hist().map(h => h.id));
+          // light "recommendations": subscribed channels first, things you already watched last
+          const local = lib().filter(v => cat === "All" || v.cat === cat).map((v, i) => ({ v, k: (seen.has(v.id) ? 10 : 0) - (sl.includes(v.channel) ? 5 : 0) + i / 1000 })).sort((a, b) => a.k - b.k).map(x => x.v);
+          const page = list => `${chipsHtml([["All", "All"], ...cats().map(c => [c, c])], cat, "data-cat")}${list.length ? grid(list) : empty("Nothing here yet", "No videos in this category.")}`;
+          if (!ytApi.on || (cat !== "All" && !YT_CATID[cat])) return page(local);
+          return ytApi.popular(cat === "All" ? 0 : YT_CATID[cat]).then(api => page(blend(local, mergeList(api)))).catch(() => page(local));
+        },
+        trending(s) {
+          const k = s.k || "now", ex = YT_EXPLORE.find(x => x[0] === k) || YT_EXPLORE[0], present = new Set(lib().map(v => v.cat));
+          const head = `<h2 class="yt2__h">${ex[0] === "now" ? "Trending" : esc(ex[1])}</h2>${chipsHtml(YT_EXPLORE.filter(x => x[0] === "now" || ytApi.on || (x[4] || []).some(c => present.has(c))).map(x => [x[0], x[1]]), ex[0], "data-k")}`;
+          const rank = v => { const i = hist().findIndex(h => h.id === v.id); return i < 0 ? 1e6 : i; };
+          const local = (ex[0] === "now" ? lib().slice().sort((a, b) => rank(a) - rank(b)) : lib().filter(v => (ex[4] || []).includes(v.cat)));
+          const page = list => `${head}${list.length ? `<div class="yt2__rows yt2__rows--wide">${list.map(v => row(v, { desc: true })).join("")}</div>` : empty("Nothing here yet", "There are no videos in this category.")}`;
+          if (!ytApi.on) return page(local);
+          return ytApi.popular(ex[2]).then(api => page(mergeList(api))).catch(() => page(local));
         },
         subs() {
-          const s = subs(), list = all.filter(i => s.includes(VIDEOS[i].channel));
-          return `<h2 class="yt2__h">Subscriptions</h2>${list.length ? grid(list) : `<p class="yt2__empty">You haven't subscribed to anyone yet. Open a video and hit Subscribe.</p>`}`;
+          const sl = subs();
+          if (!sl.length) return `<h2 class="yt2__h">Subscriptions</h2>${empty("Don't miss new videos", "Subscribe to a channel and its latest videos show up here.")}<h3 class="yt2__h3">Suggested channels</h3><div class="yt2__chrows">${channels().filter(c => c !== NAME).slice(0, 6).map(chRow).join("")}</div>`;
+          const strip = `<div class="yt2__strip">${sl.map(c => `<button type="button" class="yt2__stripc" data-channel="${esc(c)}"${cidAttr(c)}>${avHtml(c, true)}<span>${esc(c)}</span></button>`).join("")}</div>`;
+          const local = lib().filter(v => sl.includes(v.channel));
+          const page = list => `<h2 class="yt2__h">Latest</h2>${strip}${list.length ? grid(list) : empty("No videos yet", "Nothing from your subscriptions yet.")}`;
+          const ids = sl.map(cid).filter(Boolean).slice(0, 6);
+          if (!ytApi.on || !ids.length) return page(local);
+          return Promise.all(ids.map(id => ytApi.channel(id).then(c => ytApi.uploads(c.uploads)).catch(() => []))).then(r => {
+            const seen = new Set(), all = mergeList([].concat(...r)).concat(local).filter(v => !seen.has(v.id) && seen.add(v.id));
+            return page(all.sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0)));
+          }).catch(() => page(local));
         },
-        liked() {
-          const l = likes(), list = all.filter(i => l.includes(VIDEOS[i].id));
-          return `<h2 class="yt2__h">Liked videos</h2>${list.length ? grid(list) : `<p class="yt2__empty">Videos you like will show up here.</p>`}`;
+        history(s) {
+          const off = store.get("ytHistOff", false);
+          return `<h2 class="yt2__h">Watch history</h2><div class="yt2__hist">
+            <div class="yt2__hmain"><div class="yt2__hlist">${histList((s.q || "").toLowerCase())}</div></div>
+            <aside class="yt2__hside">
+              <form class="yt2__hsearch" role="search"><input data-hq placeholder="Search watch history" value="${esc(s.q || "")}" aria-label="Search watch history" autocomplete="off">${ytI("search", 20)}</form>
+              <button type="button" class="yt2__lnk" data-clearhist>${ytI("trash", 20)}<span>Clear all watch history</span></button>
+              <button type="button" class="yt2__lnk" data-pausehist>${ytI("history", 20)}<span>${off ? "Turn on watch history" : "Pause watch history"}</span></button>
+            </aside></div>`;
+        },
+        playlists() {
+          const tile = (id, name, ids, sub) => {
+            const f = ids[0] && vidOf(ids[0]);
+            return `<div class="yt2__plc"><button type="button" class="yt2__tl" data-go="playlist" data-id="${esc(id)}" tabindex="-1" aria-hidden="true"><span class="yt2__thumb">${f ? `<img src="${esc(ytThumb(f.id))}" alt="" loading="lazy" draggable="false">` : ""}<span class="yt2__pcount">${ytI("list", 16)}${ids.length} video${ids.length === 1 ? "" : "s"}</span></span></button><button type="button" class="yt2__tt" data-go="playlist" data-id="${esc(id)}"><strong>${esc(name)}</strong></button><small>${sub}</small></div>`;
+          };
+          const mine = pls();
+          return `<div class="yt2__phead"><h2 class="yt2__h">Playlists</h2><button type="button" class="yt2__sub" data-newpl>${ytI("plus", 20)}<span>New playlist</span></button></div>
+            <div class="yt2__grid">
+              ${tile("WL", "Watch later", wl(), "Private")}${tile("LL", "Liked videos", likes().slice().reverse(), "Private")}
+              ${mine.map(p => tile(p.id, p.name, p.ids, `Updated ${esc(ytAgo(p.upd || p.ts))}`)).join("")}
+            </div>${mine.length ? "" : `<p class="yt2__hint2">Create a playlist to group videos. Use <b>Save</b> on any video to add it.</p>`}`;
+        },
+        playlist(s) {
+          const P = plInfo(s.id);
+          if (!P) return empty("This playlist doesn't exist", "It may have been deleted.");
+          const items = P.ids.map(vidOf), f = items[0];
+          return `<div class="yt2__plpage">
+            <aside class="yt2__plside">
+              <span class="yt2__plcover"><span class="yt2__thumb">${f ? `<img src="${esc(ytThumb(f.id))}" alt="" draggable="false">` : ""}</span></span>
+              <div class="yt2__pltitle"><h2>${esc(P.name)}</h2>${P.sys ? "" : `<button type="button" class="yt2__ibtn" data-plrename="${esc(P.id)}" aria-label="Rename playlist" title="Rename playlist">${ytI("edit", 18)}</button>`}</div>
+              <p class="yt2__plmeta"><b>${esc(NAME)}</b></p>
+              <p class="yt2__plmeta">${items.length} video${items.length === 1 ? "" : "s"}${P.upd ? ` &middot; Updated ${esc(ytAgo(P.upd))}` : ""}</p>
+              <div class="yt2__plbtns">
+                <button type="button" class="yt2__sub yt2__sub--w" data-playall="${esc(P.id)}"${items.length ? "" : " disabled"}>${ytI("play", 20)}<span>Play all</span></button>
+                <button type="button" class="yt2__pill" data-playall="${esc(P.id)}" data-shuffle="1"${items.length ? "" : " disabled"}>${ytI("shuffle", 18)}<span>Shuffle</span></button>
+                ${P.sys ? "" : `<button type="button" class="yt2__pill" data-pldel="${esc(P.id)}">${ytI("trash", 18)}<span>Delete</span></button>`}
+              </div>
+            </aside>
+            <div class="yt2__rows yt2__rows--pl" data-list="${esc(P.id)}">${items.length ? items.map((v, i) => row(v, { idx: i + 1, rm: "pl" })).join("") : empty("No videos yet", P.id === "LL" ? "Videos you like will show up here." : "Use Save on a video to add it to this playlist.")}</div>
+          </div>`;
         },
         search(s) {
           const q = s.q.toLowerCase().replace(/\bfnaf\b/g, "five nights").replace(/\bfnf\b/g, "friday night funkin").replace(/\brick ?roll\b/g, "rick astley").replace(/\bcory\b/g, "coryxkenshin").replace(/\bmark\b/g, "markiplier");
           const terms = q.split(/\s+/).filter(Boolean);
-          const list = all.filter(i => terms.every(t => (VIDEOS[i].title + " " + VIDEOS[i].channel + " " + VIDEOS[i].cat).toLowerCase().includes(t)));
-          return `<h2 class="yt2__h">Results for "${esc(s.q)}"</h2>${list.length ? `<div class="yt2__rows">${list.map(i => row(VIDEOS[i], i)).join("")}</div>` : `<p class="yt2__empty">No results. Try "fnaf", "music" or a channel name.</p>`}`;
+          const local = lib().filter(v => terms.every(t => (v.title + " " + v.channel + " " + v.cat).toLowerCase().includes(t)));
+          const chans = s.q.trim() ? channels().filter(c => terms.every(t => c.toLowerCase().includes(t))).slice(0, 2) : [];
+          const page = list => `<h2 class="yt2__h">Results for "${esc(s.q)}"</h2>${chans.length ? `<div class="yt2__chrows">${chans.map(chRow).join("")}</div>` : ""}${list.length ? `<div class="yt2__rows yt2__rows--wide">${list.map(v => row(v, { desc: true })).join("")}</div>` : empty("No results found", `Try "fnaf", "music" or a channel name.`)}`;
+          if (!ytApi.on) return page(local);
+          return ytApi.search(s.q).then(api => page(mergeList(api))).catch(() => page(local));
         },
         channel(s) {
-          const ch = s.name, list = all.filter(i => VIDEOS[i].channel === ch), mine = ch === NAME;
+          const ch = s.name, mine = ch === NAME, tab = s.tab || "videos";
+          const localList = lib().filter(v => v.channel === ch);
           if (mine && !store.get("ytJoined", 0)) store.set("ytJoined", Date.now());
-          const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
-          const handle = "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
-          return `
-            <div class="yt2__banner" style="background:${ytColor(ch)}"></div>
-            <div class="yt2__chan">
-              <i class="yt2__av yt2__av--big" style="background:${ytColor(ch)}">${esc(ch[0].toUpperCase())}</i>
-              <span><b>${esc(ch)}</b><small>${mine ? `${esc(handle)} &middot; ` : ""}${list.length} video${list.length === 1 ? "" : "s"}${mine ? ` &middot; Joined ${esc(joined)}` : " here"}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
-              ${mine ? `<button type="button" class="yt2__sub" data-go="upload">Upload video</button>` : subBtn(ch)}
-            </div>
-            ${mine ? `<div class="yt2__backup">${backupBar()}</div>` : ""}
-            ${list.length ? grid(list) : mine ? `<p class="yt2__empty">This is your channel. You haven't posted anything yet &mdash; hit <b>Upload video</b> and paste a YouTube link to publish it here.</p>` : ""}`;
+          const page = (info, list) => {
+            const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : info && info.joined ? new Date(info.joined).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+            const handle = info && info.handle ? info.handle : "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
+            const nv = info && info.count != null ? info.count : list.length;
+            const sub = [mine || (info && info.handle) ? handle : "", info && info.subs != null ? `${ytNum(info.subs)} subscribers` : "", `${ytNum(nv)} video${nv === 1 ? "" : "s"}${!mine && !info ? " here" : ""}`, mine ? `Joined ${joined}` : ""].filter(Boolean).join(" • ");
+            const tabs = [["videos", "Videos"], ...(mine ? [["playlists", "Playlists"]] : []), ["about", "About"]];
+            let content;
+            if (tab === "about") {
+              const links = mine ? CONTACTS.filter(x => x && x.href).map(x => `<a href="${esc(x.href)}" target="_blank" rel="noopener noreferrer">${esc(x.label || x.href)}</a>`).join("") : "";
+              content = `<div class="yt2__about"><h3>Description</h3><p>${ytLinkify(mine ? (C.tagline || ROLE || "") : info && info.desc ? info.desc : `${ch} is a channel in ${FIRST}'s library.`)}</p><h3>More info</h3><ul>${joined ? `<li>Joined ${esc(joined)}</li>` : ""}${info && info.views != null ? `<li>${ytNum(info.views)} total views</li>` : ""}${mine && LOCATION ? `<li>${esc(LOCATION)}</li>` : ""}<li>${nv} video${nv === 1 ? "" : "s"}</li></ul>${links ? `<h3>Links</h3><div class="yt2__links">${links}</div>` : ""}</div>`;
+            } else if (tab === "playlists") content = views.playlists();
+            else content = `${mine ? `<div class="yt2__backup">${backupBar()}</div>` : ""}${list.length ? grid(list) : mine ? `<p class="yt2__empty">This is your channel. You haven't posted anything yet &mdash; hit <b>Upload video</b> and paste a YouTube link to publish it here.</p>` : ""}`;
+            return `
+              <div class="yt2__banner" style="background:${ytColor(ch)}"></div>
+              <div class="yt2__chan">
+                ${avHtml(ch, true)}
+                <span><b>${esc(ch)}</b><small>${esc(sub)}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
+                ${mine ? `<button type="button" class="yt2__sub" data-go="upload">Upload video</button>` : subBtn(ch, (info && info.id) || s.cid || cid(ch))}
+              </div>
+              <div class="yt2__tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? "is-on" : ""}" data-tab="${k}">${l}</button>`).join("")}</div>
+              ${content}`;
+          };
+          if (mine || !ytApi.on || tab !== "videos" && tab !== "about") return page(null, localList);
+          const idp = s.cid ? Promise.resolve(s.cid) : cid(ch) ? Promise.resolve(cid(ch)) : ytApi.findChannel(ch);
+          return idp.then(id => {
+            if (!id) throw new Error("unknown channel");
+            return ytApi.channel(id).then(info => {
+              CHAN[ch] = { id, thumb: info.thumb }; store.set("ytChan", CHAN);
+              return ytApi.uploads(info.uploads).then(up => { const seen = new Set(localList.map(v => v.id)); return page(info, localList.concat(mergeList(up).filter(v => !seen.has(v.id)))); });
+            });
+          }).catch(() => page(null, localList));
         },
         upload(s) {
           const ed = s.edit ? VIDEOS.find(v => v.mine && v.id === s.edit) : null;
@@ -1530,148 +2112,375 @@ function openYouTube(o = {}) {
               <p class="yt2__hint">${ed ? "Changes are saved to your channel." : `Paste a YouTube link (or video ID). It will be posted to <b>${esc(NAME)}</b>'s channel.`}</p>
               <label>YouTube link<input name="url" placeholder="https://www.youtube.com/watch?v=..." value="${ed ? `https://youtu.be/${esc(ed.id)}` : ""}"${ed ? " readonly" : " required"}></label>
               <label>Title<input name="title" maxlength="100" value="${ed ? esc(ed.title) : ""}" placeholder="Filled in automatically when possible"></label>
-              <label>Category<input name="cat" list="ytCatList" value="${ed ? esc(ed.cat) : "Videos"}" maxlength="24"><datalist id="ytCatList">${cats().filter(c => c !== "All").map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
+              <label>Category<input name="cat" list="ytCatList" value="${ed ? esc(ed.cat) : "Videos"}" maxlength="24"><datalist id="ytCatList">${cats().map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
               <label>Description<textarea name="desc" rows="3" maxlength="500">${ed ? esc(ed.desc) : ""}</textarea></label>
-              <div class="yt2__prev">${ed ? `<img src="${ytThumb(ed.id)}" alt="">` : ""}</div>
+              <div class="yt2__prev">${ed ? `<img src="${esc(ytThumb(ed.id))}" alt="">` : ""}</div>
               <button type="submit" class="yt2__sub yt2__sub--red">${ed ? "Save changes" : "Publish"}</button>
             </form>`;
         },
         watch(s) {
-          const v = VIDEOS[s.i], liked = likes().includes(v.id);
-          const next = all.filter(i => i !== s.i).sort((a, b) => (VIDEOS[b].channel === v.channel) - (VIDEOS[a].channel === v.channel));
+          const v = vidOf(s.id), liked = likes().includes(v.id), ch = v.channel, mine = !!v.mine;
+          const dateStr = v.date || v.ts ? new Date(v.date || v.ts).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+          const stats = [v.views != null ? ytViews(v.views) : "", dateStr].filter(Boolean);
+          const text = v.desc || `Added to ${FIRST}'s favorites. Watching on Windows 98, as intended.`;
+          const n = lib().filter(x => x.channel === ch).length;
+          const P = s.list ? plInfo(s.list) : null, pids = P ? (s.order || P.ids) : [], pi = pids.indexOf(v.id);
           return `
-            <div class="yt2__watch">
+            <div class="yt2__watch${theater ? " is-theater" : ""}">
+              <div class="yt2__stage"><div class="yt2__player is-loading"></div></div>
               <div class="yt2__primary">
-                <div class="yt2__player"></div>
-                <h1 class="yt2__title">${esc(v.title)}</h1>
-                <div class="yt2__owner">
-                  <i class="yt2__av" style="background:${ytColor(v.channel)}">${esc(v.channel[0].toUpperCase())}</i>
-                  <span><b data-channel="${esc(v.channel)}">${esc(v.channel)}</b><small>${esc(v.cat)}</small></span>
-                  ${subBtn(v.channel)}
-                  <span class="yt2__actions">
-                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">${ui("like", 18)}<span>${liked ? "Liked" : "Like"}</span></button>
-                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">${ui("share", 18)}<span>Share</span></button>
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">${ui("edit", 18)}<span>Edit</span></button>` : ""}
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">${ui("trash", 18)}<span>Delete</span></button>` : ""}
-                    <a class="yt2__pill" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Open on YouTube</a>
+                <div class="yt2__trow">
+                  <h1 class="yt2__title">${esc(v.title)}</h1>
+                  <span class="yt2__tools">
+                    <button type="button" class="yt2__chipb" data-speed aria-haspopup="menu" aria-label="Playback speed" title="Playback speed (&lt; and &gt;)">${ytI("speed", 20)}<span class="yt2__spd">${speed === 1 ? "" : speed + "x"}</span></button>
+                    <button type="button" class="yt2__chipb${theater ? " is-on" : ""}" data-theater aria-pressed="${theater}" aria-label="Theater mode" title="Theater mode (t)">${ytI("theater", 20)}</button>
+                    <a class="yt2__chipb" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener" aria-label="Open on YouTube" title="Open on YouTube">${ytI("ext", 20)}</a>
                   </span>
                 </div>
-                <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>${v.desc ? esc(v.desc).replace(/\n/g, "<br>") : `Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.`}</div>
+                <div class="yt2__owner">
+                  <button type="button" class="yt2__avb" data-channel="${esc(ch)}"${cidAttr(ch, v)} tabindex="-1" aria-hidden="true">${avHtml(ch)}</button>
+                  <span class="yt2__oname"><b data-channel="${esc(ch)}"${cidAttr(ch, v)}>${esc(ch)}</b><small class="yt2__subs">${mine ? `${n} video${n === 1 ? "" : "s"}` : esc(v.cat)}</small></span>
+                  ${mine ? "" : subBtn(ch, v.channelId || cid(ch))}
+                  <span class="yt2__actions">
+                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">${likeInner(v, liked)}</button>
+                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">${ytI("share", 18)}<span>Share</span></button>
+                    <button type="button" class="yt2__pill" data-save="${esc(v.id)}" aria-haspopup="menu">${ytI("listAdd", 18)}<span>Save</span></button>
+                    ${mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">${ytI("edit", 18)}<span>Edit</span></button>` : ""}
+                    ${mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">${ytI("trash", 18)}<span>Delete</span></button>` : ""}
+                  </span>
+                </div>
+                <div class="yt2__desc">
+                  <div class="yt2__dstat">${stats.length ? stats.map(x => `<b>${esc(x)}</b>`).join("") : `<b>${esc(ch)}</b><b>${esc(v.cat)}</b>`}</div>
+                  <div class="yt2__dtext">${ytLinkify(text)}</div>
+                  <dl class="yt2__dx"><dt>Channel</dt><dd><button type="button" class="yt2__cn" data-channel="${esc(ch)}"${cidAttr(ch, v)}>${esc(ch)}</button></dd><dt>Category</dt><dd>${esc(v.cat)}</dd>${durOf(v) ? `<dt>Length</dt><dd>${ytDur(durOf(v))}</dd>` : ""}<dt>Video ID</dt><dd>${esc(v.id)}</dd></dl>
+                  <button type="button" class="yt2__dmore" data-desc aria-expanded="false">Show more</button>
+                </div>
                 <section class="yt2__comments">
-                  <h3>${cmts(v.id).length} comment${cmts(v.id).length === 1 ? "" : "s"}</h3>
-                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>${cmts(v.id).length ? "" : `<p class="yt2__empty yt2__empty--cmt">No comments yet. Be the first to comment.</p>`}
-                  ${cmts(v.id).slice().reverse().map(c => `<div class="yt2__cmt"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span><b>${esc(NAME)}</b> <small>${esc(new Date(c.ts).toLocaleDateString())}</small><br>${esc(c.t)}<br><button type="button" class="yt2__cdel" data-cdel="${c.ts}" data-vid="${esc(v.id)}">Delete</button></span></div>`).join("")}
+                  <div class="yt2__chead"><h3 class="yt2__ccount"></h3><button type="button" class="yt2__csort" data-csort aria-haspopup="menu">${ytI("sort", 24)}<span>Sort by</span></button></div>
+                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span class="yt2__cin"><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment" autocomplete="off"><span class="yt2__cbtns"><button type="reset" class="yt2__sub yt2__sub--ghost">Cancel</button><button type="submit" class="yt2__sub">Comment</button></span></span></form>
+                  <div class="yt2__clist"></div>
                 </section>
               </div>
               <aside class="yt2__next">
-                <label class="yt2__auto"><span>Up next</span><span class="check"><input type="checkbox" class="yt2__autobox"${autoplay ? " checked" : ""}><span>Autoplay</span></span></label>
-                <div class="yt2__rows yt2__rows--small">${next.map(i => row(VIDEOS[i], i)).join("")}</div>
+                ${P ? `<div class="yt2__plpanel"><div class="yt2__plph"><b>${esc(P.name)}</b><small>${esc(NAME)} &bull; ${pi + 1} / ${pids.length}</small></div><div class="yt2__plbody" data-list="${esc(P.id)}">${pids.map((id, i) => row(vidOf(id), { idx: i + 1, cur: id === v.id, cls: "yt2__row--pl" + (id === v.id ? " is-cur" : "") })).join("")}</div></div>` : ""}
+                <div class="yt2__nhead"><span>Up next</span><label class="yt2__auto"><span>Autoplay</span><input type="checkbox" class="yt2__autobox" role="switch"${autoplay ? " checked" : ""}></label></div>
+                <div class="yt2__chips yt2__chips--s"><button type="button" class="yt2__chip is-on" data-nf="all">All</button><button type="button" class="yt2__chip" data-nf="ch">From ${esc(ch)}</button></div>
+                <div class="yt2__rows yt2__rows--small" data-nlist>${skRow.repeat(5)}</div>
               </aside>
             </div>`;
         },
       };
-      const mountPlayer = (src, title) => {
-        const box = $(".yt2__player", main);
-        box.innerHTML = `<iframe src="${src}&enablejsapi=1${origin}" title="${esc(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-        const ifr = $("iframe", box);
-        ifr.addEventListener("load", () => { try { ifr.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*"); } catch (e) {} });
+      const likeInner = (v, liked) => `${ytI(liked ? "like" : "likeO", 18)}<span>${v.likes != null ? ytNum(v.likes + (liked ? 1 : 0)) : liked ? "Liked" : "Like"}</span>`;
+      const histList = q => {
+        const all = hist(), items = all.map(h => ({ h, v: vidOf(h.id) })).filter(x => !q || (x.v.title + " " + x.v.channel).toLowerCase().includes(q));
+        if (!items.length) return empty(all.length ? "No matching videos" : store.get("ytHistOff", false) ? "Watch history is paused" : "Your watch history is empty", all.length ? "Try a different search." : "Videos you watch will show up here.");
+        let cur = "", html = "";
+        items.forEach(({ h, v }) => {
+          const d = dayLabel(h.ts);
+          if (d !== cur) { if (cur) html += "</div>"; cur = d; html += `<h3 class="yt2__day">${esc(d)}</h3><div class="yt2__rows">`; }
+          html += row(v, { rm: "hist", desc: true });
+        });
+        return html + "</div>";
       };
-      const render = () => {
-        const s = stack[stack.length - 1];
+
+      /* ---- comments ---- */
+      const commentItems = v => {
+        const sort = store.get("ytCSort", "top"), liked = new Set(store.get("ytCL", []));
+        const mineC = cmts(v.id).map(c => ({ key: `me:${v.id}:${c.ts}`, name: NAME, t: c.t, ts: c.ts, likes: 0, me: true, raw: c.ts })).sort((a, b) => b.ts - a.ts);
+        const api = apiComments[v.id + ":" + sort] || [];
+        if (sort === "new") return mineC.concat(api).sort((a, b) => b.ts - a.ts);
+        return mineC.filter(c => liked.has(c.key)).concat(api, mineC.filter(c => !liked.has(c.key)));
+      };
+      const commentHtml = (c, v, liked) => `
+        <div class="yt2__cmt">
+          ${c.avatar ? `<img class="yt2__av" src="${esc(c.avatar)}" alt="">` : `<i class="yt2__av" style="background:${ytColor(c.name)}">${esc((c.name || "?")[0].toUpperCase())}</i>`}
+          <span class="yt2__cbody"><span class="yt2__chd"><b>${esc(c.name)}</b> <small>${esc(ytAgo(c.ts))}</small></span><span class="yt2__ctx">${esc(c.t).replace(/\n/g, "<br>")}</span>
+          <span class="yt2__cact"><button type="button" class="yt2__clike${liked.has(c.key) ? " is-on" : ""}" data-clike="${esc(c.key)}" aria-label="Like" aria-pressed="${liked.has(c.key)}">${ytI(liked.has(c.key) ? "like" : "likeO", 16)}<span>${c.likes + (liked.has(c.key) ? 1 : 0) || ""}</span></button>${c.me ? `<button type="button" class="yt2__cdel" data-cdel="${c.raw}" data-vid="${esc(v.id)}">Delete</button>` : ""}</span></span>
+        </div>`;
+      const refreshComments = v => {
+        const list = $(".yt2__clist", main), head = $(".yt2__ccount", main);
+        if (!list || !head || !v) return;
+        const items = commentItems(v), liked = new Set(store.get("ytCL", [])), sort = store.get("ytCSort", "top");
+        const total = (ytApi.on && v.commentCount != null ? v.commentCount : 0) + items.filter(c => c.me).length;
+        head.textContent = ytApi.on && v.commentCount != null ? `${ytNum(total)} Comments` : `${items.length} Comment${items.length === 1 ? "" : "s"}`;
+        const loading = ytApi.on && apiComments[v.id + ":" + sort] === undefined;
+        list.innerHTML = (items.length ? items.map(c => commentHtml(c, v, liked)).join("") : loading ? "" : `<p class="yt2__empty yt2__empty--cmt">No comments yet. Be the first to comment.</p>`) + (loading ? `<div class="yt2__cmt is-skel" aria-hidden="true"><i class="yt2__av"></i><span class="yt2__cbody"><span class="yt2__sk" style="width:30%"></span><span class="yt2__sk" style="width:85%"></span></span></div>`.repeat(3) : "");
+      };
+      const loadApiComments = v => {
+        const sort = store.get("ytCSort", "top"), key = v.id + ":" + sort;
+        if (!ytApi.on || apiComments[key] !== undefined) return;
+        const my = tok;
+        ytApi.comments(v.id, sort === "new" ? "time" : "relevance").then(c => { apiComments[key] = c; }, () => { apiComments[key] = []; }).then(() => { if (my === tok) refreshComments(v); });
+      };
+
+      /* ---- "Up next" / related ---- */
+      const drawNext = (s, v) => {
+        const list = $("[data-nlist]", main);
+        if (!list) return;
+        const shown = nextAll.filter(x => nextFilter === "all" || x.channel === v.channel);
+        upnext = nextAll.map(x => x.id);
+        list.innerHTML = shown.length ? shown.map(x => row(x, { cls: "yt2__row--sm" })).join("") : empty("", `Nothing else from ${esc(v.channel)}.`);
+        settle();
+      };
+      const fillNext = (s, v) => {
+        const my = tok, local = lib().filter(x => x.id !== v.id).sort((a, b) => (b.channel === v.channel) - (a.channel === v.channel));
+        nextFilter = "all"; nextAll = []; upnext = [];
+        const done = items => { if (my !== tok) return; nextAll = items; drawNext(s, v); };
+        if (ytApi.on) ytApi.related(v).then(a => done(mergeList(a).slice(0, 16).concat(local.filter(x => x.channel === v.channel).slice(0, 3)).filter((x, i, arr) => arr.findIndex(y => y.id === x.id) === i)), () => done(local));
+        else done(local);
+      };
+      // real subscriber count and channel picture, when the API is on and the channel is known
+      const fillOwner = v => {
+        const id = v.channelId || cid(v.channel), my = tok;
+        if (!ytApi.on || !id || v.mine) return;
+        ytApi.channel(id).then(info => {
+          CHAN[v.channel] = { id, thumb: info.thumb }; store.set("ytChan", CHAN);
+          if (my !== tok) return;
+          const sb = $(".yt2__subs", main);
+          if (sb && info.subs != null) sb.textContent = `${ytNum(info.subs)} subscribers`;
+          const av = $(".yt2__owner .yt2__avb", main);
+          if (av && info.thumb) { av.innerHTML = avHtml(v.channel); settle(); }
+        }).catch(() => {});
+      };
+
+      /* ---- render ---- */
+      let drawer = false;
+      const render = (restoreY = 0) => {
+        const s = stack[stack.length - 1], my = ++tok;
+        leaveWatch();
+        closePop(); hideSug();
+        drawer = false; root.classList.remove("is-drawer");
         drawSide();
-        main.innerHTML = views[s.page](s);
-        main.scrollTop = 0;
         back.disabled = stack.length < 2;
-        $$(".yt2__side [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === s.page));
-        $$(".yt2__side [data-channel]", body).forEach(b => b.classList.toggle("is-on", s.page === "channel" && b.dataset.channel === s.name));
-        current = -1;
-        if (s.page === "watch") {
-          const v = VIDEOS[s.i];
-          current = s.i; endedFor = null;
-          mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0`, v.title);
-          win.setTitle(`${v.title} - YouTube`);
-        } else win.setTitle("YouTube");
+        win.setTitle("YouTube");
+        let out;
+        try { out = views[s.page](s); } catch (err) { console.error(err); out = empty("Something went wrong", "Please try again."); }
+        const put = html => {
+          if (my !== tok) return;
+          main.innerHTML = html;
+          main.scrollTop = restoreY;
+          settle();
+          if (s.page === "watch") {
+            const v = vidOf(s.id);
+            pushHist(v);
+            mountPlayer(v);
+            win.setTitle(`${v.title} - YouTube`);
+            sizeStage();
+            refreshComments(v); loadApiComments(v);
+            fillNext(s, v); fillOwner(v);
+          }
+        };
+        if (out && typeof out.then === "function") { main.innerHTML = skeleton(s.page); main.scrollTop = 0; out.then(put, err => { console.warn(err); put(empty("Couldn't load this page", "Check your connection and try again.")); }); }
+        else put(out);
       };
+      const sameState = (a, b) => JSON.stringify(a, (k, x) => k === "_y" ? undefined : x) === JSON.stringify(b, (k, x) => k === "_y" ? undefined : x);
       const go = s => {
         const top = stack[stack.length - 1];
-        if (top && JSON.stringify(top) === JSON.stringify(s)) return;
+        if (top && sameState(top, s)) return;
+        if (top) top._y = main.scrollTop;
         stack.push(s);
         if (stack.length > 40) stack.shift();
         render();
       };
       win.ytGo = go;
-
-      const onMsg = e => {
-        if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
-        const ifr = $(".yt2__player iframe", main);
-        if (!ifr || e.source !== ifr.contentWindow) return;
-        let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (err) { return; }
-        const state = d && (d.event === "onStateChange" ? d.info : d.event === "infoDelivery" && d.info ? d.info.playerState : undefined);
-        if (state === 0 && current >= 0 && autoplay && endedFor !== current) {
-          endedFor = current;
-          const nextBtn = $(".yt2__next [data-v]", main);
-          if (nextBtn) go({ page: "watch", i: +nextBtn.dataset.v });
-        }
+      const toast = text => {
+        $$(".yt2__toast", root).forEach(x => x.remove());
+        const t = document.createElement("div");
+        t.className = "yt2__toast"; t.setAttribute("role", "status"); t.textContent = text;
+        root.appendChild(t);
+        later(() => t.remove(), 2600);
       };
-      window.addEventListener("message", onMsg);
-      win.cleanup = () => window.removeEventListener("message", onMsg);
+
+      /* ---- actions ---- */
+      const top = () => stack[stack.length - 1] || {};
+      const share = id => {
+        const url = `https://www.youtube.com/watch?v=${id}`;
+        const done = () => msgBox({ title: "Share", icon: "info", text: `Link copied to the clipboard:\n${url}` });
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => msgBox({ title: "Share", icon: "info", text: url })); else msgBox({ title: "Share", icon: "info", text: url });
+      };
+      const toggleDesc = () => {
+        const d = $(".yt2__desc", main);
+        if (!d) return;
+        const open = d.classList.toggle("is-open"), b = $("[data-desc]", d);
+        b.textContent = open ? "Show less" : "Show more";
+        b.setAttribute("aria-expanded", open);
+      };
+      const saveHtml = id => `<h4>Save video to...</h4><div class="yt2__chks">
+        <label class="yt2__chk"><input type="checkbox" data-plchk="WL"${wl().includes(id) ? " checked" : ""}><span>Watch later</span></label>
+        ${pls().map(p => `<label class="yt2__chk"><input type="checkbox" data-plchk="${esc(p.id)}"${p.ids.includes(id) ? " checked" : ""}><span>${esc(p.name)}</span></label>`).join("")}</div>
+        <div class="yt2__pnew"><button type="button" data-pnew>${ytI("plus", 24)}<span>New playlist</span></button></div>`;
+      const openSave = (anchor, id) => openPop(anchor, saveHtml(id), "yt2__pop--save", { vid: id });
+      const openMenu = (btn, id) => {
+        const inWL = wl().includes(id);
+        openPop(btn, `<button type="button" data-pa="wl" data-id="${esc(id)}">${ytI("later", 24)}<span>${inWL ? "Remove from Watch later" : "Save to Watch later"}</span></button>
+          <button type="button" data-pa="save" data-id="${esc(id)}">${ytI("listAdd", 24)}<span>Save to playlist</span></button>
+          <button type="button" data-pa="share" data-id="${esc(id)}">${ytI("share", 24)}<span>Share</span></button>`, "yt2__pop--menu", { right: true });
+      };
+      const openMe = btn => {
+        const handle = "@" + NAME.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        openPop(btn, `<div class="yt2__pme">${avHtml(NAME, true)}<span><b>${esc(NAME)}</b><small>${esc(handle)}</small><button type="button" class="yt2__lnk2" data-channel="${esc(NAME)}">View your channel</button></span></div><hr>
+          <button type="button" role="menuitemcheckbox" aria-checked="${dark}" data-pa="theme">${ytI("moon", 24)}<span>Dark theme</span><span class="yt2__switch${dark ? " is-on" : ""}"></span></button>
+          <button type="button" data-pa="keys">${ytI("keys", 24)}<span>Keyboard shortcuts</span></button><hr>
+          <button type="button" data-export>${ytI("down", 24)}<span>Export backup</span></button>
+          <label class="yt2__pbtn">${ytI("up", 24)}<span>Import backup</span><input type="file" accept="application/json,.json" data-import hidden></label>`, "yt2__pop--me", { right: true });
+      };
+      const popAction = el => {
+        const a = el.dataset.pa, id = el.dataset.id, anchor = pop && pop.anchor;
+        if (a === "theme") { setDark(!dark); el.setAttribute("aria-checked", dark); $(".yt2__switch", el).classList.toggle("is-on", dark); return; }
+        closePop();
+        if (a === "keys") showKeys();
+        else if (a === "wl") {
+          const on = !wl().includes(id);
+          plAdd("WL", id, on);
+          toast(on ? "Saved to Watch later" : "Removed from Watch later");
+          if (top().page === "playlist" && top().id === "WL") render(main.scrollTop);
+        }
+        else if (a === "save" && anchor) openSave(anchor, id);
+        else if (a === "share") share(id);
+        else if (a === "sort") { const v = vidOf(top().id); store.set("ytCSort", el.dataset.val); refreshComments(v); loadApiComments(v); }
+        else if (a === "speed") setSpeed(+el.dataset.val);
+      };
+      const playAll = (id, shuffle) => {
+        const P = plInfo(id);
+        if (!P || !P.ids.length) return;
+        const order = shuffle ? shuffled(P.ids) : null;
+        go({ page: "watch", id: (order || P.ids)[0], list: id, ...(order ? { order } : {}) });
+      };
+      const confirmBox = (title, text, yes) => msgBox({ title, icon: "warning", text, buttons: [yes, "Cancel"], defaultIndex: 1 }).then(r => r === 0 || r === yes);
 
       body.addEventListener("click", e => {
-        const ch = e.target.closest("[data-channel]");
-        if (ch) { e.stopPropagation(); go({ page: "channel", name: ch.dataset.channel }); return; }
-        if (e.target.closest("[data-export]")) { exportBackup(); return; }
-        const edt = e.target.closest("[data-edit]");
-        if (edt) { go({ page: "upload", edit: edt.dataset.edit }); return; }
-        const cd = e.target.closest("[data-cdel]");
-        if (cd) {
-          const m = store.get("ytComments", {});
-          m[cd.dataset.vid] = (m[cd.dataset.vid] || []).filter(c => String(c.ts) !== cd.dataset.cdel);
-          store.set("ytComments", m);
-          const s = stack[stack.length - 1], y = main.scrollTop;
-          main.innerHTML = views.watch(s); mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(VIDEOS[s.i].id)}?autoplay=1&rel=0`, VIDEOS[s.i].title); main.scrollTop = y;
+        const t = e.target, c = sel => t.closest(sel);
+        let el;
+        if ((el = c("[data-pa]"))) { popAction(el); return; }
+        if (c("[data-scrim]")) { drawer = false; root.classList.remove("is-drawer"); return; }
+        if (c("[data-burger]")) {
+          if (root.classList.contains("is-narrow")) { drawer = !drawer; root.classList.toggle("is-drawer", drawer); }
+          else { sideMode = sideMode === "mini" ? "" : "mini"; store.set("ytSide", sideMode); drawSide(); }
           return;
         }
-        const del = e.target.closest("[data-del]");
-        if (del) {
+        if ((el = c("[data-me]"))) { openMe(el); return; }
+        if ((el = c("[data-more]"))) { openMenu(el, el.dataset.more); return; }
+        if ((el = c("[data-channel]"))) { e.stopPropagation(); go({ page: "channel", name: el.dataset.channel, ...(el.dataset.cid ? { cid: el.dataset.cid } : {}) }); return; }
+        if (c("[data-export]")) { closePop(); ytExport(); return; }
+        if ((el = c("[data-edit]"))) { go({ page: "upload", edit: el.dataset.edit }); return; }
+        if ((el = c("[data-cdel]"))) {
+          const m = store.get("ytComments", {});
+          m[el.dataset.vid] = (m[el.dataset.vid] || []).filter(x => String(x.ts) !== el.dataset.cdel);
+          store.set("ytComments", m);
+          refreshComments(vidOf(el.dataset.vid));
+          return;
+        }
+        if ((el = c("[data-del]"))) {
+          const id = el.dataset.del;
           msgBox({ title: "Delete video", icon: "warning", text: "Remove this video from your channel?", buttons: ["Delete", "Cancel"], defaultIndex: 1 }).then(r => {
             if (r !== 0 && r !== "Delete") return;
-            store.set("ytUploads", store.get("ytUploads", []).filter(u => u.id !== del.dataset.del));
-            const i = VIDEOS.findIndex(v => v.mine && v.id === del.dataset.del);
+            store.set("ytUploads", store.get("ytUploads", []).filter(u => u.id !== id));
+            const i = VIDEOS.findIndex(v => v.mine && v.id === id);
             if (i >= 0) VIDEOS.splice(i, 1);
-            all = VIDEOS.map((_, k) => k);
+            pool.delete(id); syncPool();
             stack.length = 0;
             go({ page: "channel", name: NAME });
           });
           return;
         }
-        const sb = e.target.closest("[data-sub]");
-        if (sb) {
-          const on = toggle("ytSubs", sb.dataset.sub);
-          $$(`[data-sub="${CSS.escape(sb.dataset.sub)}"]`, body).forEach(b => { b.classList.toggle("is-on", on); b.textContent = on ? "Subscribed" : "Subscribe"; });
+        if ((el = c("[data-sub]"))) {
+          const ch = el.dataset.sub, on = toggle("ytSubs", ch);
+          if (on && el.dataset.cid) { CHAN[ch] = Object.assign(CHAN[ch] || {}, { id: el.dataset.cid }); store.set("ytChan", CHAN); }
+          $$(`[data-sub="${CSS.escape(ch)}"]`, body).forEach(b => { b.classList.toggle("is-on", on); b.textContent = on ? "Subscribed" : "Subscribe"; });
+          drawSide();
           return;
         }
-        const lk = e.target.closest("[data-like]");
-        if (lk) { const on = toggle("ytLikes", lk.dataset.like); lk.classList.toggle("is-on", on); lk.innerHTML = `${ui("like", 18)}<span>${on ? "Liked" : "Like"}</span>`; return; }
-        const sh = e.target.closest("[data-share]");
-        if (sh) {
-          const url = `https://www.youtube.com/watch?v=${sh.dataset.share}`;
-          const done = () => msgBox({ title: "Share", icon: "info", text: `Link copied to the clipboard:\n${url}` });
-          if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => msgBox({ title: "Share", icon: "info", text: url })); else msgBox({ title: "Share", icon: "info", text: url });
+        if ((el = c("[data-like]"))) {
+          const v = vidOf(el.dataset.like), on = toggle("ytLikes", v.id);
+          if (on) remember(v);
+          el.classList.toggle("is-on", on);
+          el.innerHTML = likeInner(v, on);
           return;
         }
-        const cat = e.target.closest("[data-cat]");
-        if (cat) { stack[stack.length - 1] = { page: "home", cat: cat.dataset.cat }; render(); return; }
-        const v = e.target.closest("[data-v]");
-        if (v) { go({ page: "watch", i: +v.dataset.v }); return; }
-        const g = e.target.closest("[data-go]");
-        if (g) go({ page: g.dataset.go });
+        if ((el = c("[data-share]"))) { share(el.dataset.share); return; }
+        if ((el = c("[data-save]"))) { openSave(el, el.dataset.save); return; }
+        if ((el = c("[data-speed]"))) {
+          openPop(el, `<h4>Playback speed</h4>${[.25, .5, .75, 1, 1.25, 1.5, 1.75, 2].map(x => `<button type="button" data-pa="speed" data-val="${x}"><span class="yt2__ck">${x === speed ? ytI("check", 20) : ""}</span><span>${x === 1 ? "Normal" : x}</span></button>`).join("")}`, "yt2__pop--menu");
+          return;
+        }
+        if (c("[data-theater]")) { setTheater(!theater); return; }
+        if ((el = c("[data-seek]"))) { seekTo(+el.dataset.seek); return; }
+        if (c("a[href]")) return;
+        if (c("[data-desc]") || c(".yt2__desc:not(.is-open)")) { toggleDesc(); return; }
+        if ((el = c("[data-csort]"))) {
+          const cur = store.get("ytCSort", "top");
+          openPop(el, [["top", "Top comments"], ["new", "Newest first"]].map(([k, l]) => `<button type="button" data-pa="sort" data-val="${k}"><span class="yt2__ck">${k === cur ? ytI("check", 20) : ""}</span><span>${l}</span></button>`).join(""), "yt2__pop--menu");
+          return;
+        }
+        if ((el = c("[data-clike]"))) { toggle("ytCL", el.dataset.clike); refreshComments(vidOf(top().id)); return; }
+        if ((el = c("[data-nf]"))) {
+          nextFilter = el.dataset.nf;
+          $$("[data-nf]", main).forEach(b => b.classList.toggle("is-on", b === el));
+          drawNext(top(), vidOf(top().id));
+          return;
+        }
+        if (c("[data-newpl]")) { askName("New playlist", "", "Create", n => { plNew(n); if (top().page === "playlists" || top().tab === "playlists") render(main.scrollTop); toast("Playlist created"); }); return; }
+        if (c("[data-pnew]")) {
+          const box = $(".yt2__pnew", pop && pop.el);
+          if (!box) return;
+          box.innerHTML = `<form class="yt2__pform"><input name="n" maxlength="150" placeholder="Enter playlist name..." aria-label="Playlist name" autocomplete="off"><button type="submit">Create</button></form>`;
+          $("input", box).focus();
+          return;
+        }
+        if ((el = c("[data-plrename]"))) {
+          const P = plInfo(el.dataset.plrename);
+          if (P) askName("Rename playlist", P.name, "Save", n => { const a = pls(), p = a.find(x => x.id === P.id); if (p) { p.name = n.slice(0, 150); p.upd = Date.now(); store.set("ytPL", a); } render(main.scrollTop); });
+          return;
+        }
+        if ((el = c("[data-pldel]"))) {
+          const P = plInfo(el.dataset.pldel);
+          if (P) confirmBox("Delete playlist", `Delete "${P.name}"? This can't be undone.`, "Delete").then(ok => { if (!ok) return; store.set("ytPL", pls().filter(p => p.id !== P.id)); stack[stack.length - 1] = { page: "playlists" }; render(); });
+          return;
+        }
+        if ((el = c("[data-playall]"))) { playAll(el.dataset.playall, !!el.dataset.shuffle); return; }
+        if ((el = c("[data-plrm]"))) {
+          const list = (c("[data-list]") || {}).dataset && c("[data-list]").dataset.list, id = el.dataset.plrm;
+          if (list === "LL") toggle("ytLikes", id); else if (list) plAdd(list, id, false);
+          render(main.scrollTop);
+          return;
+        }
+        if ((el = c("[data-rmhist]"))) {
+          store.set("ytHist", hist().filter(x => x.id !== el.dataset.rmhist));
+          $(".yt2__hlist", main).innerHTML = histList((top().q || "").toLowerCase());
+          settle();
+          return;
+        }
+        if (c("[data-clearhist]")) {
+          confirmBox("Clear watch history", "Clear all of your watch history? This also forgets where you stopped in each video.", "Clear history").then(ok => {
+            if (!ok) return;
+            store.set("ytHist", []);
+            Object.keys(PROG).forEach(k => delete PROG[k]); store.set("ytProg", PROG);
+            render();
+          });
+          return;
+        }
+        if (c("[data-pausehist]")) { store.set("ytHistOff", !store.get("ytHistOff", false)); render(main.scrollTop); return; }
+        if ((el = c("[data-tab]"))) { stack[stack.length - 1] = { ...top(), tab: el.dataset.tab }; render(); return; }
+        if ((el = c("[data-cat]"))) { stack[stack.length - 1] = { page: "home", cat: el.dataset.cat }; render(); return; }
+        if ((el = c("[data-k]"))) { stack[stack.length - 1] = { page: "trending", k: el.dataset.k }; render(); return; }
+        if ((el = c("[data-v]"))) {
+          const lst = c("[data-list]"), cur = top(), st = { page: "watch", id: el.dataset.v };
+          if (lst) { st.list = lst.dataset.list; if (cur.page === "watch" && cur.list === st.list && cur.order) st.order = cur.order; }
+          go(st);
+          return;
+        }
+        if ((el = c("[data-go]"))) { const st = { page: el.dataset.go }; if (el.dataset.id) st.id = el.dataset.id; if (el.dataset.k) st.k = el.dataset.k; go(st); }
       });
       body.addEventListener("input", e => {
+        const hq = e.target.closest("[data-hq]");
+        if (hq) { top().q = hq.value; $(".yt2__hlist", main).innerHTML = histList(hq.value.toLowerCase()); settle(); return; }
+        const ci = e.target.closest(".yt2__cform input");
+        if (ci) { ci.parentElement.classList.toggle("has-text", !!ci.value); return; }
         const f = e.target.closest(".yt2__form");
         if (!f || e.target.name !== "url") return;
         const id = ytParseId(e.target.value), prev = $(".yt2__prev", f);
         if (!id) { prev.innerHTML = e.target.value ? `<small>That doesn't look like a YouTube link yet.</small>` : ""; return; }
-        prev.innerHTML = `<img src="${ytThumb(id)}" alt="">`;
+        prev.innerHTML = `<img src="${esc(ytThumb(id))}" alt="">`;
         const t = f.elements.title;
         if (t.value.trim() && !t.dataset.auto) return;
         fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent("https://www.youtube.com/watch?v=" + id)}`)
@@ -1679,20 +2488,31 @@ function openYouTube(o = {}) {
           .then(j => { if (j && j.title && ytParseId(f.elements.url.value) === id && (!t.value.trim() || t.dataset.auto)) { t.value = j.title; t.dataset.auto = "1"; } })
           .catch(() => {});
       });
+      body.addEventListener("reset", e => { const cin = e.target.closest(".yt2__cform"); if (cin) { $(".yt2__cin", cin).classList.remove("has-text"); document.activeElement && document.activeElement.blur(); } });
       body.addEventListener("submit", e => {
+        const f0 = e.target;
+        if (f0.matches(".yt2__search")) { e.preventDefault(); runSearch(qInput.value); return; }
+        if (f0.matches(".yt2__hsearch")) { e.preventDefault(); return; }
+        if (f0.matches(".yt2__pform")) {
+          e.preventDefault();
+          const n = f0.elements.n.value.trim();
+          if (!n || !pop) return;
+          const p = plNew(n, pop.vid);
+          pop.el.innerHTML = saveHtml(pop.vid);
+          toast(`Saved to ${p.name}`);
+          return;
+        }
         const cf = e.target.closest(".yt2__cform");
         if (cf) {
           e.preventDefault();
-          const t = cf.elements.c.value.trim(), s = stack[stack.length - 1];
-          if (!t) return;
-          const id = VIDEOS[s.i].id, m = store.get("ytComments", {});
+          const t = cf.elements.c.value.trim(), s = top();
+          if (!t || s.page !== "watch") return;
+          const id = s.id, m = store.get("ytComments", {});
           m[id] = (m[id] || []).concat({ t, ts: Date.now() });
           store.set("ytComments", m);
           Sound.play("notify");
-          const y = main.scrollTop;
-          main.innerHTML = views.watch(s);
-          mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`, VIDEOS[s.i].title);
-          main.scrollTop = y;
+          cf.reset();
+          refreshComments(vidOf(id));
           return;
         }
         const f = e.target.closest(".yt2__form");
@@ -1702,7 +2522,7 @@ function openYouTube(o = {}) {
           const list = store.get("ytUploads", []), u = list.find(x => x.id === f.dataset.editing), v = VIDEOS.find(x => x.mine && x.id === f.dataset.editing);
           if (u && v) {
             Object.assign(u, { title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim() });
-            Object.assign(v, u);
+            Object.assign(v, { title: u.title, cat: u.cat, desc: u.desc });
             store.set("ytUploads", list);
           }
           stack.length = 0;
@@ -1712,32 +2532,151 @@ function openYouTube(o = {}) {
         const id = ytParseId(f.elements.url.value);
         if (!id) { msgBox({ title: "Upload", icon: "error", text: "Couldn't find a video in that link. Paste a youtube.com or youtu.be link, or the 11-character video ID." }); return; }
         if (VIDEOS.some(v => v.mine && v.id === id)) { msgBox({ title: "Upload", icon: "info", text: "That video is already on your channel." }); return; }
-        const u = { id, title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim() };
+        const u = { id, title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim(), ts: Date.now() };
         store.set("ytUploads", store.get("ytUploads", []).concat(u));
         VIDEOS.push({ ...u, channel: NAME, mine: true });
-        all = VIDEOS.map((_, k) => k);
+        syncPool();
         Sound.play("notify");
         go({ page: "channel", name: NAME });
       });
       body.addEventListener("change", e => {
-        if (e.target.matches("[data-import]") && e.target.files[0]) {
-          importBackup(e.target.files[0], ok => {
+        const imp = e.target.closest("[data-import]");
+        if (imp && imp.files[0]) {
+          const file = imp.files[0];
+          closePop();
+          importBackup(file, ok => {
             if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
-            msgBox({ title: "Import", icon: "info", text: "Backup imported. Reopen YouTube to see everything." }).then(() => win.close());
+            ytImportExtra(file).then(() => msgBox({ title: "Import", icon: "info", text: "Backup imported. Reopen YouTube to see everything." })).then(() => win.close());
           });
+          return;
+        }
+        if (e.target.classList.contains("yt2__autobox")) { autoplay = e.target.checked; store.set("ytAuto", autoplay); return; }
+        const chk = e.target.closest("[data-plchk]");
+        if (chk && pop && pop.vid) {
+          plAdd(chk.dataset.plchk, pop.vid, chk.checked);
+          const name = chk.dataset.plchk === "WL" ? "Watch later" : (plInfo(chk.dataset.plchk) || {}).name || "playlist";
+          toast(chk.checked ? `Saved to ${name}` : `Removed from ${name}`);
         }
       });
-      body.addEventListener("change", e => { if (e.target.classList.contains("yt2__autobox")) { autoplay = e.target.checked; store.set("ytAuto", autoplay); } });
-      back.addEventListener("click", () => { if (stack.length > 1) { stack.pop(); render(); } });
-      $(".yt2__search", body).addEventListener("submit", e => {
-        e.preventDefault();
-        const q = $("input", e.target).value.trim();
-        if (q) go({ page: "search", q });
+      back.addEventListener("click", () => { if (stack.length > 1) { stack.pop(); render(top()._y || 0); } });
+
+      /* ---- search box ---- */
+      let typed = "";
+      qInput.addEventListener("input", () => { typed = qInput.value; showSug(); });
+      qInput.addEventListener("focus", () => { typed = qInput.value; showSug(); });
+      qInput.addEventListener("blur", () => later(hideSug, 150));
+      qInput.addEventListener("keydown", e => {
+        if (e.key === "Escape") { if (!sug.hidden) { hideSug(); e.stopPropagation(); } else qInput.blur(); return; }
+        if ((e.key === "ArrowDown" || e.key === "ArrowUp") && sugItems.length) {
+          if (sug.hidden) { showSug(); return; }
+          e.preventDefault();
+          const n = sugItems.length;
+          sugSel = e.key === "ArrowDown" ? (sugSel + 1 >= n ? -1 : sugSel + 1) : (sugSel - 1 < -1 ? n - 1 : sugSel - 1);
+          qInput.value = sugSel >= 0 ? sugItems[sugSel].t : typed;
+          markSug();
+        }
       });
+      sug.addEventListener("pointerdown", e => e.preventDefault());
+      sug.addEventListener("click", e => {
+        e.stopPropagation();
+        const x = e.target.closest("[data-sx]");
+        if (x) { const it = sugItems[+x.dataset.sx]; if (it) store.set("ytSearches", store.get("ytSearches", []).filter(q => q !== it.t)); showSug(); return; }
+        const it = e.target.closest("[data-si]");
+        if (it && sugItems[+it.dataset.si]) runSearch(sugItems[+it.dataset.si].t);
+      });
+
+      /* ---- keyboard shortcuts (the iframe handles its own keys while it has focus) ---- */
+      const onKey = e => {
+        if (WM.active !== "youtube" || win.min || e.ctrlKey || e.metaKey || e.altKey) return;
+        const t = e.target, tag = t && t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+        if ($(".yt2__modal", root)) return;
+        const s = top(), watching = s.page === "watch", k = e.key, onBtn = tag === "BUTTON" || tag === "A" || tag === "SUMMARY";
+        let used = true;
+        if (k === "/") { qInput.focus(); qInput.select(); }
+        else if (k === "?") showKeys();
+        else if (!watching) used = false;
+        else if (k === "k" || (k === " " && !onBtn)) playPause();
+        else if (k === "j") seek(-10);
+        else if (k === "l") seek(10);
+        else if (k === "ArrowLeft" && !onBtn) seek(-5);
+        else if (k === "ArrowRight" && !onBtn) seek(5);
+        else if (k === "m") cmd(pl.muted ? "unMute" : "mute");
+        else if (/^[0-9]$/.test(k)) { if (pl.d) seekTo(pl.d * +k / 10); }
+        else if (k === "f") fullscreen();
+        else if (k === "t") setTheater(!theater);
+        else if (k === "<" || k === ">") {
+          const steps = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2], i = Math.max(0, steps.indexOf(speed));
+          setSpeed(steps[Math.max(0, Math.min(steps.length - 1, i + (k === ">" ? 1 : -1)))]);
+          toast(`Playback speed: ${speed === 1 ? "Normal" : speed + "x"}`);
+        }
+        else if (k === "N") { const n = nextOf(s, true); if (n) go(n); }
+        else used = false;
+        if (used) e.preventDefault();
+      };
+      document.addEventListener("keydown", onKey);
+
+      /* ---- player messages (YouTube iframe API) ---- */
+      const onMsg = e => {
+        if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
+        const ifr = $(".yt2__player iframe", main);
+        if (!ifr || e.source !== ifr.contentWindow) return;
+        let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (err) { return; }
+        if (!d) return;
+        const info = d.event === "infoDelivery" || d.event === "initialDelivery" ? d.info : d.event === "onStateChange" ? { playerState: d.info } : null;
+        if (!info || typeof info !== "object") return;
+        const first = !pl.got;
+        pl.got = true;
+        if (typeof info.currentTime === "number") pl.t = info.currentTime;
+        if (info.duration > 0 && pl.d !== info.duration) {
+          pl.d = info.duration;
+          if (Math.abs((DUR[pl.id] || 0) - pl.d) > 1) { DUR[pl.id] = Math.round(pl.d); const k = Object.keys(DUR); if (k.length > 600) delete DUR[k[0]]; store.set("ytDur", DUR); }
+        }
+        if (typeof info.volume === "number") pl.vol = info.volume;
+        if (typeof info.muted === "boolean") pl.muted = info.muted;
+        if (typeof info.playbackRate === "number") pl.rate = info.playbackRate;
+        if (first && speed !== 1) cmd("setPlaybackRate", [speed]);
+        if (info.playerState !== undefined && info.playerState !== null) {
+          const st = info.playerState;
+          pl.state = st;
+          if (st === 2) saveProg(true);
+          if (st === 1 && !pl.spd) { pl.spd = true; if (speed !== 1) cmd("setPlaybackRate", [speed]); }
+          if (st === 0 && pl.endedFor !== pl.id) {
+            pl.endedFor = pl.id;
+            saveProg(true);
+            const s = top(), n = s.page === "watch" ? nextOf(s) : null;
+            if (n) go(n);
+            return;
+          }
+        }
+        saveProg(false);
+      };
+      window.addEventListener("message", onMsg);
+
+      // narrow windows get a slide-over guide instead of the side rail
+      const fit = () => {
+        const was = root.classList.contains("is-narrow"), narrow = root.clientWidth < 720;
+        root.classList.toggle("is-narrow", narrow);
+        root.classList.toggle("is-compact", main.clientWidth < 1000);
+        root.classList.toggle("is-tiny", root.clientWidth < 540);
+        if (was !== narrow) { drawer = false; root.classList.remove("is-drawer"); drawSide(); }
+        sizeStage();
+      };
+      const ro = typeof ResizeObserver === "function" ? new ResizeObserver(fit) : null;
+      if (ro) { ro.observe(root); ro.observe(main); }
+      fit();
+      win.cleanup = () => {
+        leaveWatch();
+        window.removeEventListener("message", onMsg);
+        document.removeEventListener("keydown", onKey);
+        if (ro) ro.disconnect();
+        timers.forEach(clearTimeout);
+      };
       go({ page: "home", cat: "All" });
     },
     onClose: w => w.cleanup && w.cleanup(),
   });
+  if (o.q && w && w.ytGo) w.ytGo({ page: "search", q: String(o.q) });
 }
 
 /* ---------- Spotify ---------- */
