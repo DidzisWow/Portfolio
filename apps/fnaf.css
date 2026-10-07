@@ -1,0 +1,160 @@
+/* Five Nights at the Server: flat, dark, and deliberately plain. All sizes are in
+   800x540 "stage" pixels; script scales the whole .fn__ui layer to fit the window. */
+.window[data-id="fnaf"]{ min-width:0; }
+.fn{
+  position:absolute; inset:0; overflow:hidden; background:#000; color:#cfd8d2;
+  font-family:"Lucida Console","Courier New",monospace; -webkit-user-select:none; user-select:none;
+}
+.fn__stage{ position:absolute; overflow:hidden; background:#050607; }
+.fn__cv{ position:absolute; left:0; top:0; width:100%; height:100%; display:block; }
+.fn__ui{ position:absolute; left:0; top:0; width:800px; height:540px; transform-origin:0 0; }
+:where(.fn) button{
+  font:inherit; color:inherit; background:none; border:0; border-radius:0; padding:0; margin:0;
+  box-shadow:none; text-shadow:none; cursor:pointer; touch-action:none; -webkit-tap-highlight-color:transparent;
+}
+:where(.fn) button:focus{ outline:none; }
+.fn [hidden]{ display:none !important; }
+
+/* ---------------------------------------------------------------- HUD */
+.fn__hud{ position:absolute; inset:0; pointer-events:none; }
+.fn__pw{
+  position:absolute; left:20px; top:16px; display:flex; flex-direction:column; gap:7px;
+  font:bold 19px/1.1 "Lucida Console","Courier New",monospace; color:#eef3ee; text-shadow:0 2px 0 #000;
+}
+.fn__use{ display:flex; align-items:center; gap:9px; font-size:15px; color:#cdd6cf; }
+.fn__bars{ display:flex; gap:3px; }
+.fn__bars i{ width:15px; height:20px; background:#12171a; box-shadow:inset 0 0 0 1px #364048; }
+.fn__use[data-lvl="g"] .on{ background:#4cd964; box-shadow:none; }
+.fn__use[data-lvl="y"] .on{ background:#f1c40f; box-shadow:none; }
+.fn__use[data-lvl="r"] .on{ background:#e5483a; box-shadow:none; }
+.fn__clk{ position:absolute; right:22px; top:14px; display:flex; flex-direction:column; align-items:flex-end; gap:5px; text-shadow:0 2px 0 #000; }
+.fn__clk b{ font:bold 38px/1 "Lucida Console","Courier New",monospace; color:#eef3ee; letter-spacing:1px; }
+.fn__clk span{ font:bold 16px/1 "Lucida Console","Courier New",monospace; color:#a9b6ad; letter-spacing:1px; }
+
+.fn__call{ position:absolute; inset:0; pointer-events:none; }
+.fn__call button{
+  position:absolute; left:20px; top:96px; pointer-events:auto; padding:5px 10px;
+  font:bold 12px "Lucida Console","Courier New",monospace; letter-spacing:.5px; color:#d6ddd8;
+  background:rgba(8,10,10,.8); box-shadow:inset 0 0 0 2px #4b5a50;
+}
+.fn__call button:hover{ box-shadow:inset 0 0 0 2px #d8a31a; color:#fff; }
+.fn__call p{
+  position:absolute; left:20px; bottom:66px; width:520px; margin:0; padding:9px 14px;
+  background:rgba(0,0,0,.66); text-align:left; font:bold 15px/1.45 "Lucida Console","Courier New",monospace; color:#f2f2e8; text-shadow:0 1px 0 #000;
+}
+.fn__call p:empty{ display:none; }
+
+/* ---------------------------------------------------------------- office buttons */
+.fn__pan{ position:absolute; top:158px; width:60px; display:flex; flex-direction:column; gap:10px; }
+.fn__pan--l{ left:202px; }
+.fn__pan--r{ left:538px; }
+.fn__pb{
+  position:relative; height:76px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  background:#323d48; box-shadow:inset 0 0 0 2px #0b0f13, inset 0 4px 0 #4a5864, inset 0 -4px 0 #232b33;
+}
+.fn__pb i{ width:12px; height:12px; background:#4d1f1f; box-shadow:0 0 0 2px #0b0f13; }
+.fn__pb b{ font:bold 12px/1 "Lucida Console","Courier New",monospace; letter-spacing:.5px; color:#d8dfda; }
+.fn__pb small{ font:bold 10px/1 "Lucida Console","Courier New",monospace; color:#7d8a93; }
+.fn__pb:hover{ background:#3a4753; }
+.fn__pb:active, .fn__pb.is-on{ box-shadow:inset 0 0 0 2px #0b0f13, inset 0 -3px 0 #4a5864, inset 0 4px 0 #1c232a; padding-top:3px; }
+.fn__pb--door.is-on i{ background:#ff4a3d; }
+.fn__pb--door.is-on{ background:#4a2b2d; }
+.fn__pb--light i{ background:#3b4046; }
+.fn__pb--light.is-on i{ background:#f6f8f2; }
+.fn__pb--light.is-on{ background:#505d69; }
+
+.fn__cb{
+  position:absolute; left:50%; bottom:14px; width:300px; height:36px; margin-left:-150px;
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  background:rgba(8,10,10,.86); box-shadow:inset 0 0 0 2px #6f7d76; color:#eef3ee;
+  font:bold 15px/1 "Lucida Console","Courier New",monospace; letter-spacing:2px;
+}
+.fn__cb small{ font-size:11px; color:#7f8c85; letter-spacing:1px; }
+.fn__cb:hover{ background:#1a2127; box-shadow:inset 0 0 0 2px #eef3ee; }
+
+/* ---------------------------------------------------------------- camera map */
+.fn__map{ position:absolute; right:16px; bottom:14px; width:218px; height:138px; background:rgba(4,8,6,.82); box-shadow:inset 0 0 0 2px #4b5a50; }
+.fn__mb, .fn__you{
+  position:absolute; height:34px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  background:#0e1512; box-shadow:inset 0 0 0 2px #2f4238; color:#8bb89a;
+}
+.fn__mb b{ font:bold 11px/1 "Lucida Console","Courier New",monospace; }
+.fn__mb small{ font:bold 8px/1 "Lucida Console","Courier New",monospace; letter-spacing:.5px; opacity:.8; }
+.fn__mb:hover{ background:#16241c; }
+.fn__mb.is-on{ background:#1d4a2f; box-shadow:inset 0 0 0 2px #8dffae; color:#eafff0; }
+.fn__mb--1{ left:6px; top:6px; width:100px; }
+.fn__mb--2{ left:110px; top:6px; width:100px; }
+.fn__mb--5{ left:6px; top:48px; width:49px; }
+.fn__mb--3{ left:59px; top:48px; width:47px; }
+.fn__mb--4{ left:110px; top:48px; width:47px; }
+.fn__mb--6{ left:161px; top:48px; width:49px; }
+.fn__you{ left:59px; top:92px; width:98px; background:transparent; box-shadow:inset 0 0 0 2px #4b5a50; color:#c8d4cc; font:bold 11px "Lucida Console","Courier New",monospace; letter-spacing:2px; }
+
+/* ---------------------------------------------------------------- screens */
+.fn__scr{ position:absolute; inset:0; }
+.fn__title{ position:absolute; left:56px; top:46px; width:520px; }
+.fn__kick{ margin:0 0 14px; font:bold 12px/1 "Lucida Console","Courier New",monospace; letter-spacing:3px; text-transform:uppercase; color:#85928a; }
+.fn__title h1{
+  margin:0; font-family:Impact,Haettenschweiler,"Arial Narrow Bold","Arial Black","Liberation Sans Narrow","DejaVu Sans Condensed",sans-serif;
+  font-weight:900; text-transform:uppercase; letter-spacing:1px; line-height:.95; color:#ecf1ec; text-shadow:4px 4px 0 #000;
+}
+.fn__title h1 span{ display:block; font-size:70px; }
+.fn__title h1 span + span{ font-size:50px; color:#d8a31a; margin-top:4px; }
+.fn__tag{ margin:16px 0 0; font:bold 13px/1 "Lucida Console","Courier New",monospace; letter-spacing:2px; color:#a9b6ad; text-transform:uppercase; }
+.fn__menu{ list-style:none; margin:44px 0 0; padding:0; }
+.fn__mi{
+  position:relative; display:block; padding:6px 0 6px 30px; text-align:left;
+  font:bold 24px/1.15 "Lucida Console","Courier New",monospace; letter-spacing:1px; text-transform:uppercase; color:#8c9993;
+}
+.fn__mi small{ margin-left:14px; font-size:12px; letter-spacing:1px; color:#68746e; }
+.fn__mi.is-sel{ color:#fff; }
+.fn__mi.is-sel::before{ content:""; position:absolute; left:8px; top:50%; margin-top:-8px; border:8px solid transparent; border-left:13px solid #d8a31a; border-right-width:0; }
+.fn__foot{ position:absolute; left:0; top:438px; width:540px; margin:0; font:11px/1.4 "Lucida Console","Courier New",monospace; color:#58645e; }
+
+.fn__card{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.fn__big{ margin:0; font:bold 62px/1.1 "Lucida Console","Courier New",monospace; letter-spacing:3px; color:#eef3ee; }
+.fn__mid{ margin:16px 0 0; font:bold 24px/1.3 "Lucida Console","Courier New",monospace; letter-spacing:1px; color:#bcc7c0; }
+.fn__red{ color:#d63a2f; }
+.fn__card--intro .fn__big{ animation:fnIn 1.4s ease-out both; }
+.fn__card--intro .fn__mid{ animation:fnIn 1.4s .7s ease-out both; }
+.fn__hint{ position:absolute; left:0; right:0; bottom:34px; margin:0; font:12px/1.4 "Lucida Console","Courier New",monospace; letter-spacing:.5px; color:#6f7c75; animation:fnIn 1.4s 1.4s ease-out both; }
+.fn__card--over .fn__big{ font-size:68px; letter-spacing:6px; text-shadow:4px 4px 0 #000; }
+.fn__btns{ display:flex; gap:16px; margin-top:34px; }
+.fn__btn{
+  padding:11px 24px; font:bold 15px/1 "Lucida Console","Courier New",monospace; letter-spacing:1px; color:#eef3ee;
+  background:#0b0f0d; box-shadow:inset 0 0 0 2px #4b5a50;
+}
+.fn__btn:hover{ box-shadow:inset 0 0 0 2px #d8a31a; color:#fff; }
+.fn__roll{ height:72px; overflow:hidden; }
+.fn__roll > div{ animation:fnRoll 3.4s both; }
+.fn__roll span{ display:block; height:72px; font:bold 64px/72px "Lucida Console","Courier New",monospace; letter-spacing:3px; color:#eef3ee; }
+.fn__fade{ animation:fnIn .9s 3.2s both; }
+@keyframes fnIn{ from{ opacity:0; } }
+@keyframes fnRoll{ 0%, 30%{ transform:translateY(0); } 44%, 100%{ transform:translateY(-72px); } }
+
+.fn__check{
+  width:560px; padding:18px 24px 16px; text-align:left; background:#e5e2d2; color:#26302a;
+  font:12px/1.4 "Lucida Console","Courier New",monospace; box-shadow:0 0 0 2px #8b8870, 6px 6px 0 #000;
+}
+.fn__chk-h{ display:flex; justify-content:space-between; margin:0 0 16px; }
+.fn__chk-h b{ font-size:15px; letter-spacing:1px; }
+.fn__chk-row{ display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin:0 0 6px; }
+.fn__chk-row p{ margin:0; font-size:13px; }
+.fn__chk-row u{ text-decoration:none; border-bottom:1px solid #26302a; padding:0 10px 1px; font-weight:bold; }
+.fn__chk-amt{ padding:4px 12px; font:bold 24px/1 "Lucida Console","Courier New",monospace; border:2px solid #26302a; }
+.fn__chk-l{ margin:6px 0; font-size:13px; }
+.fn__chk-m{ margin:12px 0 0; font-size:11px; color:#5b6258; }
+.fn__chk-s{ display:flex; justify-content:space-between; align-items:flex-end; margin:16px 0 0; }
+.fn__chk-s i{ font:italic 22px/1 "Brush Script MT","Segoe Script",cursive; border-bottom:1px solid #26302a; padding:0 18px 2px 4px; }
+.fn__chk-s span{ font-size:10px; color:#5b6258; }
+
+.fn__pause{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  background:rgba(0,0,0,.74);
+}
+.fn__pause b{ font:bold 48px/1 "Lucida Console","Courier New",monospace; letter-spacing:8px; color:#eef3ee; }
+.fn__pause span{ font:bold 14px/1 "Lucida Console","Courier New",monospace; letter-spacing:1px; color:#98a59d; }
+
+@media (prefers-reduced-motion:reduce){
+  .fn__card--intro .fn__big, .fn__card--intro .fn__mid, .fn__fade, .fn__roll > div{ animation-duration:.01s; animation-delay:0s; }
+}

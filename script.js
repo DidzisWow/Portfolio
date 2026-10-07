@@ -1066,18 +1066,37 @@ const GUESTBOOK_SEED = [
   { name: "NetSurfer99", msg: "love the under construction sign. very professional", date: "06/12/1998" },
   { name: "Mom", msg: "Very nice honey. How do I get back to the AOL?", date: "06/10/1998" },
 ];
+/* Chrome's data lives in localStorage: bookmarks, history and a few settings, shared by every Chrome window. */
+const CR_PAGES = ["newtab", "history", "bookmarks", "downloads", "settings", "version"];
+const CR_ENGINES = {
+  Google: { color: "#4285f4", url: q => `https://www.google.com/search?q=${q}` },
+  Bing: { color: "#0f7b6c", url: q => `https://www.bing.com/search?q=${q}` },
+  DuckDuckGo: { color: "#de5833", url: q => `https://duckduckgo.com/?q=${q}` },
+  AltaVista: { color: "#c8102e", url: q => `http://www.altavista.com/search?q=${q}` },
+};
+const crEngine = () => { const e = store.get("crEngine", "Google"); return CR_ENGINES[e] ? e : "Google"; };
+const crBrandOf = url => /bing\.com/i.test(url) ? "Bing" : /duckduckgo\.com/i.test(url) ? "DuckDuckGo" : /altavista\.com/i.test(url) ? "AltaVista" : /google\.com/i.test(url) ? "Google" : crEngine();
+const crSearchUrl = (q, brand = crEngine()) => CR_ENGINES[brand].url(encodeURIComponent(q));
+const crQuery = url => { try { return new URL(url).searchParams.get("q") || ""; } catch (e) { return ""; } };
+const crHue = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const crHost = url => { try { return new URL(url).hostname.replace(/^www\./i, ""); } catch (e) { return String(url).replace(/^[a-z]+:\/\//i, "").split(/[/?#]/)[0].replace(/^www\./i, ""); } };
+const crSame = (a, b) => String(a).replace(/\/+$/, "").toLowerCase() === String(b).replace(/\/+$/, "").toLowerCase();
+const crCap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const crLooksLikeUrl = s => !/\s/.test(s) && (/^(https?:\/\/|www\.|chrome:|about:)/i.test(s) || /\.(com|org|net|io|app|dev|edu|gov|co|uk|de|fr|info)(\/|$|\?)/i.test(s));
+
 function normUrl(u) {
   let s = String(u || "").trim();
   if (!s) return HOME;
-  if (/^chrome:/i.test(s)) return "chrome://newtab";
-  if (!/[.:/]/.test(s)) return `http://www.altavista.com/search?q=${encodeURIComponent(s)}`;
+  const c = s.match(/^chrome:(?:\/\/)?([a-z-]*)\/?(.*)$/i);
+  if (c) return c[1] ? `chrome://${c[1].toLowerCase()}${c[2] ? "/" + c[2] : ""}` : "chrome://newtab";
+  if (/\s/.test(s) || !/[.:/]/.test(s)) return crSearchUrl(s);
   if (!/^[a-z]+:/i.test(s)) s = "http://" + s;
   return s;
 }
 function routeOf(url) {
   const u = url.toLowerCase();
   if (u === "about:blank") return "blank";
-  if (u.startsWith("chrome://")) return "newtab";
+  if (u.startsWith("chrome://")) { const p = u.slice(9).split(/[/?#]/)[0]; return CR_PAGES.includes(p) ? p : "error"; }
   if (u.includes("geocities.com")) {
     if (/about\.html?$/.test(u)) return "about";
     if (/guestbook\.html?$/.test(u)) return "guestbook";
@@ -1087,19 +1106,179 @@ function routeOf(url) {
   }
   if (/youtube\.|youtu\.be/.test(u)) return "youtube";
   if (u.includes("github.com")) return "github";
-  if (/altavista\.com|\/search\?q=/.test(u)) return "search";
+  if (/altavista\.com|\/search\?q=|^https?:\/\/duckduckgo\.com\/\?q=/.test(u)) return "search";
   // any real-looking web address opens in the Time Machine (Internet Archive)
   if (/^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(u)) return "web";
   return "error";
 }
 const SEARCH_INDEX = () => [
-  { title: `${NAME}'s Homepage`, url: HOME, kw: `home homepage portfolio ${NAME} ${ROLE}`, desc: C.tagline || "My corner of the web." },
-  { title: `About ${NAME}`, url: HOME + "about.html", kw: `about me bio ${NAME} ${SKILLS.join(" ")}`, desc: "Who I am and what I do." },
+  { title: `${NAME}'s Homepage`, url: HOME, kw: `home homepage portfolio ${NAME} ${ROLE}`, desc: C.tagline || "My corner of the web.", img: C.heroImage || "" },
+  { title: `About ${NAME}`, url: HOME + "about.html", kw: `about me bio ${NAME} ${SKILLS.join(" ")}`, desc: ABOUT_PARAS[0] || "Who I am and what I do." },
   { title: "Sign my Guestbook!", url: HOME + "guestbook.html", kw: "guestbook sign message", desc: "Leave a message. Be nice." },
   { title: "Cool Links", url: HOME + "links.html", kw: "links webring cool sites", desc: "The best sites on the information superhighway." },
-  { title: "YouTube - Broadcast Yourself", url: "http://www.youtube.com", kw: "youtube video videos coryxkenshin", desc: "Watch videos." },
-  ...PROJECTS.map((p, i) => ({ title: p.title, url: HOME + "about.html", kw: `${p.title} ${(p.tags || []).join(" ")} project`, desc: p.description || "", project: i })),
+  { title: "YouTube", url: "http://www.youtube.com", kw: "youtube video videos watch", desc: "Watch videos in the YouTube app on this desktop." },
+  { title: "Spotify - Web Player", url: "http://open.spotify.com", kw: "spotify music songs playlist listen", desc: "Listen to music in the Spotify app on this desktop.", app: "spotify" },
+  { title: "Discord", url: "http://discord.com", kw: "discord chat friends message", desc: "Chat with the people on this desktop.", app: "discord" },
+  { title: `${NAME} on GitHub`, url: GITHUB_URL || "http://www.github.com", kw: "github code repositories repos source", desc: "Code, repositories and open source projects." },
+  ...PROJECTS.map((p, i) => ({ title: p.title, url: HOME + "about.html", kw: `${p.title} ${(p.tags || []).join(" ")} project`, desc: p.description || "", project: i, img: p.image || "" })),
 ];
+function crSearchResults(q) {
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  return SEARCH_INDEX().map((r, i) => {
+    const title = r.title.toLowerCase(), kw = (r.kw || "").toLowerCase(), desc = (r.desc || "").toLowerCase();
+    let score = 0;
+    terms.forEach(t => { if (title.includes(t)) score += 3; if (kw.includes(t)) score += 2; if (desc.includes(t)) score += 1; });
+    return { r, score, i };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.i - b.i).map(x => x.r);
+}
+const crMark = (text, terms) => {
+  const t = terms.filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!t.length) return esc(text);
+  return String(text).split(new RegExp("(" + t.join("|") + ")", "ig")).map((p, i) => i % 2 ? `<b>${esc(p)}</b>` : esc(p)).join("");
+};
+const crCrumb = url => { try { const u = new URL(url); return [u.origin].concat(u.pathname.split("/").filter(Boolean).map(s => decodeURIComponent(s))).join(" \u203a "); } catch (e) { return url; } };
+
+/* ---- bookmarks ---- */
+const CR_DEFAULT_BM = () => [
+  { title: "My Homepage", url: HOME },
+  { title: "Guestbook", url: HOME + "guestbook.html" },
+  { title: "Cool Links", url: HOME + "links.html" },
+  { title: "YouTube", url: "http://www.youtube.com" },
+  { title: "GitHub", url: GITHUB_URL || "http://www.github.com" },
+  { title: "AltaVista", url: "http://www.altavista.com" },
+];
+const crBms = () => { const b = store.get("crBookmarks", null); return Array.isArray(b) ? b.filter(x => x && x.url) : CR_DEFAULT_BM(); };
+const CR_BUS = new Set();
+const crNotify = what => CR_BUS.forEach(fn => fn(what));
+const crSaveBms = list => { store.set("crBookmarks", list); crNotify("bm"); };
+
+/* ---- history ---- */
+const crHist = () => { const h = store.get("crHistory", []); return Array.isArray(h) ? h : []; };
+function crAddHist(url, title) {
+  const h = crHist();
+  if (h[0] && h[0].url === url && Date.now() - h[0].t < 60000) { h[0].title = title; h[0].t = Math.max(Date.now(), h[0].t + 1); }
+  else h.unshift({ url, title, t: Math.max(Date.now(), h[0] ? h[0].t + 1 : 0) });
+  store.set("crHistory", h.slice(0, 300));
+}
+const CR_RECORD = { home: 1, about: 1, guestbook: 1, links: 1, "404": 1, youtube: 1, github: 1, search: 1, web: 1 };
+const crDayKey = t => { const d = new Date(t); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+function crDayLabel(t) {
+  const d = new Date(t), n = new Date();
+  const diff = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  const full = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return diff === 0 ? "Today - " + full : diff === 1 ? "Yesterday - " + full : full;
+}
+
+/* ---- glyphs (flat Material paths, kept local to the Chrome app) ---- */
+const CR_PATHS = {
+  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
+  fwd: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+  reload: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z",
+  page: "M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm7 7V3.5L18.5 9z",
+  star: "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z",
+  starO: "M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28z",
+  more: "M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2",
+  download: "M19 9h-4V3H9v6H5l7 7zM5 18v2h14v-2z",
+  settings: "M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6",
+  history: "M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z",
+  info: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z",
+  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1z",
+  globe: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39",
+  check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  chev2: "M6.41 6 5 7.41 9.58 12 5 16.59 6.41 18l6-6zM13 6l-1.41 1.41L16.17 12l-4.58 4.59L13 18l6-6z",
+  right: "M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z",
+  up: "M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z",
+  dn: "M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z",
+  incog: "M12 3C9.3 3 7.4 4.2 7.4 4.2L6 9h12l-1.4-4.8S14.7 3 12 3M2 10.5v1.5h20v-1.5zM6.5 13A3.5 3.5 0 1 0 10 16.5c0-.5-.1-.9-.3-1.3h4.6c-.2.4-.3.8-.3 1.3a3.5 3.5 0 1 0 3.5-3.5c-.8 0-1.4.2-2 .6-.9-.4-4.3-.4-5.4 0-.6-.4-1.2-.6-2-.6",
+  folder: "M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8z",
+};
+const crIco = (name, size = 20, color = "") => `<svg class="cr-svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"${color ? ` style="color:${color}"` : ""} aria-hidden="true"><path d="${CR_PATHS[name] || UI_PATHS[name] || ""}"/></svg>`;
+const crChromeLogo = (s = 48) => `<svg class="cr-logo-mark" viewBox="0 0 48 48" width="${s}" height="${s}" aria-hidden="true"><path d="M24 24 4.95 13A22 22 0 0 1 43.05 13z" fill="#ea4335"/><path d="M24 24 43.05 13A22 22 0 0 1 24 46z" fill="#fbbc04"/><path d="M24 24 24 46A22 22 0 0 1 4.95 13z" fill="#34a853"/><circle cx="24" cy="24" r="10.5" fill="#fff"/><circle cx="24" cy="24" r="8" fill="#1a73e8"/></svg>`;
+const crLogo = brand => brand === "Google"
+  ? `<span class="cr-logo cr-logo--g" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></span>`
+  : `<span class="cr-logo cr-logo--t" style="color:${CR_ENGINES[brand].color}">${esc(brand)}</span>`;
+
+// favicon for a URL: app icons for YouTube/GitHub, flat glyphs for Chrome's own pages, a coloured letter for the rest
+function crFav(url, size = 16) {
+  const r = routeOf(url);
+  if (r === "youtube") return icon("youtube", size);
+  if (r === "github") return icon("github", size);
+  if (r === "newtab" || r === "blank") return crIco("globe", size, "#9aa0a6");
+  if (r === "history") return crIco("history", size, "#5f6368");
+  if (r === "bookmarks") return crIco("star", size, "#f9ab00");
+  if (r === "downloads") return crIco("download", size, "#5f6368");
+  if (r === "settings") return crIco("settings", size, "#5f6368");
+  if (r === "version" || r === "error") return crIco("info", size, "#5f6368");
+  if (r === "search") return crIco("search", size, CR_ENGINES[crBrandOf(url)].color);
+  if (["home", "about", "guestbook", "links", "404"].includes(r)) return crIco("page", size, "#1a73e8");
+  const h = crHost(url);
+  return `<span class="cr-fav-l" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .62)}px;background:hsl(${crHue(h)} 52% 44%)">${esc((h[0] || "?").toUpperCase())}</span>`;
+}
+
+const CR_TILES = [
+  { key: "home", label: "My Homepage", url: HOME, color: "#1a73e8" },
+  { key: "google.com", label: "Google, 1998", url: "http://www.google.com", color: "#4285f4" },
+  { key: "yahoo.com", label: "Yahoo!", url: "http://www.yahoo.com", color: "#720e9e" },
+  { key: "spacejam.com", label: "Space Jam", url: "http://www.spacejam.com", color: "#1a237e" },
+  { key: "apple.com", label: "Apple", url: "http://www.apple.com", color: "#5f6368" },
+  { key: "amazon.com", label: "Amazon", url: "http://www.amazon.com", color: "#e68a00" },
+  { key: "yt", label: "YouTube", url: "http://www.youtube.com", ic: "youtube" },
+  { key: "gh", label: "GitHub", url: "http://www.github.com", ic: "github" },
+  { key: "discord", label: "Discord", url: "", ic: "discord", app: "discord" },
+];
+// most-visited sites from real history first, then the default shortcuts
+function crTiles() {
+  const map = new Map();
+  crHist().forEach(e => {
+    const r = routeOf(e.url);
+    let key, label, url;
+    if (["home", "about", "guestbook", "links", "404"].includes(r)) { key = "home"; label = "My Homepage"; url = HOME; }
+    else if (r === "youtube") { key = "yt"; label = "YouTube"; url = "http://www.youtube.com"; }
+    else if (r === "github") { key = "gh"; label = "GitHub"; url = GITHUB_URL || "http://www.github.com"; }
+    else if (r === "web") { const h = crHost(e.url); key = h; label = crCap(h.split(".")[0]); try { url = new URL(e.url).origin + "/"; } catch (x) { url = "http://" + h; } }
+    else return;
+    const m = map.get(key) || { key, label, url, n: 0, t: e.t };
+    m.n++;
+    map.set(key, m);
+  });
+  const out = Array.from(map.values()).sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 10).map(m => {
+    const d = CR_TILES.find(x => x.key === m.key);
+    if (d) return m.key === "gh" ? { ...d, url: m.url } : d;
+    return { key: m.key, label: m.label, url: m.url, color: `hsl(${crHue(m.key)} 52% 38%)` };
+  });
+  const seen = new Set(out.map(t => t.key));
+  CR_TILES.forEach(d => { if (out.length < 10 && !seen.has(d.key)) out.push(d); });
+  return out;
+}
+const crTile = t => `<button type="button" class="nt__tile" ${t.app ? `data-app="${esc(t.app)}"` : `data-go="${esc(t.url)}"`} title="${esc(t.label)}"><span class="nt__fav"${t.ic ? "" : ` style="color:${t.color}"`}>${t.ic ? icon(t.ic, 26) : esc(t.label[0].toUpperCase())}</span><span class="nt__lbl">${esc(t.label)}</span></button>`;
+
+/* ---- list renderers used by the History and Bookmarks pages ---- */
+function crHistList(q) {
+  const terms = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+  const list = crHist().filter(e => terms.every(t => (e.title + " " + e.url).toLowerCase().includes(t))).slice(0, 200);
+  if (!list.length) return `<div class="cp__empty">${terms.length ? "No search results found" : "Your browsing history appears here"}</div>`;
+  let out = "", day = null;
+  list.forEach(e => {
+    const k = crDayKey(e.t);
+    if (k !== day) { if (day !== null) out += "</div>"; day = k; out += `<h3 class="hist__day">${esc(crDayLabel(e.t))}</h3><div class="hist__card">`; }
+    out += `<div class="hist__row" data-t="${e.t}"><label class="hist__chk"><input type="checkbox" data-sel aria-label="Select ${esc(e.title)}"></label><span class="hist__time">${esc(fmtTime(new Date(e.t)))}</span><span class="hist__fav">${crFav(e.url, 16)}</span><a class="hist__title" data-go="${esc(e.url)}" title="${esc(e.url)}">${esc(e.title)}</a><span class="hist__host">${esc(crHost(e.url))}</span><button type="button" class="hist__rm" data-act="rm-hist" data-t="${e.t}" aria-label="Remove from history" title="Remove from history">${crIco("close", 16)}</button></div>`;
+  });
+  return out + "</div>";
+}
+function crBmList(q, edit = -1) {
+  const terms = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+  const all = crBms();
+  const rows = all.map((b, i) => ({ b, i })).filter(x => terms.every(t => (x.b.title + " " + x.b.url).toLowerCase().includes(t)));
+  if (!rows.length) return `<div class="cp__empty">${terms.length ? "No bookmarks found" : "No bookmarks"}</div>`;
+  return `<div class="hist__card bm__card">${rows.map(({ b, i }) => i === edit
+    ? `<form class="bm__edit" data-form="bm-save" data-i="${i}"><input class="cp__in" name="title" value="${esc(b.title)}" aria-label="Name" maxlength="120"><input class="cp__in" name="url" value="${esc(b.url)}" aria-label="URL" maxlength="500"><button type="submit" class="cp__btn cp__btn--blue">Save</button><button type="button" class="cp__btn" data-act="bm-cancel">Cancel</button></form>`
+    : `<div class="hist__row bm__row"><span class="hist__fav">${crFav(b.url, 16)}</span><a class="hist__title" data-go="${esc(b.url)}" title="${esc(b.url)}">${esc(b.title)}</a><span class="hist__host">${esc(b.url)}</span><span class="bm__acts"><button type="button" class="hist__rm" data-act="bm-edit" data-i="${i}" aria-label="Edit ${esc(b.title)}" title="Edit">${ui("edit", 16)}</button><button type="button" class="hist__rm" data-act="bm-del" data-i="${i}" aria-label="Delete ${esc(b.title)}" title="Delete">${ui("trash", 16)}</button></span></div>`).join("")}</div>`;
+}
+
+const CR_ZOOMS = [25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500];
+const crSad = (s = 72) => `<svg class="cr-sad" viewBox="0 0 48 48" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5h16l10 10v28H12z"/><path d="M28 5v10h10"/><path d="M19 26h.01M29 26h.01" stroke-width="3.4"/><path d="M19 37c2.5-3.5 7.5-3.5 10 0"/></svg>`;
+
 const PAGES = {
   blank: () => `<div class="ie-page"></div>`,
   home: () => {
@@ -1155,206 +1334,818 @@ const PAGES = {
       </ul>
       <p class="gc__small">This site is a proud member of the <b>Windows 98 Webring</b></p>
     </div>`,
-  youtube: () => `<div class="ie-page"><h1>Opening YouTube...</h1><p>YouTube opened in its own window, where the videos actually play.</p><p><a data-app="youtube">Show YouTube</a> &middot; <a data-nav="back">Go back</a></p></div>`,
+  youtube: () => `<div class="cr-msg"><div class="cr-msg__ic">${icon("youtube", 48)}</div><h1>Opening YouTube</h1><p>YouTube opened in its own window, where the videos actually play.</p><p class="cr-msg__btns"><button type="button" class="cp__btn cp__btn--blue" data-app="youtube">Show YouTube</button><button type="button" class="cp__btn" data-nav="back">Go back</button></p></div>`,
   web: url => {
     const year = store.get("crYear", 1998);
-    const host = url.replace(/^https?:\/\//i, "").split(/[/?#]/)[0].replace(/^www\./i, "");
+    const host = crHost(url);
     return `<div class="tm">
       <div class="tm__bar">
-        <span class="tm__badge">TIME MACHINE</span>
-        <span><b>${esc(host)}</b> as it looked around <b>${year}</b>, from the Internet Archive</span>
+        <span class="tm__badge">Time Machine</span>
+        <span class="tm__txt"><b>${esc(host)}</b> as it looked around <b>${year}</b>, from the Internet Archive</span>
         <a href="https://web.archive.org/web/${year}0601000000*/${esc(url)}" target="_blank" rel="noopener">All snapshots</a>
         <a href="${esc(url)}" target="_blank" rel="noopener">Live site</a>
       </div>
       <iframe class="tm__frame" src="https://web.archive.org/web/${year}0601000000if_/${esc(url)}" title="${esc(host)} in ${year}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
-      <div class="tm__loading"><span class="tm__spin"></span>Dialing the Internet Archive...</div>
+      <div class="tm__loading"><span class="tm__spin"></span>Contacting the Internet Archive...</div>
     </div>`;
   },
-  newtab: () => `<div class="nt">
-      <div class="nt__logo" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></div>
-      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search, or type a website like google.com" aria-label="Search" autocomplete="off" spellcheck="false"></form>
-      <div class="nt__tiles">${CR_TILES.map(([label, url, ic, app, col]) => `<a class="nt__tile" ${app ? `data-app="${app}"` : `data-go="${esc(url)}"`}><span class="nt__fav"${col ? ` style="color:${col}"` : ""}>${col ? esc(label[0]) : icon(ic, 24)}</span><span class="nt__lbl">${esc(label)}</span></a>`).join("")}</div>
-    </div>`,
-  github: url => `<div class="ie-page">
-      <h1>Opening GitHub...</h1>
-      <p>GitHub opened in its own window.</p>
-      <p><a data-app="github">Show GitHub</a> &middot; <a href="${esc(url)}" target="_blank" rel="noopener">Open github.com in a real browser</a> &middot; <a data-nav="back">Go back</a></p></div>`,
-  search: url => {
-    let q = "";
-    try { q = new URL(url).searchParams.get("q") || ""; } catch (e) {}
-    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-    const results = terms.length ? SEARCH_INDEX().filter(r => terms.some(t => (r.title + " " + r.kw + " " + r.desc).toLowerCase().includes(t))) : [];
-    return `<div class="ie-page">
-      <h1>AltaVista Search</h1>
-      <form class="search-box" data-form="search"><input class="field" name="q" value="${esc(q)}" placeholder="Search the web"><button class="btn btn--sm" type="submit">Search</button></form>
-      ${q ? (results.length ? results.map(r => `<div class="result"><a ${r.project !== undefined ? `data-project="${r.project}"` : `data-go="${esc(r.url)}"`}>${esc(r.title)}</a><br>${esc(r.desc)}<small>${esc(r.url)}</small></div>`).join("")
-          : `<p>No results on this site for <b>${esc(q)}</b>.</p>`) + (q ? `<p class="result"><a data-go="http://www.${esc(q.toLowerCase().replace(/[^a-z0-9-]/g, ""))}.com">Visit www.${esc(q.toLowerCase().replace(/[^a-z0-9-]/g, ""))}.com in the Time Machine</a><small>See how it looked back in the day</small></p>` : "") : `<p class="ie-page__muted">Tip: try searching for "projects" or "${esc(FIRST)}".</p>`}
+  newtab: (url, ctx = {}) => {
+    if (ctx.incog) return `<div class="nt nt--incog">
+      <div class="nt__inc-ic">${crIco("incog", 72)}</div>
+      <h1>You've gone Incognito</h1>
+      <p class="nt__inc-lead">Now you can browse privately, and other people who use this device won't see your activity. However, downloads and bookmarks will be saved.</p>
+      <div class="nt__inc-cols">
+        <div><h2>Chrome won't save:</h2><ul><li>Your browsing history</li><li>Cookies and site data</li><li>Information entered in forms</li></ul></div>
+        <div><h2>Your activity might still be visible to:</h2><ul><li>Websites you visit</li><li>Your employer or school</li><li>Your internet service provider</li></ul></div>
+      </div></div>`;
+    const brand = crEngine();
+    return `<div class="nt">
+      <div class="nt__logo">${crLogo(brand)}</div>
+      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search ${esc(brand)} or type a URL" aria-label="Search" autocomplete="off" spellcheck="false"></form>
+      <div class="nt__tiles">${crTiles().map(crTile).join("")}</div>
+      <button type="button" class="nt__custom" data-go="chrome://settings">${ui("edit", 16)}<span>Customize Chrome</span></button>
     </div>`;
+  },
+  github: url => `<div class="cr-msg"><div class="cr-msg__ic">${icon("github", 48)}</div><h1>Opening GitHub</h1><p>GitHub opened in its own window.</p>
+      <p class="cr-msg__btns"><button type="button" class="cp__btn cp__btn--blue" data-app="github">Show GitHub</button><a class="cp__btn" href="${esc(url)}" target="_blank" rel="noopener">Open github.com in a real browser</a><button type="button" class="cp__btn" data-nav="back">Go back</button></p></div>`,
+  search: url => {
+    let tab = "";
+    try { tab = new URL(url).searchParams.get("tbm") || ""; } catch (e) {}
+    const q = crQuery(url).trim();
+    const brand = crBrandOf(url);
+    if (!q) return `<div class="nt nt--search">
+      <div class="nt__logo">${crLogo(brand)}</div>
+      <form class="nt__search" data-form="search">${ui("search", 20)}<input class="field" name="q" placeholder="Search ${esc(brand)} or type a URL" aria-label="Search" autocomplete="off" spellcheck="false"></form>
+      <p class="nt__tip">Try searching for "projects" or "${esc(FIRST)}".</p></div>`;
+    const tabHref = t => { try { const u = new URL(url); if (t) u.searchParams.set("tbm", t); else u.searchParams.delete("tbm"); return u.href; } catch (e) { return url; } };
+    const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const res = crSearchResults(q);
+    const slug = q.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    const secs = (0.18 + (crHue(q) % 40) / 100).toFixed(2);
+    const attrs = r => r.project !== undefined ? `data-project="${r.project}"` : r.app ? `data-app="${esc(r.app)}"` : `data-go="${esc(r.url)}"`;
+    const none = what => `<div class="sr__none"><p>Your search - <b>${esc(q)}</b> - did not match any ${what}.</p><p>Suggestions:</p><ul><li>Make sure all words are spelled correctly.</li><li>Try different keywords.</li><li>Try more general keywords.</li><li>Try fewer keywords.</li></ul></div>`;
+    let main;
+    if (tab === "isch") {
+      const imgs = res.filter(r => r.img);
+      main = imgs.length ? `<div class="sr__imgs">${imgs.map(r => `<a class="sr__img" ${attrs(r)}><img src="${esc(r.img)}" data-fallback="${esc(initials(r.title))}" alt=""><span>${esc(r.title)}</span><small>${esc(crHost(r.url))}</small></a>`).join("")}</div>` : none("image results");
+    } else if (tab === "nws") {
+      main = none("news results");
+    } else {
+      main = (res.length
+        ? `<div class="sr__stats">About ${res.length} result${res.length > 1 ? "s" : ""} (${secs} seconds)</div>` + res.map(r => `<div class="sr__item">
+            <div class="sr__site"><span class="sr__ic">${crFav(r.url, 16)}</span><span class="sr__sn"><span class="sr__name">${esc(crCap(crHost(r.url).split(".")[0]))}</span><span class="sr__crumb">${esc(crCrumb(r.url))}</span></span></div>
+            <a class="sr__title" ${attrs(r)}>${esc(r.title)}</a>
+            <div class="sr__desc">${crMark(r.desc || "", terms)}</div></div>`).join("")
+        : none("documents"))
+        + (slug ? `<div class="sr__tm"><span class="sr__tm-ic">${crIco("history", 22)}</span><div><a class="sr__title sr__title--sm" data-go="http://www.${esc(slug)}.com">Visit www.${esc(slug)}.com in the Time Machine</a><div class="sr__desc">See how it looked back in ${store.get("crYear", 1998)}, from the Internet Archive.</div></div></div>` : "");
+    }
+    return `<div class="sr">
+      <div class="sr__head">
+        <div class="sr__logo" data-go="chrome://newtab" title="Home">${crLogo(brand)}</div>
+        <form class="sr__box" data-form="search"><span class="sr__box-ic">${ui("search", 20)}</span><input name="q" value="${esc(q)}" aria-label="Search" autocomplete="off" spellcheck="false"><button type="button" class="sr__clear" data-act="sr-clear" aria-label="Clear" title="Clear">${ui("close", 20)}</button></form>
+      </div>
+      <nav class="sr__tabs" aria-label="Search categories"><a class="${!tab ? "is-on" : ""}" data-go="${esc(tabHref(""))}">All</a><a class="${tab === "isch" ? "is-on" : ""}" data-go="${esc(tabHref("isch"))}">Images</a><a class="${tab === "nws" ? "is-on" : ""}" data-go="${esc(tabHref("nws"))}">News</a></nav>
+      <div class="sr__main">${main}</div>
+      <footer class="sr__foot">Results come from this portfolio. Website addresses open in the Time Machine.</footer>
+    </div>`;
+  },
+  history: () => `<div class="cp cp--history">
+    <header class="cp__head"><span class="cp__brand">History</span>
+      <label class="cp__find">${ui("search", 20)}<input data-hsearch type="search" placeholder="Search history" autocomplete="off" aria-label="Search history"></label>
+      <div class="cp__selbar"><span><b data-selcount>0</b> selected</span><button type="button" class="cp__btn cp__btn--ghost" data-act="hist-cancel">Cancel</button><button type="button" class="cp__btn cp__btn--ghost" data-act="hist-delete">Delete</button></div>
+    </header>
+    <div class="cp__body">
+      <nav class="cp__nav" aria-label="History"><a class="is-on" data-go="chrome://history">${crIco("history", 20)}<span>History</span></a><a data-act="clear-data" role="button" tabindex="0">${ui("trash", 20)}<span>Clear browsing data</span></a></nav>
+      <main class="cp__main"><div class="hist" data-hist>${crHistList("")}</div></main>
+    </div></div>`,
+  bookmarks: () => {
+    const n = crBms().length;
+    return `<div class="cp cp--bm">
+    <header class="cp__head"><span class="cp__brand">Bookmarks</span>
+      <label class="cp__find">${ui("search", 20)}<input data-bsearch type="search" placeholder="Search bookmarks" autocomplete="off" aria-label="Search bookmarks"></label></header>
+    <div class="cp__body">
+      <nav class="cp__nav" aria-label="Folders"><a class="is-on">${ui("folder", 20)}<span>Bookmarks bar</span></a></nav>
+      <main class="cp__main">
+        <div class="bm__top"><span class="bm__count">${n} bookmark${n === 1 ? "" : "s"}</span><button type="button" class="cp__btn cp__btn--blue" data-act="bm-add-form">Add new bookmark</button></div>
+        <form class="bm__add" data-form="bm-add" hidden><input class="cp__in" name="title" placeholder="Name" aria-label="Name" maxlength="120"><input class="cp__in" name="url" placeholder="URL (like google.com)" aria-label="URL" maxlength="500"><button type="submit" class="cp__btn cp__btn--blue">Add</button><button type="button" class="cp__btn" data-act="bm-add-form">Cancel</button></form>
+        <div data-bm>${crBmList("")}</div>
+      </main>
+    </div></div>`;
+  },
+  downloads: () => `<div class="cp cp--dl">
+    <header class="cp__head"><span class="cp__brand">Downloads</span>
+      <label class="cp__find">${ui("search", 20)}<input type="search" placeholder="Search downloads" autocomplete="off" aria-label="Search downloads"></label></header>
+    <div class="cp__body"><main class="cp__main"><div class="cp__empty">No downloads</div></main></div></div>`,
+  settings: () => {
+    const sel = (k, vals, cur) => `<select class="cp__sel" data-set="${k}" aria-label="${k}">${vals.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(cur) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+    const sw = (k, on) => `<label class="sw"><input type="checkbox" data-set="${k}"${on ? " checked" : ""}><span class="sw__t"></span></label>`;
+    const row = (t, s, c) => `<div class="set__row"><div class="set__txt"><div class="set__t">${t}</div>${s ? `<div class="set__s">${s}</div>` : ""}</div><div class="set__ctl">${c}</div></div>`;
+    return `<div class="cp cp--set">
+    <header class="cp__head"><span class="cp__brand">Settings</span>
+      <label class="cp__find">${ui("search", 20)}<input data-ssearch type="search" placeholder="Search settings" autocomplete="off" aria-label="Search settings"></label></header>
+    <div class="cp__body">
+      <nav class="cp__nav" aria-label="Settings"><a class="is-on" data-go="chrome://settings">${crIco("settings", 20)}<span>Settings</span></a><a data-go="chrome://history">${crIco("history", 20)}<span>History</span></a><a data-go="chrome://bookmarks">${crIco("star", 20)}<span>Bookmarks</span></a><a data-go="chrome://downloads">${crIco("download", 20)}<span>Downloads</span></a><a data-go="chrome://version">${crIco("info", 20)}<span>About Chrome</span></a></nav>
+      <main class="cp__main">
+        <section class="set"><h2>Appearance</h2><div class="set__card">
+          ${row("Show bookmarks bar", "Shows your bookmarks under the address bar.", sw("bar", store.get("crBar", true)))}
+          ${row("Page zoom", "The zoom level new tabs start with.", sel("zoom", [[75, "75%"], [90, "90%"], [100, "100%"], [110, "110%"], [125, "125%"], [150, "150%"]], store.get("crZoom", 100)))}
+        </div></section>
+        <section class="set"><h2>Search engine</h2><div class="set__card">
+          ${row("Search engine used in the address bar", "Searches typed in the address bar are branded with this engine. Results come from this portfolio.", sel("engine", Object.keys(CR_ENGINES).map(k => [k, k]), crEngine()))}
+        </div></section>
+        <section class="set"><h2>Time Machine</h2><div class="set__card">
+          ${row("Default Time Machine year", "Website addresses you type open as they looked in this year.", sel("year", Array.from({ length: 15 }, (_, i) => [1996 + i, String(1996 + i)]), store.get("crYear", 1998)))}
+        </div></section>
+        <section class="set"><h2>Privacy and security</h2><div class="set__card">
+          ${row("Clear browsing data", "Clears your browsing history.", `<button type="button" class="cp__btn" data-act="clear-data">Clear data</button>`)}
+        </div></section>
+        <section class="set"><h2>Reset settings</h2><div class="set__card">
+          ${row("Restore settings to their original defaults", "Also restores the default bookmarks.", `<button type="button" class="cp__btn" data-act="reset-settings">Reset settings</button>`)}
+        </div></section>
+        <section class="set"><h2>About Chrome</h2><div class="set__card">
+          ${row("Chrome 98", "Version 98.0.4758.102 (Official Build)", `<button type="button" class="cp__btn" data-go="chrome://version">Details</button>`)}
+        </div></section>
+        <p class="cp__empty cp__empty--set" hidden>No settings found</p>
+      </main>
+    </div></div>`;
+  },
+  version: () => {
+    const rows = [
+      ["Chrome", "98.0.4758.102 (Official Build) (32-bit)"],
+      ["OS", "Windows 98 Second Edition 4.10.2222 A"],
+      ["JavaScript", "V8 (whatever your real browser is running)"],
+      ["User Agent", navigator.userAgent],
+      ["Command Line", "\"C:\\Program Files\\Chrome 98\\chrome.exe\" --time-machine"],
+      ["Executable Path", "C:\\Program Files\\Chrome 98\\chrome.exe"],
+      ["Profile Path", `C:\\WINDOWS\\Application Data\\Chrome\\${esc(SLUG)}`],
+      ["Time Machine", `Internet Archive, ${store.get("crYear", 1998)}`],
+    ];
+    return `<div class="cp cp--ver"><div class="ver">
+      <div class="ver__head">${crChromeLogo(64)}<div><h1>About Version</h1><p>Chrome 98 &middot; Windows 98 Edition</p></div></div>
+      <table class="ver__tbl">${rows.map(([k, v]) => `<tr><th>${k}</th><td>${k === "User Agent" || k.includes("Path") || k === "Command Line" ? esc(v) : v}</td></tr>`).join("")}</table>
+    </div></div>`;
   },
   "404": url => `<div class="gc"><h1>404 Not Found</h1><p>The page <b>${esc(url)}</b> has moved to a new neighborhood.</p><p><a data-go="${HOME}">Go to the homepage</a></p></div>`,
-  error: url => `<div class="ie-page">
-      <h1>The page cannot be displayed</h1>
-      <p>The page you are looking for is currently unavailable. The Web site might be experiencing technical difficulties, or it's 1998 and it doesn't exist yet.</p>
-      <hr>
-      <p>Please try the following:</p>
-      <ul>
-        <li>Click the <a data-nav="reload">Refresh</a> button, or try again later.</li>
-        <li>Open the <a data-go="${HOME}">home page</a>, and then look for links to the information you want.</li>
-        <li>Check your dial-up connection. Is someone on the phone?</li>
-      </ul>
-      <p class="ie-page__muted">Cannot find server or DNS Error<br>Chrome 98 &middot; ${esc(url)}</p>
-    </div>`,
+  error: url => {
+    const internal = /^chrome:/i.test(url), host = crHost(url);
+    return `<div class="cr-msg cr-msg--err">
+      <div class="cr-msg__ic">${crSad(72)}</div>
+      <h1>${internal ? "This page isn't available" : "This site can't be reached"}</h1>
+      <p>${internal ? `<b>${esc(url)}</b> doesn't exist in this version of Chrome.` : `<b>${esc(host || url)}</b>'s server IP address could not be found.`}</p>
+      <p class="cr-msg__h">Try:</p>
+      <ul><li>${internal ? "Opening the <a data-go=\"chrome://settings\">settings</a> or <a data-go=\"chrome://history\">history</a> page" : "Checking the connection"}</li><li>Checking the address for typos</li><li>Going back to the <a data-go="${HOME}">home page</a></li></ul>
+      <p class="cr-msg__code">${internal ? "ERR_INVALID_URL" : "ERR_NAME_NOT_RESOLVED"}</p>
+      <p class="cr-msg__btns"><button type="button" class="cp__btn cp__btn--blue" data-nav="reload">Reload</button></p>
+    </div>`;
+  },
 };
-const PAGE_TITLES = { web: "Time Machine", newtab: "New Tab", home: `${NAME}'s Homepage`, about: "About Me", guestbook: "Guestbook", links: "Cool Links", search: "AltaVista Search", youtube: "YouTube", github: "GitHub", error: "Cannot find server", "404": "404 Not Found", blank: "about:blank" };
+const PAGE_TITLES = { web: "Time Machine", newtab: "New Tab", home: `${NAME}'s Homepage`, about: "About Me", guestbook: "Guestbook", links: "Cool Links", search: "Search", youtube: "YouTube", github: "GitHub", error: "Can't reach this page", "404": "404 Not Found", blank: "about:blank", history: "History", bookmarks: "Bookmarks", downloads: "Downloads", settings: "Settings", version: "About Version" };
+function crPageTitle(page, url) {
+  if (page === "search") { const q = crQuery(url); return q ? `${q} - ${crBrandOf(url)} Search` : crBrandOf(url); }
+  if (page === "web") return `${crHost(url)} (${store.get("crYear", 1998)})`;
+  return PAGE_TITLES[page] || url;
+}
 
-const CR_BOOKMARKS = () => [
-  ["My Homepage", HOME, "page"],
-  ["Guestbook", HOME + "guestbook.html", "page"],
-  ["Cool Links", HOME + "links.html", "page"],
-  ["YouTube", "http://www.youtube.com", "youtube"],
-  ["GitHub", GITHUB_URL || "http://www.github.com", "github"],
-  ["AltaVista", "http://www.altavista.com", "page"],
-];
-// Chrome toolbar glyphs (flat Material paths), kept local to the Chrome app
-const CR_PATHS = {
-  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
-  fwd: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
-  reload: "M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z",
-  page: "M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm7 7V3.5L18.5 9z",
-};
-const crIco = (name, size = 20) => `<svg class="cr-svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${CR_PATHS[name]}"/></svg>`;
-const crBmIcon = ic => CR_PATHS[ic] ? crIco(ic, 16) : icon(ic, 16);
-const CR_TILES = [
-  ["My Homepage", HOME, "about", "", "#1a73e8"],
-  ["Google, 1998", "http://www.google.com", "chrome", "", "#4285f4"],
-  ["Yahoo!", "http://www.yahoo.com", "chrome", "", "#720e9e"],
-  ["Space Jam", "http://www.spacejam.com", "chrome", "", "#1a237e"],
-  ["Apple", "http://www.apple.com", "chrome", "", "#5f6368"],
-  ["Amazon", "http://www.amazon.com", "chrome", "", "#ff9900"],
-  ["YouTube", "http://www.youtube.com", "youtube"],
-  ["GitHub", "http://www.github.com", "github"],
-  ["Discord", "", "discord", "discord"],
-];
+/* ---- flat popup menus (Chrome menu, tab and bookmark context menus) ---- */
+const CR_POP = { stack: [], off: null };
+function crPopClose(from = 0) {
+  while (CR_POP.stack.length > from) { const p = CR_POP.stack.pop(); p.el.remove(); if (p.onClose) p.onClose(); }
+  if (!CR_POP.stack.length && CR_POP.off) { CR_POP.off(); CR_POP.off = null; }
+}
+function crPop(items, x, y, o = {}) {
+  const level = o.level || 0;
+  crPopClose(level);
+  const el = document.createElement("div");
+  el.className = "cr-menu" + (o.dark ? " cr-menu--dark" : "");
+  el.setAttribute("role", "menu");
+  const hasCk = items.some(it => it.checked !== undefined);
+  items.forEach(it => {
+    if (it.sep) { const s = document.createElement("div"); s.className = "cr-menu__sep"; s.setAttribute("role", "separator"); el.appendChild(s); return; }
+    if (it.zoom) {
+      const r = document.createElement("div");
+      r.className = "cr-menu__zoom";
+      r.innerHTML = `<span class="cr-menu__zl">Zoom</span><span class="cr-menu__zb"><button type="button" data-z="-1" aria-label="Zoom out">&minus;</button><span class="cr-menu__zv">${it.zoom.get()}%</span><button type="button" data-z="1" aria-label="Zoom in">+</button></span>`;
+      r.addEventListener("click", e => { const b = e.target.closest("[data-z]"); if (!b) return; it.zoom.step(+b.dataset.z); $(".cr-menu__zv", r).textContent = it.zoom.get() + "%"; });
+      r.addEventListener("pointerenter", () => crPopClose(level + 1));
+      el.appendChild(r);
+      return;
+    }
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "cr-menu__item";
+    b.setAttribute("role", it.checked !== undefined ? "menuitemcheckbox" : "menuitem");
+    if (it.checked !== undefined) b.setAttribute("aria-checked", String(!!it.checked));
+    b.disabled = !!it.disabled;
+    b.innerHTML = `${hasCk ? `<span class="cr-menu__ck">${it.checked ? crIco("check", 16) : ""}</span>` : ""}${it.icon ? `<span class="cr-menu__ic">${it.icon}</span>` : ""}<span class="cr-menu__label"></span>${it.hint ? `<span class="cr-menu__hint"></span>` : ""}${it.sub ? `<span class="cr-menu__arrow">${crIco("right", 18)}</span>` : ""}`;
+    $(".cr-menu__label", b).textContent = it.label;
+    if (it.hint) $(".cr-menu__hint", b).textContent = it.hint;
+    if (it.sub) {
+      b.setAttribute("aria-haspopup", "true");
+      const openSub = focus => { const r = b.getBoundingClientRect(); const m = crPop(it.sub, r.right - 4, r.top - 8, { level: level + 1, dark: o.dark, flip: r.left }); if (focus) { const f = $(".cr-menu__item:not(:disabled)", m); if (f) f.focus(); } };
+      b.addEventListener("pointerenter", () => openSub(false));
+      b.addEventListener("click", e => { e.stopPropagation(); openSub(e.detail === 0); });
+    } else {
+      b.addEventListener("pointerenter", () => crPopClose(level + 1));
+      b.addEventListener("click", e => { e.stopPropagation(); crPopClose(0); if (it.action) it.action(); });
+    }
+    el.appendChild(b);
+  });
+  document.body.appendChild(el);
+  const r = el.getBoundingClientRect();
+  let left = o.alignRight ? x - r.width : x;
+  if (left + r.width > window.innerWidth - 4) left = o.flip != null ? o.flip - r.width : window.innerWidth - r.width - 4;
+  const top = Math.max(4, Math.min(y, window.innerHeight - 36 - r.height));
+  el.style.left = Math.max(4, left) + "px";
+  el.style.top = top + "px";
+  CR_POP.stack.push({ el, onClose: o.onClose, anchor: o.anchor });
+  if (!CR_POP.off) {
+    const down = e => { if (CR_POP.stack.some(p => p.el.contains(e.target) || (p.anchor && p.anchor.contains(e.target)))) return; crPopClose(0); };
+    const key = e => {
+      if (!CR_POP.stack.length) return;
+      const top = CR_POP.stack[CR_POP.stack.length - 1].el;
+      if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); crPopClose(0); return; }
+      const its = $$(".cr-menu__item:not(:disabled)", top), i = its.indexOf(document.activeElement);
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault(); e.stopPropagation();
+        if (!its.length) return;
+        const d = e.key === "ArrowDown" ? 1 : -1;
+        its[i < 0 ? (d > 0 ? 0 : its.length - 1) : (i + d + its.length) % its.length].focus();
+      } else if (e.key === "ArrowRight" && i >= 0 && its[i].getAttribute("aria-haspopup")) { e.preventDefault(); e.stopPropagation(); its[i].click(); }
+      else if (e.key === "ArrowLeft" && CR_POP.stack.length > 1) { e.preventDefault(); e.stopPropagation(); crPopClose(CR_POP.stack.length - 1); }
+    };
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("keydown", key, true);
+    CR_POP.off = () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key, true); };
+  }
+  return el;
+}
+let crIncN = 0;
 function openChrome(o = {}) {
-  const had = WM.has("chrome");
-  const w = WM.open("chrome", {
-    title: "Chrome 98", icon: "chrome", w: 800, h: 600, from: o.from, status: ["Done"],
+  const incog = !!o.incognito;
+  const wid = incog ? "chrome-inc-" + (++crIncN) : "chrome";
+  const had = !incog && WM.has("chrome");
+  const w = WM.open(wid, {
+    title: incog ? "Chrome 98 (Incognito)" : "Chrome 98", icon: "chrome", className: "cr-win" + (incog ? " cr-win--incog" : ""), w: 860, h: 620, from: o.from,
     render(body, win) {
       body.classList.add("body--flush", "body--column");
       body.innerHTML = `
-        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New Tab" aria-label="New Tab">${ui("plus", 18)}</button></div>
+        <div class="cr-tabs"><div class="cr-tabs__list" role="tablist"></div><button type="button" class="cr-tabs__new" title="New tab" aria-label="New tab">${crIco("plus", 18)}</button></div>
         <div class="cr-bar">
           <button type="button" class="cr-ico" data-nav="back" title="Back" aria-label="Back">${crIco("back")}</button>
           <button type="button" class="cr-ico" data-nav="fwd" title="Forward" aria-label="Forward">${crIco("fwd")}</button>
-          <button type="button" class="cr-ico" data-nav="reload" title="Reload" aria-label="Reload">${crIco("reload")}</button>
-          <form class="addressbar cr-omni">${ui("search", 16)}<input id="addr-chrome" class="addressbar__input" spellcheck="false" autocomplete="off" placeholder="Search or type a URL" aria-label="Address and search bar"></form>
-          <label class="cr-year" title="Which year the Time Machine shows websites from. Type any website (like google.com) to see how it looked back in the day."><span>Year</span><select class="field">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
+          <button type="button" class="cr-ico" data-nav="reload" title="Reload this page" aria-label="Reload this page">${crIco("reload")}</button>
+          <form class="addressbar cr-omni" autocomplete="off">
+            <span class="cr-omni__id">${crIco("search", 16)}</span>
+            <input id="addr-${wid}" class="addressbar__input" spellcheck="false" autocomplete="off" role="combobox" aria-expanded="false" placeholder="Search ${esc(crEngine())} or type a URL" aria-label="Address and search bar">
+            <button type="button" class="cr-zoom" hidden title="Reset zoom" aria-label="Reset zoom">${ui("search", 16)}<span>100%</span></button>
+            <button type="button" class="cr-star" hidden title="Bookmark this tab" aria-label="Bookmark this tab"></button>
+            <div class="cr-sugg" role="listbox" hidden></div>
+          </form>
+          <label class="cr-year" title="Which year the Time Machine shows websites from. Type any website (like google.com) to see how it looked back in the day."><span>Year</span><select class="field" aria-label="Time Machine year">${Array.from({ length: 15 }, (_, i) => 1996 + i).map(y => `<option${y === store.get("crYear", 1998) ? " selected" : ""}>${y}</option>`).join("")}</select></label>
+          ${incog ? `<span class="cr-incog">${crIco("incog", 18)}<span>Incognito</span></span>` : ""}
+          <button type="button" class="cr-ico" data-menu title="Customize and control Chrome" aria-label="Customize and control Chrome" aria-haspopup="true" aria-expanded="false">${crIco("more")}</button>
+          <div class="cr-bubble" role="dialog" aria-label="Bookmark" hidden></div>
         </div>
-        <div class="cr-bookmarks">${CR_BOOKMARKS().map(([label, url, ic]) => `<button type="button" data-go="${esc(url)}" title="${esc(url)}">${crBmIcon(ic)}<span>${esc(label)}</span></button>`).join("")}</div>
-        <div class="browser__view sunken-box"><div class="browser__doc"></div></div>`;
-      const input = $(".addressbar__input", body), doc = $(".browser__doc", body), view = $(".browser__view", body), list = $(".cr-tabs__list", body);
-      const bBack = $('[data-nav="back"]', body), bFwd = $('[data-nav="fwd"]', body);
-      const tabs = [];
-      let active = null, tid = 0;
-      const sync = () => { bBack.disabled = !active || active.idx <= 0; bFwd.disabled = !active || active.idx >= active.hist.length - 1; };
-      const drawTabs = () => {
-        list.innerHTML = tabs.map(t => `<div class="cr-tab${t === active ? " is-active" : ""}" data-tab="${t.id}" role="tab" title="${esc(t.title)}">${icon(t.icon || "chrome", 16)}<span>${esc(t.title)}</span><button type="button" data-close="${t.id}" aria-label="Close tab"><svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></button></div>`).join("");
+        <div class="cr-bookmarks" role="toolbar" aria-label="Bookmarks"></div>
+        <div class="cr-stage">
+          <div class="browser__view"></div>
+          <div class="cr-find" role="search" hidden>
+            <input class="cr-find__in" placeholder="Find in page" aria-label="Find in page" autocomplete="off" spellcheck="false">
+            <span class="cr-find__n" aria-live="polite"></span>
+            <button type="button" data-f="prev" title="Previous match (Shift+Enter)" aria-label="Previous match">${crIco("up", 20)}</button>
+            <button type="button" data-f="next" title="Next match (Enter)" aria-label="Next match">${crIco("dn", 20)}</button>
+            <button type="button" data-f="close" title="Close (Esc)" aria-label="Close find bar">${crIco("close", 18)}</button>
+          </div>
+          <div class="cr-status" hidden></div>
+        </div>`;
+      const input = $(".addressbar__input", body), view = $(".browser__view", body), list = $(".cr-tabs__list", body), stage = $(".cr-stage", body);
+      const omni = $(".cr-omni", body), sugg = $(".cr-sugg", body), star = $(".cr-star", body), zoomBtn = $(".cr-zoom", body), idIc = $(".cr-omni__id", body);
+      const bBack = $('[data-nav="back"]', body), bFwd = $('[data-nav="fwd"]', body), bReload = $('[data-nav="reload"]', body);
+      const bar = $(".cr-bar", body), bmBar = $(".cr-bookmarks", body), bubble = $(".cr-bubble", body), statusEl = $(".cr-status", body);
+      const menuBtn = $("[data-menu]", body), yearSel = $(".cr-year select", body);
+      const findBar = $(".cr-find", body), findIn = $(".cr-find__in", body), findN = $(".cr-find__n", body);
+      const tabs = [], closedTabs = [];
+      let active = null, tid = 0, closed = false, hover = "";
+      const curUrl = () => (active && active.hist[active.idx]) || "";
+      const isNT = u => u === "chrome://newtab";
+      const focusOmni = () => { input.focus(); input.select(); };
+
+      /* ----- toolbar state ----- */
+      const setBubble = () => { const msg = hover || (active && active.loading ? active.loadMsg : ""); statusEl.hidden = !msg; statusEl.textContent = msg || ""; };
+      const bmIndex = url => crBms().findIndex(b => crSame(b.url, url));
+      const syncStar = () => {
+        const url = curUrl(), r = url ? routeOf(url) : "newtab", can = r !== "newtab" && r !== "blank";
+        const on = can && bmIndex(url) >= 0;
+        star.hidden = !can;
+        star.classList.toggle("is-on", on);
+        star.innerHTML = crIco(on ? "star" : "starO", 18);
+        star.title = on ? "Edit bookmark" : "Bookmark this tab";
+        star.setAttribute("aria-pressed", String(on));
       };
-      const showTitle = () => win.setTitle(`${active.title} - Chrome 98`);
-      // archived pages load inside an iframe: show progress until it finishes
-      const watchFrame = () => {
-        const f = $(".tm__frame", doc);
+      const syncZoom = () => { const z = active ? active.zoom : 100; zoomBtn.hidden = z === 100; $("span", zoomBtn).textContent = z + "%"; };
+      const sync = () => {
+        bBack.disabled = !active || active.idx <= 0;
+        bFwd.disabled = !active || active.idx >= active.hist.length - 1;
+        const ld = !!(active && active.loading);
+        bReload.innerHTML = crIco(ld ? "close" : "reload");
+        bReload.title = ld ? "Stop loading this page" : "Reload this page";
+        bReload.setAttribute("aria-label", bReload.title);
+        bReload.dataset.nav = ld ? "stop" : "reload";
+        win.el.classList.toggle("is-loading", ld);
+        syncStar(); syncZoom(); setBubble();
+      };
+      const setAddr = url => {
+        input.value = isNT(url) ? "" : url;
+        const r = url ? routeOf(url) : "newtab";
+        idIc.innerHTML = crIco(r === "newtab" ? "search" : /^https:/i.test(url) ? "lock" : "info", 16);
+      };
+      const showTitle = () => win.setTitle(`${active ? active.title : "New Tab"} - Chrome 98${incog ? " (Incognito)" : ""}`);
+      const applyZoom = t => { t.pane.style.zoom = t.zoom === 100 ? "" : String(t.zoom / 100); };
+      const stepZoom = d => {
+        if (!active) return;
+        const z = active.zoom;
+        active.zoom = d === 0 ? 100 : d > 0 ? (CR_ZOOMS.find(x => x > z) || 500) : ([...CR_ZOOMS].reverse().find(x => x < z) || 25);
+        applyZoom(active); syncZoom();
+      };
+
+      /* ----- tab strip (elements are kept, so dragging and animations survive redraws) ----- */
+      const drawTabs = () => {
+        Array.from(list.children).forEach(c => { if (!tabs.some(t => t.el === c)) c.remove(); });
+        tabs.forEach((t, i) => {
+          let el = t.el;
+          if (!el) {
+            el = t.el = document.createElement("div");
+            el.className = "cr-tab";
+            el.setAttribute("role", "tab");
+            el.tabIndex = -1;
+            el.innerHTML = `<span class="cr-tab__fav"></span><span class="cr-tab__t"></span><button type="button" class="cr-tab__x" tabindex="-1" aria-label="Close tab" title="Close">${crIco("close", 14)}</button>`;
+            if (t.fresh && !reduceMotion()) { el.classList.add("is-new"); setTimeout(() => el.classList.remove("is-new"), 200); }
+            t.fresh = false;
+          }
+          if (list.children[i] !== el) list.insertBefore(el, list.children[i] || null);
+          const url = t.hist[t.idx] || "";
+          el.classList.toggle("is-active", t === active);
+          el.setAttribute("aria-selected", String(t === active));
+          el.tabIndex = t === active ? 0 : -1;
+          el.dataset.tab = t.id;
+          el.title = t.title;
+          const fk = (t.loading ? "L" : "F") + url;
+          if (el.dataset.fav !== fk) { el.dataset.fav = fk; $(".cr-tab__fav", el).innerHTML = t.loading ? `<span class="cr-spin"></span>` : crFav(url || "chrome://newtab", 16); }
+          $(".cr-tab__t", el).textContent = t.title;
+        });
+      };
+
+      /* ----- find in page ----- */
+      let marks = [], findAt = -1;
+      const clearMarks = () => {
+        marks.forEach(m => { const p = m.parentNode; if (p) { p.replaceChild(document.createTextNode(m.textContent), m); p.normalize(); } });
+        marks = []; findAt = -1;
+      };
+      const setHit = i => {
+        marks.forEach(m => m.classList.remove("is-on"));
+        findAt = marks.length ? (i + marks.length) % marks.length : -1;
+        if (findAt >= 0) { marks[findAt].classList.add("is-on"); marks[findAt].scrollIntoView({ block: "center" }); }
+        findN.textContent = findIn.value ? `${marks.length ? findAt + 1 : 0}/${marks.length}` : "";
+        findBar.classList.toggle("is-none", !!findIn.value && !marks.length);
+      };
+      const runFind = () => {
+        clearMarks();
+        const q = findIn.value;
+        if (!q || !active) { setHit(0); return; }
+        const walker = document.createTreeWalker(active.pane, NodeFilter.SHOW_TEXT, { acceptNode: n => n.nodeValue.trim() && !n.parentElement.closest("script,style,textarea,iframe") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        const lq = q.toLowerCase();
+        nodes.forEach(n => {
+          const txt = n.nodeValue, low = txt.toLowerCase();
+          let i = low.indexOf(lq);
+          if (i < 0) return;
+          const frag = document.createDocumentFragment();
+          let last = 0;
+          while (i >= 0) {
+            frag.appendChild(document.createTextNode(txt.slice(last, i)));
+            const m = document.createElement("mark");
+            m.className = "cr-hit";
+            m.textContent = txt.slice(i, i + q.length);
+            frag.appendChild(m); marks.push(m);
+            last = i + q.length; i = low.indexOf(lq, last);
+          }
+          frag.appendChild(document.createTextNode(txt.slice(last)));
+          n.parentNode.replaceChild(frag, n);
+        });
+        setHit(0);
+      };
+      const openFind = () => {
+        const s = String(window.getSelection() || "").trim();
+        if (s && s.length < 80 && !/\n/.test(s)) findIn.value = s;
+        findBar.hidden = false;
+        findIn.focus(); findIn.select();
+        runFind();
+      };
+      const closeFind = () => { findBar.hidden = true; clearMarks(); findBar.classList.remove("is-none"); };
+      findIn.addEventListener("input", runFind);
+      findIn.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); setHit(findAt + (e.shiftKey ? -1 : 1)); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeFind(); }
+      });
+      findBar.addEventListener("click", e => {
+        const b = e.target.closest("[data-f]");
+        if (!b) return;
+        if (b.dataset.f === "close") closeFind(); else setHit(findAt + (b.dataset.f === "prev" ? -1 : 1));
+      });
+
+      /* ----- pages, tabs and navigation ----- */
+      const watchFrame = t => {
+        const f = $(".tm__frame", t.pane);
         if (!f) return;
-        win.el.classList.add("is-loading");
-        win.setStatus(["Contacting web.archive.org...", ""]);
-        const done = () => { if (!f.isConnected) return; win.el.classList.remove("is-loading"); f.parentElement.classList.add("is-ready"); win.setStatus(["Done", ""]); };
+        t.loading = true; t.loadMsg = "Waiting for web.archive.org...";
+        t.frameDone = false;
+        const done = () => {
+          if (t.frameDone || closed) return;
+          t.frameDone = true; clearTimeout(t.ft); t.loading = false;
+          if (f.isConnected) f.parentElement.classList.add("is-ready");
+          if (t === active) sync();
+          drawTabs();
+        };
         f.addEventListener("load", done);
-        setTimeout(done, 20000);
+        t.ft = setTimeout(done, 20000);
       };
       const select = t => {
-        if (active) active.scroll = view.scrollTop;
+        closeBubble(true); closeSugg();
         active = t;
-        doc.innerHTML = t.html;
-        view.scrollTop = t.scroll || 0;
-        watchFrame();
-        input.value = t.hist[t.idx] === "chrome://newtab" ? "" : (t.hist[t.idx] || "");
-        win.el.classList.toggle("is-loading", !!t.loading);
+        tabs.forEach(x => { x.pane.hidden = x !== t; });
+        setAddr(curUrl());
         sync(); drawTabs(); showTitle();
+        if (!findBar.hidden) runFind();
       };
-      const load = (t, url) => {
+      const load = (t, url, record = false) => {
         const my = t.token = (t.token || 0) + 1;
-        t.loading = true;
-        if (t === active) { input.value = url === "chrome://newtab" ? "" : url; win.setStatus([`Opening page ${url}...`]); win.el.classList.add("is-loading"); }
-        setTimeout(() => {
-          if (my !== t.token || !WM.has("chrome")) return;
+        clearTimeout(t.timer); clearTimeout(t.ft);
+        const fast = reduceMotion() || /^(chrome|about):/i.test(url);
+        t.loading = !fast; t.loadMsg = `Waiting for ${crHost(url) || "page"}...`;
+        if (t === active) { setAddr(url); sync(); }
+        drawTabs();
+        t.timer = setTimeout(() => {
+          if (my !== t.token || closed) return;
           const page = routeOf(url);
-          t.html = PAGES[page](url);
-          t.title = PAGE_TITLES[page] || url;
-          t.icon = page === "youtube" ? "youtube" : page === "github" ? "github" : "chrome";
+          t.page = page;
+          t.pane.innerHTML = PAGES[page](url, { incog });
+          t.pane.scrollTop = 0;
+          t.title = crPageTitle(page, url);
           t.loading = false;
-          t.scroll = 0;
-          if (t === active) {
-            doc.innerHTML = t.html;
-            view.scrollTop = 0;
-            win.el.classList.remove("is-loading");
-            win.setStatus(["Done"]);
-            watchFrame();
-            showTitle();
-            if (page === "newtab") { const q = $(".nt__search input", doc); if (q) q.focus(); }
-          }
+          if (!incog && record && CR_RECORD[page]) crAddHist(url, t.title);
+          watchFrame(t);
+          if (t === active) { sync(); showTitle(); if (!findBar.hidden) runFind(); }
           drawTabs();
+          if (page === "newtab" && t === active) {
+            const q = $(".nt__search input", t.pane);
+            if (t.omni || !q) focusOmni(); else q.focus();
+            t.omni = false;
+          }
           if (page === "youtube") openApp("youtube");
           if (page === "github") openApp("github");
-        }, reduceMotion() || url === "chrome://newtab" ? 0 : 250 + Math.random() * 350);
+        }, fast ? 0 : 250 + Math.random() * 350);
       };
       const navigate = (raw, t = active) => {
+        if (!t) return;
         const url = normUrl(raw);
+        if (t.idx >= 0 && t.hist[t.idx] === url) { load(t, url); return; }
         t.hist.splice(t.idx + 1);
         t.hist.push(url);
         t.idx = t.hist.length - 1;
-        if (t === active) sync();
-        load(t, url);
+        load(t, url, true);
       };
-      const newTab = (url, focus = true) => {
-        const t = { id: ++tid, hist: [], idx: -1, title: "New Tab", html: "", scroll: 0 };
-        tabs.push(t);
+      const newTab = (url, focus = true, at, omniFocus = false) => {
+        const pane = document.createElement("div");
+        pane.className = "browser__doc cr-pane";
+        pane.hidden = true;
+        view.appendChild(pane);
+        const t = { id: ++tid, hist: [], idx: -1, title: "New Tab", pane, zoom: +store.get("crZoom", 100) || 100, loading: false, fresh: true, omni: omniFocus };
+        tabs.splice(at == null ? tabs.length : at, 0, t);
+        applyZoom(t);
         if (focus || !active) select(t); else drawTabs();
         navigate(url || "chrome://newtab", t);
         return t;
       };
       const closeTab = t => {
         const i = tabs.indexOf(t);
+        if (i < 0) return;
+        if (!incog && t.idx >= 0 && !isNT(t.hist[t.idx])) { closedTabs.push({ hist: t.hist.slice(), idx: t.idx }); if (closedTabs.length > 10) closedTabs.shift(); }
+        t.token++; clearTimeout(t.timer); clearTimeout(t.ft);
+        t.pane.remove();
         tabs.splice(i, 1);
         if (!tabs.length) { win.close(); return; }
-        if (active === t) { active = null; select(tabs[Math.max(0, i - 1)]); } else drawTabs();
+        if (active === t) { active = null; select(tabs[Math.min(i, tabs.length - 1)]); } else drawTabs();
+      };
+      const reopenTab = () => {
+        const c = closedTabs.pop();
+        if (!c) return;
+        const t = newTab(c.hist[c.idx]);
+        t.hist = c.hist.slice(); t.idx = c.idx;
+        sync();
+      };
+      const duplicateTab = t => {
+        const n = newTab(t.hist[t.idx], true, tabs.indexOf(t) + 1);
+        n.hist = t.hist.slice(); n.idx = t.idx; n.zoom = t.zoom;
+        applyZoom(n); sync();
       };
       const nav = a => {
         const t = active;
-        if (a === "back" && t.idx > 0) { t.idx--; sync(); load(t, t.hist[t.idx]); }
-        else if (a === "fwd" && t.idx < t.hist.length - 1) { t.idx++; sync(); load(t, t.hist[t.idx]); }
+        if (!t) return;
+        if (a === "back" && t.idx > 0) { t.idx--; load(t, t.hist[t.idx]); }
+        else if (a === "fwd" && t.idx < t.hist.length - 1) { t.idx++; load(t, t.hist[t.idx]); }
         else if (a === "reload" && t.idx >= 0) load(t, t.hist[t.idx]);
         else if (a === "home") navigate(HOME);
-        else if (a === "stop") { t.token++; t.loading = false; win.el.classList.remove("is-loading"); win.setStatus(["Stopped"]); }
+        else if (a === "stop") { t.token++; clearTimeout(t.timer); clearTimeout(t.ft); t.loading = false; sync(); drawTabs(); }
+      };
+      const cycle = d => { if (tabs.length > 1) select(tabs[(tabs.indexOf(active) + d + tabs.length) % tabs.length]); };
+      const openInternal = name => {
+        const url = "chrome://" + name;
+        const t = tabs.find(x => crSame(x.hist[x.idx] || "", url));
+        if (t) select(t);
+        else if (active && isNT(curUrl())) navigate(url);
+        else newTab(url);
       };
       win.navigate = url => navigate(url);
-      win.newTab = newTab;
+      win.newTab = (url, focus) => newTab(url, focus !== false);
       win.nav = nav;
 
+      /* ----- bookmarks bar ----- */
+      let overflowIdx = [];
+      const fitBookmarks = () => {
+        const L = $(".cr-bm__list", bmBar), more = $("[data-more]", bmBar);
+        if (!L || !more) return;
+        const btns = $$(".cr-bm", L);
+        const measure = () => { btns.forEach(b => { b.hidden = false; }); overflowIdx = []; btns.forEach((b, i) => { if (b.offsetLeft - L.offsetLeft + b.offsetWidth > L.clientWidth + 1) { b.hidden = true; overflowIdx.push(i); } }); };
+        more.hidden = true;
+        measure();
+        if (overflowIdx.length) { more.hidden = false; measure(); }
+        more.hidden = !overflowIdx.length;
+      };
+      const drawBookmarks = () => {
+        const on = store.get("crBar", true);
+        bmBar.hidden = !on;
+        if (!on) return;
+        const bms = crBms();
+        bmBar.innerHTML = `<div class="cr-bm__list">${bms.length ? bms.map((b, i) => `<button type="button" class="cr-bm" data-bm="${i}" data-go="${esc(b.url)}" title="${esc(b.title + "\n" + b.url)}">${crFav(b.url, 16)}<span>${esc(b.title)}</span></button>`).join("") : `<span class="cr-bm__hint">For quick access, bookmark pages with the star in the address bar.</span>`}</div><button type="button" class="cr-bm cr-bm--more" data-more title="Show more bookmarks" aria-label="Show more bookmarks" hidden>${crIco("chev2", 18)}</button><span class="cr-bm__sp"></span><button type="button" class="cr-bm" data-go="chrome://bookmarks" title="Bookmark manager">${crIco("folder", 16)}<span>All Bookmarks</span></button>`;
+        fitBookmarks();
+      };
+      const toggleBar = () => { store.set("crBar", !store.get("crBar", true)); crNotify("set"); };
+      bmBar.addEventListener("click", e => {
+        const more = e.target.closest("[data-more]");
+        if (more) {
+          const r = more.getBoundingClientRect(), bms = crBms();
+          crPop(overflowIdx.map(i => bms[i]).filter(Boolean).map(b => ({ label: b.title, icon: crFav(b.url, 16), action: () => navigate(b.url) })), r.left, r.bottom + 2, { dark: incog, anchor: more });
+          return;
+        }
+        const b = e.target.closest("[data-go]");
+        if (!b) return;
+        if (e.ctrlKey || e.metaKey) newTab(b.dataset.go, false); else navigate(b.dataset.go);
+      });
+      bmBar.addEventListener("auxclick", e => { const b = e.target.closest("[data-go]"); if (b && e.button === 1) { e.preventDefault(); newTab(b.dataset.go, false); } });
+      bmBar.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        const b = e.target.closest("[data-bm]");
+        const items = [];
+        if (b) {
+          const i = +b.dataset.bm;
+          items.push({ label: "Open in new tab", action: () => newTab(b.dataset.go, false) }, { sep: true },
+            { label: "Edit...", action: () => openInternal("bookmarks") },
+            { label: "Delete", action: () => { const l = crBms(); l.splice(i, 1); crSaveBms(l); } }, { sep: true });
+        }
+        items.push({ label: "Show bookmarks bar", hint: "Ctrl+Shift+B", checked: true, action: toggleBar }, { label: "Bookmark manager", hint: "Ctrl+Shift+O", action: () => openInternal("bookmarks") });
+        crPop(items, e.clientX, e.clientY, { dark: incog });
+      });
+
+      /* ----- bookmark star + bubble ----- */
+      let bubbleOff = null;
+      const closeBubble = save => {
+        if (bubble.hidden) return;
+        if (save) {
+          const inp = $("input", bubble), i = +bubble.dataset.i, bms = crBms();
+          if (bms[i] && inp && inp.value.trim() && inp.value.trim() !== bms[i].title) { bms[i].title = inp.value.trim(); crSaveBms(bms); }
+        }
+        bubble.hidden = true; bubble.innerHTML = "";
+        if (bubbleOff) { bubbleOff(); bubbleOff = null; }
+      };
+      const showBubble = (i, adding) => {
+        const b = crBms()[i];
+        if (!b) return;
+        bubble.dataset.i = i;
+        bubble.innerHTML = `<h4>${adding ? "Bookmark added" : "Edit bookmark"}</h4><label>Name<input value="${esc(b.title)}" maxlength="120" autocomplete="off"></label><div class="cr-bubble__btns"><button type="button" data-bb="remove">Remove</button><button type="button" class="is-blue" data-bb="done">Done</button></div>`;
+        bubble.hidden = false;
+        const r = star.getBoundingClientRect(), br = bar.getBoundingClientRect();
+        bubble.style.left = Math.max(8, Math.min(r.right - br.left - 300, br.width - 308)) + "px";
+        const down = e => { if (!bubble.contains(e.target) && !star.contains(e.target)) closeBubble(true); };
+        document.addEventListener("pointerdown", down, true);
+        bubbleOff = () => document.removeEventListener("pointerdown", down, true);
+        const inp = $("input", bubble);
+        inp.focus(); inp.select();
+      };
+      bubble.addEventListener("click", e => {
+        const b = e.target.closest("[data-bb]");
+        if (!b) return;
+        if (b.dataset.bb === "remove") { const l = crBms(); l.splice(+bubble.dataset.i, 1); closeBubble(false); crSaveBms(l); }
+        else closeBubble(true);
+      });
+      bubble.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); closeBubble(true); } else if (e.key === "Escape") { e.stopPropagation(); closeBubble(true); } });
+      const toggleStar = () => {
+        if (!bubble.hidden) { closeBubble(true); return; }
+        const url = curUrl(), r = url ? routeOf(url) : "newtab";
+        if (!active || r === "newtab" || r === "blank") return;
+        const bms = crBms();
+        let i = bmIndex(url);
+        const adding = i < 0;
+        if (adding) { bms.push({ title: active.title, url }); crSaveBms(bms); i = bms.length - 1; }
+        showBubble(i, adding);
+      };
+      star.addEventListener("click", toggleStar);
+      zoomBtn.addEventListener("click", () => stepZoom(0));
+
+      /* ----- address bar + suggestions ----- */
+      let suggItems = [], sel = -1, typed = "";
+      const closeSugg = () => { sugg.hidden = true; omni.classList.remove("is-open"); input.setAttribute("aria-expanded", "false"); sel = -1; suggItems = []; };
+      const drawSugg = () => {
+        sugg.innerHTML = suggItems.map((s, i) => `<div class="cr-sugg__row${i === sel ? " is-sel" : ""}" role="option" data-i="${i}" aria-selected="${i === sel}"><span class="cr-sugg__ic">${s.ic}</span><span class="cr-sugg__t">${s.html}</span></div>`).join("");
+        sugg.hidden = !suggItems.length;
+        omni.classList.toggle("is-open", !sugg.hidden);
+        input.setAttribute("aria-expanded", String(!sugg.hidden));
+      };
+      const buildSugg = q0 => {
+        const q = q0.trim();
+        if (!q) return [];
+        const lq = q.toLowerCase(), terms = lq.split(/\s+/), isUrl = crLooksLikeUrl(q);
+        const out = [{ ic: crIco(isUrl ? "globe" : "search", 18, "#5f6368"), html: `${esc(q)}<span class="cr-sugg__d"> - ${isUrl ? "Open web page" : esc(crEngine()) + " Search"}</span>`, go: q }];
+        const seen = new Set(), cand = [];
+        const add = (ic, title, u) => {
+          const t = title.toLowerCase(), k = u.replace(/\/+$/, "").toLowerCase();
+          if (seen.has(k) || !terms.every(x => (t + " " + k).includes(x))) return;
+          seen.add(k);
+          cand.push({ ic, title, u, score: t.startsWith(lq) ? 0 : t.includes(lq) ? 1 : terms.every(x => t.includes(x)) ? 2 : 3 });
+        };
+        crBms().forEach(b => add(crIco("star", 18, "#f9ab00"), b.title, b.url));
+        if (!incog) crHist().forEach(e => { if (routeOf(e.url) !== "search") add(crIco("history", 18, "#5f6368"), e.title, e.url); });
+        SEARCH_INDEX().forEach(r => { if (r.project === undefined && !r.app) add(crIco("page", 18, "#1a73e8"), r.title, r.url); });
+        cand.sort((x, y) => x.score - y.score).slice(0, 6).forEach(c => out.push({ ic: c.ic, html: `<span class="cr-sugg__tt">${crMark(c.title, terms)}</span><span class="cr-sugg__d"> - </span><span class="cr-sugg__u">${esc(c.u)}</span>`, go: c.u }));
+        return out;
+      };
+      input.addEventListener("input", () => { typed = input.value; suggItems = buildSugg(typed); sel = -1; drawSugg(); });
+      // like Chrome, the first click into the address bar selects the whole address
+      let freshFocus = false;
+      input.addEventListener("mousedown", () => { freshFocus = document.activeElement !== input; });
+      input.addEventListener("mouseup", e => { if (freshFocus) { e.preventDefault(); input.select(); freshFocus = false; } });
+      input.addEventListener("blur", () => setTimeout(closeSugg, 120));
+      input.addEventListener("keydown", e => {
+        if ((e.key === "ArrowDown" || e.key === "ArrowUp") && suggItems.length) {
+          e.preventDefault();
+          const n = suggItems.length;
+          sel = e.key === "ArrowDown" ? (sel + 1 >= n ? -1 : sel + 1) : (sel - 1 < -1 ? n - 1 : sel - 1);
+          input.value = sel < 0 ? typed : suggItems[sel].go;
+          drawSugg();
+        } else if (e.key === "Escape") {
+          e.stopPropagation();
+          if (!sugg.hidden) { input.value = typed; closeSugg(); } else { setAddr(curUrl()); input.blur(); }
+        }
+      });
+      sugg.addEventListener("mousedown", e => e.preventDefault());
+      sugg.addEventListener("click", e => { const r = e.target.closest("[data-i]"); if (r && suggItems[+r.dataset.i]) { const go = suggItems[+r.dataset.i].go; closeSugg(); input.blur(); navigate(go); } });
+      omni.addEventListener("submit", e => {
+        e.preventDefault();
+        const go = sel >= 0 && suggItems[sel] ? suggItems[sel].go : input.value;
+        closeSugg(); input.blur();
+        navigate(go);
+      });
+
+      /* ----- Chrome menu ----- */
+      const printPage = () => {
+        if (!active) return;
+        const fr = $(".tm__frame", active.pane);
+        if (fr) { try { fr.contentWindow.print(); return; } catch (e) {} }
+        const host = document.createElement("div");
+        host.id = "crPrint";
+        host.innerHTML = active.pane.innerHTML;
+        document.body.appendChild(host);
+        document.body.classList.add("cr-printing");
+        let done = false;
+        const end = () => { if (done) return; done = true; host.remove(); document.body.classList.remove("cr-printing"); window.removeEventListener("afterprint", end); };
+        window.addEventListener("afterprint", end);
+        setTimeout(end, 4000);
+        try { window.print(); } catch (e) { end(); }
+      };
+      const mainMenu = () => [
+        { label: "New tab", hint: "Ctrl+T", action: () => newTab(null, true, undefined, true) },
+        { label: "New incognito window", hint: "Ctrl+Shift+N", action: () => openChrome({ incognito: true }) },
+        { sep: true },
+        { label: "History", hint: "Ctrl+H", action: () => openInternal("history") },
+        { label: "Downloads", hint: "Ctrl+J", action: () => openInternal("downloads") },
+        { label: "Bookmarks", sub: [
+          { label: "Show bookmarks bar", hint: "Ctrl+Shift+B", checked: store.get("crBar", true), action: toggleBar },
+          { label: "Bookmark manager", hint: "Ctrl+Shift+O", action: () => openInternal("bookmarks") },
+          { label: "Bookmark this tab...", hint: "Ctrl+D", action: toggleStar },
+          ...(crBms().length ? [{ sep: true }, ...crBms().slice(0, 14).map(b => ({ label: b.title, icon: crFav(b.url, 16), action: () => navigate(b.url) }))] : []),
+        ] },
+        { sep: true },
+        { zoom: { get: () => (active ? active.zoom : 100), step: stepZoom } },
+        { sep: true },
+        { label: "Print...", hint: "Ctrl+P", action: printPage },
+        { label: "Find...", hint: "Ctrl+F", action: openFind },
+        { sep: true },
+        { label: "Settings", action: () => openInternal("settings") },
+        { label: "About Chrome 98", action: () => openInternal("version") },
+        { sep: true },
+        { label: "Exit", action: () => win.close() },
+      ];
+      menuBtn.addEventListener("click", e => {
+        if (CR_POP.stack.length && CR_POP.stack[0].anchor === menuBtn) { crPopClose(0); return; }
+        closeBubble(true);
+        const r = menuBtn.getBoundingClientRect();
+        menuBtn.setAttribute("aria-expanded", "true");
+        crPop(mainMenu(), r.right, r.bottom + 4, { alignRight: true, anchor: menuBtn, dark: incog, onClose: () => menuBtn.setAttribute("aria-expanded", "false") });
+        if (e.detail === 0) { const first = $(".cr-menu__item", CR_POP.stack[0].el); if (first) first.focus(); }
+      });
+
+      /* ----- tab strip interaction ----- */
+      let drag = null;
+      const dragMove = e => {
+        if (!drag) return;
+        if (!drag.moved) { if (Math.abs(e.clientX - drag.x0) < 6) return; drag.moved = true; drag.el.classList.add("is-drag"); list.classList.add("is-sorting"); }
+        const el = drag.el;
+        el.style.transform = "";
+        const wd = el.offsetWidth, cx = e.clientX - drag.grab + wd / 2;
+        for (let guard = 0; guard <= tabs.length; guard++) {
+          const prev = el.previousElementSibling, next = el.nextElementSibling;
+          if (prev) { const r = prev.getBoundingClientRect(); if (cx < r.left + r.width / 2) { list.insertBefore(el, prev); continue; } }
+          if (next) { const r = next.getBoundingClientRect(); if (cx > r.left + r.width / 2) { list.insertBefore(next, el); continue; } }
+          break;
+        }
+        const lr = list.getBoundingClientRect(), nat = el.getBoundingClientRect().left;
+        const left = Math.min(Math.max(e.clientX - drag.grab, lr.left), Math.max(lr.left, lr.right - wd));
+        el.style.transform = `translateX(${left - nat}px)`;
+      };
+      const dragEnd = () => {
+        document.removeEventListener("pointermove", dragMove);
+        document.removeEventListener("pointerup", dragEnd);
+        document.removeEventListener("pointercancel", dragEnd);
+        if (!drag) return;
+        const { el, moved } = drag;
+        drag = null;
+        el.classList.remove("is-drag"); el.style.transform = ""; list.classList.remove("is-sorting");
+        if (moved) { const order = Array.from(list.children); tabs.sort((a, b) => order.indexOf(a.el) - order.indexOf(b.el)); drawTabs(); }
+      };
+      list.addEventListener("pointerdown", e => {
+        if (e.button !== 0 || e.target.closest(".cr-tab__x")) return;
+        const el = e.target.closest(".cr-tab");
+        const t = el && tabs.find(x => x.el === el);
+        if (!t) return;
+        if (active !== t) select(t);
+        if (tabs.length < 2) return;
+        drag = { el, x0: e.clientX, grab: e.clientX - el.getBoundingClientRect().left, moved: false };
+        document.addEventListener("pointermove", dragMove);
+        document.addEventListener("pointerup", dragEnd);
+        document.addEventListener("pointercancel", dragEnd);
+      });
+      list.addEventListener("mousedown", e => { if (e.button === 1) e.preventDefault(); });
       list.addEventListener("click", e => {
-        const c = e.target.closest("[data-close]");
-        if (c) { e.stopPropagation(); closeTab(tabs.find(t => t.id === +c.dataset.close)); return; }
-        const tb = e.target.closest("[data-tab]");
-        if (tb) select(tabs.find(t => t.id === +tb.dataset.tab));
+        const el = e.target.closest(".cr-tab");
+        const t = el && tabs.find(x => x.el === el);
+        if (!t) return;
+        if (e.target.closest(".cr-tab__x")) { e.stopPropagation(); closeTab(t); } else if (active !== t) select(t);
       });
-      list.addEventListener("auxclick", e => { const tb = e.target.closest("[data-tab]"); if (tb && e.button === 1) closeTab(tabs.find(t => t.id === +tb.dataset.tab)); });
-      $(".cr-tabs__new", body).addEventListener("click", () => newTab());
-      $(".cr-year select", body).addEventListener("change", e => {
-        store.set("crYear", +e.target.value);
-        if (active && routeOf(active.hist[active.idx] || "") === "web") load(active, active.hist[active.idx]);
+      list.addEventListener("auxclick", e => { const el = e.target.closest(".cr-tab"); const t = el && tabs.find(x => x.el === el); if (t && e.button === 1) { e.preventDefault(); closeTab(t); } });
+      list.addEventListener("keydown", e => {
+        const el = e.target.closest(".cr-tab"), t = el && tabs.find(x => x.el === el);
+        if (t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(t); }
+        else if (t && (e.key === "ArrowLeft" || e.key === "ArrowRight")) { e.preventDefault(); cycle(e.key === "ArrowLeft" ? -1 : 1); if (active && active.el) active.el.focus(); }
       });
-      $(".addressbar", body).addEventListener("submit", e => { e.preventDefault(); navigate(input.value); });
+      list.addEventListener("contextmenu", e => {
+        const el = e.target.closest(".cr-tab"), t = el && tabs.find(x => x.el === el);
+        e.preventDefault();
+        if (!t) return;
+        const i = tabs.indexOf(t);
+        crPop([
+          { label: "New tab to the right", action: () => newTab(null, true, i + 1, true) },
+          { sep: true },
+          { label: "Reload", hint: "Ctrl+R", action: () => { if (t.idx >= 0) load(t, t.hist[t.idx]); } },
+          { label: "Duplicate", action: () => duplicateTab(t) },
+          { sep: true },
+          { label: "Close", hint: "Ctrl+W", action: () => closeTab(t) },
+          { label: "Close other tabs", disabled: tabs.length < 2, action: () => tabs.slice().forEach(x => { if (x !== t) closeTab(x); }) },
+          { label: "Close tabs to the right", disabled: i >= tabs.length - 1, action: () => tabs.slice(i + 1).forEach(closeTab) },
+          { sep: true },
+          { label: "Reopen closed tab", hint: "Ctrl+Shift+T", disabled: !closedTabs.length, action: reopenTab },
+        ], e.clientX, e.clientY, { dark: incog });
+      });
+      $(".cr-tabs__new", body).addEventListener("click", () => newTab(null, true, undefined, true));
+
+      /* ----- toolbar ----- */
+      yearSel.addEventListener("change", () => {
+        store.set("crYear", +yearSel.value);
+        crNotify("set");
+        if (active && routeOf(curUrl()) === "web") load(active, curUrl());
+      });
       $$(".cr-bar [data-nav]", body).forEach(b => b.addEventListener("click", () => nav(b.dataset.nav)));
-      $(".cr-bookmarks", body).addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { if (e.ctrlKey || e.metaKey) newTab(b.dataset.go, false); else navigate(b.dataset.go); } });
+
+      /* ----- page content (one pane per tab, so tabs keep their scroll, forms and archived pages) ----- */
       const follow = (e, background) => {
         const t = e.target.closest("[data-go],[data-app],[data-nav],[data-project]");
         if (!t) return false;
@@ -1365,33 +2156,210 @@ function openChrome(o = {}) {
         else if (t.dataset.project !== undefined) openProject(+t.dataset.project);
         return true;
       };
-      doc.addEventListener("click", e => follow(e, e.ctrlKey || e.metaKey));
-      doc.addEventListener("auxclick", e => { if (e.button === 1) follow(e, true); });
-      doc.addEventListener("submit", e => {
+      const confirmBox = (title, text, ok) => new Promise(res => {
+        const ov = document.createElement("div");
+        ov.className = "cr-dlg-ov";
+        ov.innerHTML = `<div class="cr-dlg" role="alertdialog" aria-label="${esc(title)}"><h3>${esc(title)}</h3><p>${esc(text)}</p><div class="cr-dlg__btns"><button type="button" data-r="0">Cancel</button><button type="button" class="is-blue" data-r="1">${esc(ok)}</button></div></div>`;
+        const done = v => { ov.remove(); res(v); };
+        ov.addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (b) done(b.dataset.r === "1"); else if (e.target === ov) done(false); });
+        ov.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); done(false); } });
+        stage.appendChild(ov);
+        $('[data-r="1"]', ov).focus();
+      });
+      const selUpdate = t => {
+        const n = $$("[data-sel]:checked", t.pane).length, head = $(".cp__head", t.pane);
+        if (head) { head.classList.toggle("is-sel", n > 0); const c = $("[data-selcount]", head); if (c) c.textContent = n; }
+      };
+      const histRefresh = t => { const box = $("[data-hist]", t.pane), s = $("[data-hsearch]", t.pane); if (box) { box.innerHTML = crHistList(s ? s.value : ""); selUpdate(t); } };
+      const bmRefresh = (t, edit = -1) => {
+        const box = $("[data-bm]", t.pane), s = $("[data-bsearch]", t.pane);
+        if (!box) return;
+        box.innerHTML = crBmList(s ? s.value : "", edit);
+        const n = crBms().length, c = $(".bm__count", t.pane);
+        if (c) c.textContent = `${n} bookmark${n === 1 ? "" : "s"}`;
+        if (edit >= 0) { const f = $(".bm__edit input", box); if (f) f.focus(); }
+      };
+      const rerender = t => {
+        const url = t.hist[t.idx], st = t.pane.scrollTop;
+        t.pane.innerHTML = PAGES[routeOf(url)](url, { incog });
+        t.pane.scrollTop = st;
+      };
+      const act = el => {
+        const a = el.dataset.act, t = active;
+        if (a === "clear-data") confirmBox("Clear browsing data", "This clears your browsing history. Your bookmarks and settings stay as they are.", "Clear data").then(ok => { if (ok) { store.del("crHistory"); crNotify("hist"); } });
+        else if (a === "rm-hist") { store.set("crHistory", crHist().filter(e => String(e.t) !== el.dataset.t)); crNotify("hist"); }
+        else if (a === "hist-cancel") { $$("[data-sel]", t.pane).forEach(c => { c.checked = false; }); selUpdate(t); }
+        else if (a === "hist-delete") { const ts = new Set($$("[data-sel]:checked", t.pane).map(c => c.closest("[data-t]").dataset.t)); store.set("crHistory", crHist().filter(e => !ts.has(String(e.t)))); crNotify("hist"); }
+        else if (a === "bm-add-form") { const f = $(".bm__add", t.pane); f.hidden = !f.hidden; if (!f.hidden) f.elements.title.focus(); }
+        else if (a === "bm-edit") bmRefresh(t, +el.dataset.i);
+        else if (a === "bm-cancel") bmRefresh(t);
+        else if (a === "bm-del") { const l = crBms(); l.splice(+el.dataset.i, 1); crSaveBms(l); }
+        else if (a === "reset-settings") confirmBox("Reset settings", "Bookmarks bar, zoom, search engine and Time Machine year go back to their defaults, and the default bookmarks come back.", "Reset settings").then(ok => {
+          if (!ok) return;
+          ["crBar", "crZoom", "crEngine", "crYear", "crBookmarks"].forEach(k => store.del(k));
+          crNotify("bm"); crNotify("set");
+          if (active) rerender(active);
+        });
+        else if (a === "sr-clear") { const inp = $("input", el.parentElement); inp.value = ""; inp.focus(); }
+      };
+      view.addEventListener("click", e => {
+        const a = e.target.closest("[data-act]");
+        if (a) { e.preventDefault(); act(a); return; }
+        follow(e, e.ctrlKey || e.metaKey);
+      });
+      view.addEventListener("keydown", e => { const a = e.target.closest("[data-act]"); if (a && a.getAttribute("role") === "button" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); act(a); } });
+      view.addEventListener("auxclick", e => { if (e.button === 1) follow(e, true); });
+      view.addEventListener("change", e => {
+        const s = e.target.closest("[data-set]");
+        if (s) {
+          const k = s.dataset.set;
+          if (k === "bar") store.set("crBar", s.checked);
+          else if (k === "zoom") store.set("crZoom", +s.value);
+          else if (k === "engine") store.set("crEngine", s.value);
+          else if (k === "year") store.set("crYear", +s.value);
+          crNotify("set");
+        } else if (e.target.matches("[data-sel]") && active) selUpdate(active);
+      });
+      view.addEventListener("input", e => {
+        const el = e.target;
+        if (!active) return;
+        if (el.matches("[data-hsearch]")) histRefresh(active);
+        else if (el.matches("[data-bsearch]")) bmRefresh(active);
+        else if (el.matches("[data-ssearch]")) {
+          const q = el.value.toLowerCase().trim();
+          let any = false;
+          $$(".set", active.pane).forEach(sec => {
+            const head = $("h2", sec).textContent.toLowerCase();
+            let vis = false;
+            $$(".set__row", sec).forEach(r => { const m = !q || head.includes(q) || r.textContent.toLowerCase().includes(q); r.hidden = !m; if (m) vis = true; });
+            sec.hidden = !vis;
+            if (vis) any = true;
+          });
+          const none = $(".cp__empty--set", active.pane);
+          if (none) none.hidden = any;
+        }
+      });
+      view.addEventListener("submit", e => {
         const f = e.target.closest("form[data-form]");
         if (!f) return;
         e.preventDefault();
-        if (f.dataset.form === "guestbook") {
+        const kind = f.dataset.form;
+        if (kind === "guestbook") {
           const msg = f.elements.msg.value.trim();
           if (!msg) { msgBox({ title: "Guestbook", icon: "warning", text: "Write a message first!" }); return; }
           const gb = store.get("guestbook", GUESTBOOK_SEED);
           gb.unshift({ name: f.elements.name.value.trim() || "Anonymous", msg, date: fmtDate() });
           store.set("guestbook", gb.slice(0, 50));
-          load(active, active.hist[active.idx]);
-        } else if (f.dataset.form === "search") {
+          load(active, curUrl());
+        } else if (kind === "search") {
           const q = f.elements.q.value.trim();
-          if (q) navigate(/^(https?:\/\/|www\.)|\.(com|org|net|io|app|dev)(\/|$)/i.test(q) ? q : `http://www.altavista.com/search?q=${encodeURIComponent(q)}`);
+          if (q) navigate(crLooksLikeUrl(q) ? q : crSearchUrl(q, crBrandOf(curUrl())));
+        } else if (kind === "bm-add") {
+          const u = f.elements.url.value.trim();
+          if (!u) { f.elements.url.focus(); return; }
+          const url = normUrl(u), l = crBms();
+          l.push({ title: f.elements.title.value.trim() || crHost(url) || url, url });
+          f.reset(); f.hidden = true;
+          crSaveBms(l);
+        } else if (kind === "bm-save") {
+          const i = +f.dataset.i, l = crBms();
+          if (!l[i]) return;
+          const u = f.elements.url.value.trim();
+          if (!u) { f.elements.url.focus(); return; }
+          const url = normUrl(u);
+          l[i] = { title: f.elements.title.value.trim() || crHost(url) || url, url };
+          crSaveBms(l);
         }
       });
-      doc.addEventListener("pointerover", e => {
-        const a = e.target.closest("[data-go], a[href]");
-        if (a && !win.el.classList.contains("is-loading")) win.setStatus([a.dataset.go || a.href]);
+      view.addEventListener("pointerover", e => { const a = e.target.closest("[data-go], a[href]"); if (a) { hover = a.dataset.go || a.href; setBubble(); } });
+      view.addEventListener("pointerout", e => {
+        if (e.target.closest("[data-go], a[href]") && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("[data-go], a[href]"))) { hover = ""; setBubble(); }
       });
-      doc.addEventListener("pointerout", e => {
-        if (e.target.closest("[data-go], a[href]") && !win.el.classList.contains("is-loading")) win.setStatus(["Done"]);
+      view.addEventListener("contextmenu", e => {
+        if (e.target.closest("input,textarea,select")) return;
+        e.preventDefault();
+        const link = e.target.closest("[data-go]");
+        const t = active, items = [];
+        if (link && link.dataset.go) items.push(
+          { label: "Open link in new tab", action: () => newTab(link.dataset.go, false) },
+          { label: "Copy link address", action: () => { try { navigator.clipboard.writeText(link.dataset.go); } catch (x) {} } },
+          { sep: true });
+        items.push(
+          { label: "Back", hint: "Alt+Left", disabled: !t || t.idx <= 0, action: () => nav("back") },
+          { label: "Forward", hint: "Alt+Right", disabled: !t || t.idx >= t.hist.length - 1, action: () => nav("fwd") },
+          { label: "Reload", hint: "Ctrl+R", action: () => nav("reload") },
+          { sep: true },
+          { label: "Bookmark this page...", hint: "Ctrl+D", action: toggleStar },
+          { label: "Print...", hint: "Ctrl+P", action: printPage },
+          { label: "Find...", hint: "Ctrl+F", action: openFind });
+        crPop(items, e.clientX, e.clientY, { dark: incog });
       });
+
+      /* ----- keyboard (routed here by the desktop while this window is active) ----- */
+      win.onKey = e => {
+        if (closed) return;
+        const c = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), stop = () => { e.preventDefault(); e.stopPropagation(); };
+        if (e.key === "Escape") {
+          if (!findBar.hidden) { stop(); closeFind(); }
+          else if (active && active.loading && document.activeElement !== input) { stop(); nav("stop"); }
+          return;
+        }
+        if (e.altKey && !c) {
+          if (e.key === "ArrowLeft") { stop(); nav("back"); }
+          else if (e.key === "ArrowRight") { stop(); nav("fwd"); }
+          else if (e.key === "Home") { stop(); nav("home"); }
+          else if (k === "d") { stop(); focusOmni(); }
+          return;
+        }
+        if (e.key === "F5") { stop(); nav("reload"); return; }
+        if (e.key === "F6") { stop(); focusOmni(); return; }
+        if (e.key === "F3") { stop(); if (findBar.hidden) openFind(); else setHit(findAt + (e.shiftKey ? -1 : 1)); return; }
+        if (!c) return;
+        if (e.key === "Tab" || e.key === "PageDown" || e.key === "PageUp") { stop(); cycle(e.key === "PageUp" || (e.key === "Tab" && e.shiftKey) ? -1 : 1); }
+        else if (k === "t") { stop(); if (e.shiftKey) reopenTab(); else newTab(null, true, undefined, true); }
+        else if (k === "n" && e.shiftKey) { stop(); openChrome({ incognito: true }); }
+        else if (k === "w" || k === "f4") { stop(); if (active) closeTab(active); }
+        else if (k === "l") { stop(); focusOmni(); }
+        else if (k === "r") { stop(); nav("reload"); }
+        else if (k === "f") { stop(); openFind(); }
+        else if (k === "g" && !findBar.hidden) { stop(); setHit(findAt + (e.shiftKey ? -1 : 1)); }
+        else if (k === "d") { stop(); toggleStar(); }
+        else if (k === "h") { stop(); openInternal("history"); }
+        else if (k === "j") { stop(); openInternal("downloads"); }
+        else if (k === "o" && e.shiftKey) { stop(); openInternal("bookmarks"); }
+        else if (k === "b" && e.shiftKey) { stop(); toggleBar(); }
+        else if (k === "p") { stop(); printPage(); }
+        else if (e.key === "=" || e.key === "+") { stop(); stepZoom(1); }
+        else if (e.key === "-" || e.key === "_") { stop(); stepZoom(-1); }
+        else if (e.key === "0") { stop(); stepZoom(0); }
+        else if (/^[1-9]$/.test(e.key)) { stop(); const n = +e.key; select(n === 9 ? tabs[tabs.length - 1] : tabs[n - 1] || active); }
+      };
+
+      /* ----- shared data changes (bookmarks, history, settings) ----- */
+      const onBus = what => {
+        if (closed) return;
+        if (what === "bm") { drawBookmarks(); syncStar(); tabs.forEach(t => { if (t.page === "bookmarks") bmRefresh(t); }); }
+        else if (what === "set") { drawBookmarks(); yearSel.value = String(store.get("crYear", 1998)); input.placeholder = `Search ${crEngine()} or type a URL`; }
+        else if (what === "hist") tabs.forEach(t => { if (t.page === "history") histRefresh(t); });
+      };
+      CR_BUS.add(onBus);
+      const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => fitBookmarks()) : null;
+      if (ro) ro.observe(bmBar);
+      win.cleanup = () => {
+        closed = true;
+        CR_BUS.delete(onBus);
+        if (ro) ro.disconnect();
+        dragEnd();
+        if (bubbleOff) { bubbleOff(); bubbleOff = null; }
+        crPopClose(0);
+        tabs.forEach(t => { t.token++; clearTimeout(t.timer); clearTimeout(t.ft); });
+        if (win.el) win.el.classList.remove("is-loading");
+      };
+
+      drawBookmarks();
       newTab(o.url || "chrome://newtab");
     },
+    onClose(win) { if (win.cleanup) win.cleanup(); },
   });
   if (had && o.url && w.newTab) w.newTab(o.url);
 }
@@ -1423,104 +2391,686 @@ function ytParseId(input) {
 }
 function ytColor(name) { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return `hsl(${h},55%,42%)`; }
 const ytThumb = id => `https://i.ytimg.com/vi/${encodeURIComponent(id)}/mqdefault.jpg`;
+
+// Flat Material glyphs (outlined where YouTube uses outlines). Falls back to UI_PATHS.
+const YT_ICONS = {
+  menu: "M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z",
+  arrow: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",
+  trend: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z",
+  subsO: "M20 8H4V6h16zm-2-6H6v2h12zm4 10v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2zm-2 0H4v8h16zm-10 1.5v5l5-2.5z",
+  history: "M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z",
+  later: "M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7z",
+  list: "M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z",
+  listAdd: "M14 10H2v2h12zm0-4H2v2h12zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2zM2 16h8v-2H2z",
+  likeO: "M9 21h9c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.7v-2c0-1.1-.9-2-2-2h-6.3l.9-4.6v-.3c0-.4-.2-.8-.4-1.1L14.2 1 7.6 7.6C7.2 8 7 8.5 7 9v10c0 1.1.9 2 2 2zM9 9l4.3-4.3L12 10h9v2l-3 7H9zM1 9h4v12H1z",
+  more: "M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z",
+  check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  theater: "M19 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 10H5V8h14z",
+  speed: "M20.4 8.6l-1.2 1.9a8 8 0 0 1-.2 7.5H5.1A8 8 0 0 1 15.6 6.9l1.8-1.3A10 10 0 0 0 3.4 19a2 2 0 0 0 1.7 1h13.8a2 2 0 0 0 1.8-1 10 10 0 0 0-.3-10.4zm-9.8 6.8a2 2 0 0 0 2.8 0l5.7-8.5-8.5 5.7a2 2 0 0 0 0 2.8z",
+  moon: "M12 3a9 9 0 1 0 9 9c0-.5 0-.9-.1-1.4a5.4 5.4 0 0 1-4.4 2.3 5.4 5.4 0 0 1-3.1-9.8C12.9 3 12.5 3 12 3z",
+  keys: "M20 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-9 3h2v2h-2zm0 3h2v2h-2zM8 8h2v2H8zm0 3h2v2H8zm-1 2H5v-2h2zm0-3H5V8h2zm9 7H8v-2h8zm0-4h-2v-2h2zm0-3h-2V8h2zm3 3h-2v-2h2zm0-3h-2V8h2z",
+  sort: "M3 18h6v-2H3zM3 6v2h18V6zm0 7h12v-2H3z",
+  shuffle: "M10.6 9.2 5.4 4 4 5.4l5.2 5.2zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4zm.3 9.4-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2z",
+  game: "M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3zm4.5 2a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4-3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z",
+  news: "M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-5 14H7v-2h7zm3-4H7v-2h10zm0-4H7V7h10z",
+  trophy: "M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v1c0 2.6 1.9 4.6 4.4 4.9a5 5 0 0 0 3.6 3V19H7v2h10v-2h-4v-3.1a5 5 0 0 0 3.6-3C19.1 12.6 21 10.6 21 8V7a2 2 0 0 0-2-2zM5 8V7h2v3.8C5.8 10.4 5 9.3 5 8zm14 0c0 1.3-.8 2.4-2 2.8V7h2z",
+  bulb: "M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9zm3-19a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3c1.8-1.3 3-3.4 3-5.7a7 7 0 0 0-7-7z",
+  film: "M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V4z",
+  ext: "M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z",
+  acct: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM7.1 18.3c.4-.9 3-1.8 4.9-1.8s4.5.9 4.9 1.8A7.9 7.9 0 0 1 12 20c-1.9 0-3.6-.6-4.9-1.7zm11.3-1.5C17 15.1 13.5 14.5 12 14.5s-5 .6-6.4 2.3A8 8 0 0 1 4 12a8 8 0 1 1 16 0c0 1.8-.6 3.5-1.6 4.8zM12 6a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z",
+};
+const ytI = (n, s = 20) => `<svg class="ui-i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${YT_ICONS[n] || UI_PATHS[n] || ""}"/></svg>`;
+
+// Explore / Trending: [key, label, YouTube videoCategoryId, icon, library categories that match when offline]
+const YT_EXPLORE = [
+  ["now", "Now", 0, "trend", null],
+  ["music", "Music", 10, "note", ["Music"]],
+  ["gaming", "Gaming", 20, "game", ["Gaming"]],
+  ["movies", "Movies", 1, "film", ["Animation", "Classics"]],
+  ["learning", "Learning", 27, "bulb", ["Education"]],
+  ["sports", "Sports", 17, "trophy", []],
+  ["news", "News", 25, "news", []],
+];
+const YT_CAT = { 1: "Film & Animation", 2: "Autos & Vehicles", 10: "Music", 15: "Pets & Animals", 17: "Sports", 19: "Travel & Events", 20: "Gaming", 22: "People & Blogs", 23: "Comedy", 24: "Entertainment", 25: "News & Politics", 26: "Howto & Style", 27: "Education", 28: "Science & Technology", 29: "Nonprofits & Activism" };
+const YT_CATID = { Animation: 1, Music: 10, Sports: 17, Gaming: 20, Vlogs: 22, Comedy: 23, Entertainment: 24, News: 25, Education: 27, Learning: 27, Science: 28 };
+
+// Number / date formatting the way YouTube prints it (1.2M views, 3 days ago, 12:34).
+function ytNum(n) {
+  n = +n;
+  if (!isFinite(n) || n < 0) return "";
+  for (const [d, s] of [[1e9, "B"], [1e6, "M"], [1e3, "K"]]) if (n >= d) { const v = n / d; return (v < 10 ? Math.floor(v * 10 + 1e-9) / 10 : Math.floor(v)) + s; }
+  return String(Math.floor(n));
+}
+const ytViews = n => n == null ? "" : n === 1 ? "1 view" : `${ytNum(n)} views`;
+function ytAgo(t) {
+  const ms = typeof t === "number" ? t : Date.parse(t);
+  if (!ms) return "";
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  for (const [d, u] of [[31536000, "year"], [2592000, "month"], [604800, "week"], [86400, "day"], [3600, "hour"], [60, "minute"]]) if (s >= d) { const n = Math.floor(s / d); return `${n} ${u}${n === 1 ? "" : "s"} ago`; }
+  return "Just now";
+}
+function ytDur(sec) {
+  sec = Math.round(+sec);
+  if (!(sec >= 0)) return "";
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+}
+function ytIso(d) {
+  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(d || "");
+  return m ? (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0) : 0;
+}
+// Description text -> safe HTML with links, #hashtags and clickable 1:23 timestamps.
+function ytLinkify(text) {
+  text = String(text || "");
+  const re = /(https?:\/\/[^\s<]+)|(\b(?:\d{1,2}:)?[0-5]?\d:[0-5]\d\b)|(#[\p{L}\p{N}_]+)/gu;
+  let out = "", last = 0;
+  for (const m of text.matchAll(re)) {
+    out += esc(text.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[1]) { const u = m[1].replace(/[).,;!?]+$/, ""); out += `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a>${esc(m[1].slice(u.length))}`; }
+    else if (m[2]) { const p = m[2].split(":").map(Number); out += `<button type="button" class="yt2__ts" data-seek="${p.reduce((a, b) => a * 60 + b, 0)}">${esc(m[2])}</button>`; }
+    else out += `<span class="yt2__tag">${esc(m[3])}</span>`;
+  }
+  return (out + esc(text.slice(last))).replace(/\n/g, "<br>");
+}
+
+// Optional YouTube Data API v3 (set CONTENT.youtubeApiKey). Everything here throws on failure and the app
+// falls back to the built-in library, so a missing key, a bad key or no network never shows an error.
+const ytApi = {
+  base: "https://www.googleapis.com/youtube/v3/",
+  cache: new Map(),
+  failedAt: 0,
+  key() { return typeof C.youtubeApiKey === "string" ? C.youtubeApiKey.trim() : ""; },
+  get on() { return !!this.key() && Date.now() - this.failedAt > 120000; },
+  region() { const r = ((navigator.language || "").split("-")[1] || "").toUpperCase(); return /^[A-Z]{2}$/.test(r) ? r : ""; },
+  call(ep, params) {
+    const q = new URLSearchParams(params).toString(), ck = ep + "?" + q;
+    if (this.cache.has(ck)) return this.cache.get(ck);
+    const p = fetch(`${this.base}${ep}?${q}&key=${encodeURIComponent(this.key())}`).then(r => r.ok ? r.json() : r.json().catch(() => ({})).then(j => {
+      const er = (j && j.error) || {}, e = new Error("YouTube API " + r.status);
+      e.status = r.status; e.reason = ((er.errors && er.errors[0] && er.errors[0].reason) || "") + " " + (er.message || "");
+      throw e;
+    }));
+    this.cache.set(ck, p);
+    // network trouble, a bad key or an exhausted quota pause the API for two minutes; 404/commentsDisabled do not
+    p.catch(e => { this.cache.delete(ck); if (!e.status || e.status === 401 || /quota|keyInvalid|api key|referer|accessNotConfigured|dailyLimit|rateLimit/i.test(e.reason || "")) this.failedAt = Date.now(); });
+    return p;
+  },
+  vid(it) {
+    const s = it.snippet || {}, st = it.statistics || {}, cd = it.contentDetails || {};
+    return {
+      id: typeof it.id === "string" ? it.id : "", title: s.title || "Untitled", channel: s.channelTitle || "YouTube", channelId: s.channelId || "",
+      cat: YT_CAT[s.categoryId] || "Videos", desc: s.description || "", date: s.publishedAt || "",
+      views: st.viewCount != null ? +st.viewCount : null, likes: st.likeCount != null ? +st.likeCount : null,
+      commentCount: st.commentCount != null ? +st.commentCount : null, dur: ytIso(cd.duration), live: s.liveBroadcastContent === "live",
+      embeddable: !it.status || it.status.embeddable !== false, api: true,
+    };
+  },
+  async videos(ids) {
+    ids = ids.filter(Boolean).slice(0, 50);
+    if (!ids.length) return [];
+    const j = await this.call("videos", { part: "snippet,contentDetails,statistics,status", id: ids.join(","), maxResults: 50 });
+    const map = new Map((j.items || []).map(it => [it.id, this.vid(it)]));
+    return ids.map(id => map.get(id)).filter(v => v && v.embeddable);
+  },
+  async search(q) {
+    const j = await this.call("search", { part: "snippet", type: "video", videoEmbeddable: "true", maxResults: 20, safeSearch: "moderate", q });
+    return this.videos((j.items || []).map(i => i.id && i.id.videoId));
+  },
+  async popular(catId) {
+    const p = { part: "snippet,contentDetails,statistics,status", chart: "mostPopular", maxResults: 24 };
+    if (catId) p.videoCategoryId = String(catId);
+    if (this.region()) p.regionCode = this.region();
+    const j = await this.call("videos", p);
+    return (j.items || []).map(it => this.vid(it)).filter(v => v.embeddable);
+  },
+  async related(v) {
+    const q = v.title.replace(/[|()[\]:\-–—]/g, " ").split(/\s+/).filter(Boolean).slice(0, 6).join(" ");
+    return (await this.search(q)).filter(x => x.id !== v.id);
+  },
+  async findChannel(name) {
+    const j = await this.call("search", { part: "snippet", type: "channel", maxResults: 1, q: name });
+    const it = (j.items || [])[0];
+    return it && it.snippet && it.snippet.channelId || (it && it.id && it.id.channelId) || "";
+  },
+  async channel(id) {
+    const j = await this.call("channels", { part: "snippet,statistics,contentDetails", id });
+    const it = (j.items || [])[0];
+    if (!it) throw new Error("no channel");
+    const s = it.snippet || {}, st = it.statistics || {};
+    return {
+      id, name: s.title || "", handle: s.customUrl || "", desc: s.description || "", joined: s.publishedAt || "",
+      thumb: s.thumbnails && ((s.thumbnails.medium || s.thumbnails.default || {}).url) || "",
+      subs: st.hiddenSubscriberCount ? null : st.subscriberCount != null ? +st.subscriberCount : null,
+      count: st.videoCount != null ? +st.videoCount : null, views: st.viewCount != null ? +st.viewCount : null,
+      uploads: (it.contentDetails && it.contentDetails.relatedPlaylists && it.contentDetails.relatedPlaylists.uploads) || "",
+    };
+  },
+  async uploads(playlistId) {
+    if (!playlistId) return [];
+    const j = await this.call("playlistItems", { part: "contentDetails", playlistId, maxResults: 24 });
+    return this.videos((j.items || []).map(i => i.contentDetails && i.contentDetails.videoId));
+  },
+  async comments(videoId, order) {
+    const j = await this.call("commentThreads", { part: "snippet", videoId, order: order === "time" ? "time" : "relevance", maxResults: 20, textFormat: "plainText" });
+    return (j.items || []).map(it => {
+      const c = (it.snippet && it.snippet.topLevelComment && it.snippet.topLevelComment.snippet) || {};
+      return { key: "api:" + it.id, name: String(c.authorDisplayName || "").replace(/^@/, ""), avatar: c.authorProfileImageUrl || "", t: c.textDisplay || c.textOriginal || "", likes: +c.likeCount || 0, ts: Date.parse(c.publishedAt) || 0, api: true };
+    });
+  },
+};
+// Uploads/exports for the extra YouTube data (history, playlists...). exportBackup/importBackup below only know the original keys.
+const YT_EXTRA_KEYS = ["ytHist", "ytWL", "ytPL", "ytCL", "ytMeta"];
+function ytExport() {
+  const data = { app: "w98-portfolio", saved: new Date().toISOString() };
+  BACKUP_KEYS.forEach(k => { data[k] = store.get(k, k === "ytComments" ? {} : []); });
+  YT_EXTRA_KEYS.forEach(k => { data[k] = store.get(k, k === "ytMeta" ? {} : []); });
+  downloadBlob("portfolio-media-backup.json", new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+}
+function ytImportExtra(file) {
+  return file.text().then(t => {
+    const d = JSON.parse(t);
+    if (!d || d.app !== "w98-portfolio") return;
+    const arr = k => Array.isArray(d[k]) ? d[k].filter(Boolean) : [];
+    const pl = store.get("ytPL", []), seen = new Set(pl.map(p => p.id));
+    arr("ytPL").forEach(p => { if (p.id && !seen.has(p.id) && Array.isArray(p.ids)) pl.push(p); });
+    store.set("ytPL", pl);
+    store.set("ytWL", Array.from(new Set(store.get("ytWL", []).concat(arr("ytWL").filter(x => typeof x === "string")))));
+    store.set("ytCL", Array.from(new Set(store.get("ytCL", []).concat(arr("ytCL").filter(x => typeof x === "string")))));
+    const h = store.get("ytHist", []), hs = new Set(h.map(x => x.id));
+    store.set("ytHist", h.concat(arr("ytHist").filter(x => x.id && !hs.has(x.id))).sort((a, b) => b.ts - a.ts).slice(0, 300));
+    if (d.ytMeta && typeof d.ytMeta === "object") store.set("ytMeta", Object.assign({}, d.ytMeta, store.get("ytMeta", {})));
+  }).catch(() => {});
+}
 function openYouTube(o = {}) {
-  WM.open("youtube", {
-    title: "YouTube", icon: "youtube", w: 880, h: 570, from: o.from,
+  const w = WM.open("youtube", {
+    title: "YouTube", icon: "youtube", w: 940, h: 610, from: o.from,
     render(body, win) {
       body.classList.add("body--flush");
       // videos posted from "Your channel" live in localStorage and show up under the portfolio owner's name
-      const VIDEOS = BASE_VIDEOS.concat(store.get("ytUploads", []).map(u => ({ id: u.id, title: u.title, cat: u.cat || "Videos", desc: u.desc || "", channel: NAME, mine: true })));
-      const cats = () => ["All", ...Array.from(new Set(VIDEOS.map(v => v.cat)))];
-      const channels = () => { const c = Array.from(new Set(VIDEOS.map(v => v.channel))).filter(c => c !== NAME); return [NAME, ...c]; };
-      body.innerHTML = `
-        <div class="yt2">
-          <header class="yt2__head">
-            <button type="button" class="yt2__back" title="Back" disabled>${G.back}</button>
-            <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
-            <form class="yt2__search"><input placeholder="Search" aria-label="Search YouTube"><button type="submit" aria-label="Search">${ui("search", 20)}</button></form>
-            <button type="button" class="yt2__up" data-go="upload" title="Create">${ui("create", 22)}<span>Create</span></button>
-            <button type="button" class="yt2__me" data-channel="${esc(NAME)}" title="Your channel (${esc(NAME)})" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
-          </header>
-          <div class="yt2__wrap">
-            <nav class="yt2__side"></nav>
-            <main class="yt2__main"></main>
-          </div>
-        </div>`;
-      const main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
-      // thumbnails that fail to load keep their grey box but lose the broken-image icon (error doesn't bubble, so capture it)
-      body.addEventListener("error", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-broken"); }, true);
-      const drawSide = () => {
-        side.innerHTML = `
-          <button type="button" data-go="home">${ui("home", 20)}<span>Home</span></button>
-          <button type="button" data-go="subs">${ui("subs", 20)}<span>Subscriptions</span></button>
-          <p>You</p>
-          <button type="button" data-channel="${esc(NAME)}">${ui("user", 20)}<span>Your channel</span></button>
-          <button type="button" data-go="liked">${ui("like", 20)}<span>Liked videos</span></button>
-          <button type="button" data-go="upload">${ui("up", 20)}<span>Upload video</span></button>
-          <p>Channels</p>
-          ${channels().filter(c => c !== NAME).map(c => `<button type="button" data-channel="${esc(c)}"><i style="background:${ytColor(c)}">${esc(c[0].toUpperCase())}</i><span>${esc(c)}</span></button>`).join("")}`;
+      const VIDEOS = BASE_VIDEOS.concat(store.get("ytUploads", []).map(u => ({ id: u.id, title: u.title, cat: u.cat || "Videos", desc: u.desc || "", ts: u.ts, channel: NAME, mine: true })));
+      const pool = new Map();           // every video seen this session (library + API results), by id
+      const lib = () => { const m = new Map(); VIDEOS.forEach(v => { const p = m.get(v.id); if (!p || (v.mine && !p.mine)) m.set(v.id, v); }); return Array.from(m.values()); };
+      const syncPool = () => lib().forEach(v => pool.set(v.id, v));
+      syncPool();
+      const META = store.get("ytMeta", {}), DUR = store.get("ytDur", {}), PROG = store.get("ytProg", {}), CHAN = store.get("ytChan", {});
+      const cats = () => {
+        const c = Array.from(new Set(lib().map(v => v.cat)));
+        if (ytApi.on) ["Music", "Gaming", "Sports", "News", "Learning"].forEach(x => { if (!c.some(y => y.toLowerCase() === x.toLowerCase())) c.push(x); });
+        return c;
       };
+      const channels = () => { const c = Array.from(new Set(lib().map(v => v.channel))).filter(c => c !== NAME); return [NAME, ...c]; };
+
+      /* ---- persisted state ---- */
       const subs = () => store.get("ytSubs", []);
       const likes = () => store.get("ytLikes", []);
+      const wl = () => store.get("ytWL", []);
+      const pls = () => store.get("ytPL", []);
+      const hist = () => store.get("ytHist", []);
+      const cmts = id => (store.get("ytComments", {})[id] || []);
       const toggle = (key, val) => { const a = store.get(key, []); const i = a.indexOf(val); if (i >= 0) a.splice(i, 1); else a.push(val); store.set(key, a); return i < 0; };
-      const stack = [];
-      let endedFor = null, current = -1, autoplay = store.get("ytAuto", true);
+      let autoplay = store.get("ytAuto", true), theater = store.get("ytTheater", false), speed = +store.get("ytSpeed", 1) || 1, dark = store.get("ytDark", false);
+      let sideMode = store.get("ytSide", "");   // "" = full, "mini" = icon rail
       const origin = location.origin && location.origin !== "null" ? `&origin=${encodeURIComponent(location.origin)}` : "";
 
-      const card = (v, i) => `
-        <button type="button" class="yt2__card" data-v="${i}">
-          <span class="yt2__thumb"><img src="${ytThumb(v.id)}" alt="" loading="lazy"><b>${esc(v.cat)}</b></span>
-          <span class="yt2__info">
-            <i class="yt2__av" style="background:${ytColor(v.channel)}">${esc(v.channel[0].toUpperCase())}</i>
-            <span><strong>${esc(v.title)}</strong><small data-channel="${esc(v.channel)}">${esc(v.channel)}</small></span>
-          </span>
-        </button>`;
-      const row = (v, i, cls = "") => `
-        <button type="button" class="yt2__row ${cls}" data-v="${i}">
-          <span class="yt2__thumb"><img src="${ytThumb(v.id)}" alt="" loading="lazy"></span>
-          <span><strong>${esc(v.title)}</strong><small data-channel="${esc(v.channel)}">${esc(v.channel)}</small><small>${esc(v.cat)}</small></span>
-        </button>`;
-      const grid = list => list.length ? `<div class="yt2__grid">${list.map(i => card(VIDEOS[i], i)).join("")}</div>` : "";
-      const subBtn = ch => { const on = subs().includes(ch); return `<button type="button" class="yt2__sub${on ? " is-on" : ""}" data-sub="${esc(ch)}">${on ? "Subscribed" : "Subscribe"}</button>`; };
-      let all = VIDEOS.map((_, i) => i);
-      const cmts = id => (store.get("ytComments", {})[id] || []);
+      /* ---- video lookup ---- */
+      const ensure = v => {   // merge fresh API data into the copy we already hold
+        if (!v || !v.id) return v;
+        const cur = pool.get(v.id);
+        if (!cur) { pool.set(v.id, v); return v; }
+        if (cur !== v) {
+          ["views", "likes", "commentCount", "date", "dur", "channelId", "live"].forEach(k => { if ((cur[k] == null || cur[k] === "" || cur[k] === 0) && v[k] != null && v[k] !== "") cur[k] = v[k]; });
+          if (!cur.desc && v.desc) cur.desc = v.desc;
+        }
+        return cur;
+      };
+      const mergeList = list => list.map(ensure);
+      const vidOf = id => {
+        let v = pool.get(id);
+        if (v) return v;
+        const m = META[id];
+        v = m ? { id, title: m.t || "Video", channel: m.c || "YouTube", channelId: m.ci || "", cat: m.k || "Videos", dur: m.d || 0, fromMeta: true } : { id, title: "Video unavailable", channel: "YouTube", cat: "Videos", gone: true };
+        if (m) pool.set(id, v);
+        return v;
+      };
+      const remember = v => {   // keep enough about non-library videos to list them offline later (history, playlists, likes)
+        if (!v || !v.id || v.gone || lib().some(x => x.id === v.id)) return;
+        META[v.id] = { t: v.title, c: v.channel, ci: v.channelId || "", k: v.cat || "", d: v.dur || 0 };
+        const ks = Object.keys(META);
+        if (ks.length > 400) delete META[ks[0]];
+        store.set("ytMeta", META);
+      };
+      const durOf = v => v.dur || DUR[v.id] || 0;
+      const progOf = id => { const p = PROG[id]; return p && p[1] > 0 && p[0] >= 5 ? Math.min(100, Math.round(p[0] / p[1] * 100)) : 0; };
+      const cid = name => (CHAN[name] && CHAN[name].id) || "";
+      const cidAttr = (name, v) => { const c = (v && v.channelId) || cid(name); return c ? ` data-cid="${esc(c)}"` : ""; };
 
+      /* ---- shell ---- */
+      body.innerHTML = `
+        <div class="yt2${dark ? " yt2--dark" : ""}">
+          <header class="yt2__head">
+            <button type="button" class="yt2__burger" data-burger title="Guide" aria-label="Guide">${ytI("menu", 24)}</button>
+            <button type="button" class="yt2__back" title="Back" aria-label="Back" disabled>${ytI("arrow", 24)}</button>
+            <button type="button" class="yt2__logo" data-go="home" title="YouTube Home"><span class="yt2__play"></span>YouTube</button>
+            <form class="yt2__search" role="search" autocomplete="off">
+              <input name="q" placeholder="Search" aria-label="Search YouTube" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="ytSug">
+              <button type="submit" aria-label="Search">${ytI("search", 24)}</button>
+              <div class="yt2__sug" id="ytSug" role="listbox" hidden></div>
+            </form>
+            <button type="button" class="yt2__up" data-go="upload" title="Create">${ytI("create", 24)}<span>Create</span></button>
+            <button type="button" class="yt2__me" data-me title="${esc(NAME)}" aria-label="Account menu" style="background:${ytColor(NAME)}">${esc(FIRST[0] || "?")}</button>
+          </header>
+          <div class="yt2__wrap">
+            <nav class="yt2__side" aria-label="Guide"></nav>
+            <main class="yt2__main"></main>
+          </div>
+          <div class="yt2__scrim" data-scrim></div>
+        </div>`;
+      const root = $(".yt2", body), main = $(".yt2__main", body), back = $(".yt2__back", body), side = $(".yt2__side", body);
+      const qInput = $(".yt2__search input", body), sug = $(".yt2__sug", body);
+      // thumbnails that fail to load keep their grey box but lose the broken-image icon (error doesn't bubble, so capture it)
+      body.addEventListener("error", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-broken"); }, true);
+      body.addEventListener("load", e => { if (e.target && e.target.tagName === "IMG") e.target.classList.add("is-loaded"); }, true);
+      const settle = () => $$(".yt2__thumb img, img.yt2__av", body).forEach(i => { if (i.complete && i.naturalWidth) i.classList.add("is-loaded"); });
+      const timers = [];
+      const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+
+      /* ---- markup helpers ---- */
+      const avHtml = (name, big) => { const c = CHAN[name]; return c && c.thumb ? `<img class="yt2__av${big ? " yt2__av--big" : ""}" src="${esc(c.thumb)}" alt="">` : `<i class="yt2__av${big ? " yt2__av--big" : ""}" style="background:${ytColor(name)}">${esc((name || "?")[0].toUpperCase())}</i>`; };
+      const metaLine = v => {
+        const a = [];
+        if (v.views != null) a.push(ytViews(v.views));
+        const t = v.date || v.ts;
+        if (t) a.push(ytAgo(t));
+        if (!a.length && v.cat) a.push(v.cat);
+        return a.join(" • ");
+      };
+      const thumb = v => {
+        const d = durOf(v), p = progOf(v.id);
+        return `<span class="yt2__thumb"><img src="${esc(ytThumb(v.id))}" alt="" loading="lazy" draggable="false">${v.live ? `<b class="yt2__dur yt2__dur--live">LIVE</b>` : d ? `<b class="yt2__dur">${ytDur(d)}</b>` : ""}${p ? `<i class="yt2__prog"><em style="width:${p}%"></em></i>` : ""}</span>`;
+      };
+      const chBtn = v => `<button type="button" class="yt2__cn" data-channel="${esc(v.channel)}"${cidAttr(v.channel, v)}>${esc(v.channel)}</button>`;
+      const card = v => `
+        <div class="yt2__card">
+          <button type="button" class="yt2__tl" data-v="${esc(v.id)}" tabindex="-1" aria-hidden="true">${thumb(v)}</button>
+          <div class="yt2__info">
+            <button type="button" class="yt2__avb" data-channel="${esc(v.channel)}"${cidAttr(v.channel, v)} tabindex="-1" aria-hidden="true">${avHtml(v.channel)}</button>
+            <span class="yt2__txt">
+              <button type="button" class="yt2__tt" data-v="${esc(v.id)}"><strong>${esc(v.title)}</strong></button>
+              <small>${chBtn(v)}</small>
+              <small>${esc(metaLine(v))}</small>
+            </span>
+            <button type="button" class="yt2__more" data-more="${esc(v.id)}" aria-label="Action menu" title="Action menu">${ytI("more", 20)}</button>
+          </div>
+        </div>`;
+      const row = (v, op = {}) => `
+        <div class="yt2__row${op.cls ? " " + op.cls : ""}">
+          ${op.idx != null ? `<span class="yt2__idx">${op.cur ? ytI("play", 16) : op.idx}</span>` : ""}
+          <button type="button" class="yt2__tl" data-v="${esc(v.id)}" tabindex="-1" aria-hidden="true">${thumb(v)}</button>
+          <span class="yt2__txt">
+            <button type="button" class="yt2__tt" data-v="${esc(v.id)}"><strong>${esc(v.title)}</strong></button>
+            <small>${chBtn(v)}</small>
+            <small>${esc(metaLine(v))}</small>
+            ${op.desc && v.desc ? `<small class="yt2__snip">${esc(v.desc.replace(/\s+/g, " ").slice(0, 150))}</small>` : ""}
+          </span>
+          ${op.rm === "hist" ? `<button type="button" class="yt2__more" data-rmhist="${esc(v.id)}" aria-label="Remove from watch history" title="Remove from watch history">${ytI("close", 20)}</button>`
+            : op.rm === "pl" ? `<button type="button" class="yt2__more" data-plrm="${esc(v.id)}" aria-label="Remove from playlist" title="Remove from playlist">${ytI("close", 20)}</button>`
+            : `<button type="button" class="yt2__more" data-more="${esc(v.id)}" aria-label="Action menu" title="Action menu">${ytI("more", 20)}</button>`}
+        </div>`;
+      const grid = list => list.length ? `<div class="yt2__grid">${list.map(card).join("")}</div>` : "";
+      const chipsHtml = (items, cur, attr) => `<div class="yt2__chips">${items.map(([k, label]) => `<button type="button" class="yt2__chip${k === cur ? " is-on" : ""}" ${attr}="${esc(k)}">${esc(label)}</button>`).join("")}</div>`;
+      const subBtn = (ch, c) => { const on = subs().includes(ch); return `<button type="button" class="yt2__sub${on ? " is-on" : ""}" data-sub="${esc(ch)}"${c ? ` data-cid="${esc(c)}"` : ""}>${on ? "Subscribed" : "Subscribe"}</button>`; };
+      const empty = (t, sub) => `<div class="yt2__empty">${t ? `<b>${esc(t)}</b>` : ""}${sub || ""}</div>`;
+      const chRow = c => { const n = lib().filter(v => v.channel === c).length; return `<div class="yt2__chrow"><button type="button" class="yt2__chlink" data-channel="${esc(c)}"${cidAttr(c)}>${avHtml(c, true)}<span><b>${esc(c)}</b><small>${n ? `${n} video${n === 1 ? "" : "s"}` : "Channel"}</small></span></button>${subBtn(c, cid(c))}</div>`; };
+      // skeletons: flat grey blocks that pulse until the data arrives
+      const skCard = `<div class="yt2__card is-skel" aria-hidden="true"><div class="yt2__thumb"></div><div class="yt2__info"><i class="yt2__av"></i><span class="yt2__txt"><span class="yt2__sk" style="width:92%"></span><span class="yt2__sk" style="width:62%"></span></span></div></div>`;
+      const skRow = `<div class="yt2__row is-skel" aria-hidden="true"><span class="yt2__thumb"></span><span class="yt2__txt"><span class="yt2__sk" style="width:90%"></span><span class="yt2__sk" style="width:55%"></span><span class="yt2__sk" style="width:35%"></span></span></div>`;
+      const skeleton = page => page === "search" || page === "trending" ? `<div class="yt2__rows yt2__rows--wide">${skRow.repeat(5)}</div>`
+        : page === "channel" ? `<div class="yt2__banner is-skel"></div><div class="yt2__grid">${skCard.repeat(6)}</div>`
+        : `<div class="yt2__chips is-skel">${`<span class="yt2__chip"></span>`.repeat(6)}</div><div class="yt2__grid">${skCard.repeat(9)}</div>`;
+      const dayLabel = ts => {
+        const d = new Date(ts), t = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(), diff = Math.round((day(t) - day(d)) / 864e5);
+        return diff <= 0 ? "Today" : diff === 1 ? "Yesterday" : diff < 7 ? d.toLocaleDateString(undefined, { weekday: "long" }) : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() === t.getFullYear() ? undefined : "numeric" });
+      };
+      const blend = (loc, api) => {
+        const ids = new Set(loc.map(v => v.id)), a = api.filter(v => !ids.has(v.id)), out = [];
+        let li = 0;
+        for (let i = 0; i < a.length || li < loc.length; i++) { if (i % 4 === 0 && li < loc.length) out.push(loc[li++]); if (i < a.length) out.push(a[i]); }
+        return out;
+      };
+      const shuffled = a => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+
+      /* ---- playlists ---- */
+      const plInfo = id => {
+        if (id === "WL") return { id, name: "Watch later", ids: wl(), sys: true };
+        if (id === "LL") return { id, name: "Liked videos", ids: likes().slice().reverse(), sys: true };
+        const p = pls().find(x => x.id === id);
+        return p ? { id: p.id, name: p.name, ids: p.ids.slice(), upd: p.upd || p.ts, sys: false } : null;
+      };
+      const plAdd = (listId, id, on) => {
+        if (listId === "WL") { const a = wl().filter(x => x !== id); if (on) a.unshift(id); store.set("ytWL", a); }
+        else {
+          const a = pls(), p = a.find(x => x.id === listId);
+          if (!p) return;
+          p.ids = p.ids.filter(x => x !== id);
+          if (on) p.ids.push(id);
+          p.upd = Date.now();
+          store.set("ytPL", a);
+        }
+        if (on) remember(vidOf(id));
+      };
+      const plNew = (name, firstId) => {
+        const p = { id: "pl" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36), name: name.trim().slice(0, 150) || "Untitled playlist", ids: firstId ? [firstId] : [], ts: Date.now(), upd: Date.now() };
+        store.set("ytPL", pls().concat(p));
+        if (firstId) remember(vidOf(firstId));
+        return p;
+      };
+      const pushHist = v => {
+        remember(v);
+        if (store.get("ytHistOff", false)) return;
+        store.set("ytHist", [{ id: v.id, ts: Date.now() }].concat(hist().filter(x => x.id !== v.id)).slice(0, 300));
+      };
+      const pushSearch = q => store.set("ytSearches", [q].concat(store.get("ytSearches", []).filter(x => x.toLowerCase() !== q.toLowerCase())).slice(0, 20));
+
+      /* ---- navigation ---- */
+      const stack = [];
+      let tok = 0, upnext = [], nextAll = [], nextFilter = "all";
+      const apiComments = {};
+      const pl = { id: "", t: 0, d: 0, state: -1, rate: 1, vol: 100, muted: false, got: false, saved: 0, spd: false, endedFor: "" };
+      const navKey = s => {
+        if (s.page === "playlist") return s.id === "WL" ? "later" : s.id === "LL" ? "liked" : "playlists";
+        if (s.page === "channel") return s.name === NAME ? "mine" : "";
+        if (s.page === "trending" && s.k && s.k !== "now") return "ex:" + s.k;
+        return s.page;
+      };
+      const isMini = () => sideMode === "mini" && !root.classList.contains("is-narrow");
+      const drawSide = () => {
+        const s = stack[stack.length - 1] || {}, cur = navKey(s);
+        const nb = (key, label, off, on, attrs) => `<button type="button" class="${key === cur ? "is-on" : ""}" ${attrs}>${ytI(key === cur ? on : off, 24)}<span>${label}</span></button>`;
+        const home = nb("home", "Home", "homeO", "home", 'data-go="home"'), trend = nb("trending", "Trending", "trend", "trend", 'data-go="trending"'), sb = nb("subs", "Subscriptions", "subsO", "subs", 'data-go="subs"');
+        const hi = nb("history", "History", "history", "history", 'data-go="history"'), pp = nb("playlists", "Playlists", "list", "list", 'data-go="playlists"');
+        root.classList.toggle("is-mini", isMini());
+        if (isMini()) { side.innerHTML = home + trend + sb + hi + pp; return; }
+        const sl = subs(), list = sl.length ? sl : channels().filter(c => c !== NAME), present = new Set(lib().map(v => v.cat));
+        const ex = YT_EXPLORE.filter(x => x[0] !== "now" && (ytApi.on || (x[4] || []).some(c => present.has(c))));
+        side.innerHTML = `${home}${trend}${sb}<hr>
+          <p>You ${ytI("fwd", 16)}</p>${hi}${pp}${nb("mine", "Your channel", "acct", "acct", `data-channel="${esc(NAME)}"`)}${nb("later", "Watch later", "later", "later", 'data-go="playlist" data-id="WL"')}${nb("liked", "Liked videos", "likeO", "like", 'data-go="playlist" data-id="LL"')}<hr>
+          <p>${sl.length ? "Subscriptions" : "Channels"}</p>
+          ${list.map(c => `<button type="button" class="${s.page === "channel" && s.name === c ? "is-on" : ""}" data-channel="${esc(c)}"${cidAttr(c)}>${avHtml(c)}<span>${esc(c)}</span></button>`).join("")}
+          ${ex.length ? `<hr><p>Explore</p>${ex.map(x => nb("ex:" + x[0], x[1], x[3], x[3], `data-go="trending" data-k="${x[0]}"`)).join("")}` : ""}
+          <hr><button type="button" data-pa="keys">${ytI("keys", 24)}<span>Keyboard shortcuts</span></button>`;
+      };
+
+      /* ---- player ---- */
+      const cmd = (func, args = []) => {
+        const f = $(".yt2__player iframe", main);
+        if (f && f.contentWindow) try { f.contentWindow.postMessage(JSON.stringify({ event: "command", func, args }), "*"); } catch (e) {}
+      };
+      const saveProg = force => {
+        if (!pl.id || !(pl.d > 0)) return;
+        if (!force && Date.now() - pl.saved < 5000) return;
+        pl.saved = Date.now();
+        if (pl.state === 0 || pl.t >= pl.d - 8) delete PROG[pl.id];
+        else if (pl.t >= 5) { PROG[pl.id] = [Math.floor(pl.t), Math.floor(pl.d)]; const k = Object.keys(PROG); if (k.length > 300) delete PROG[k[0]]; }
+        else return;
+        store.set("ytProg", PROG);
+      };
+      const mountPlayer = v => {
+        const box = $(".yt2__player", main);
+        if (!box) return;
+        const p = PROG[v.id], start = p && p[0] > 10 && p[1] && p[0] < p[1] - 10 ? p[0] : 0;
+        Object.assign(pl, { id: v.id, t: start, d: 0, state: -1, rate: 1, got: false, saved: Date.now(), spd: false, endedFor: "" });
+        box.classList.add("is-loading");
+        box.innerHTML = `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&playsinline=1&enablejsapi=1${start ? "&start=" + start : ""}${origin}" title="${esc(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+        const ifr = $("iframe", box);
+        const listen = () => { try { ifr.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*"); } catch (e) {} };
+        ifr.addEventListener("load", () => { box.classList.remove("is-loading"); listen(); later(() => { if (!pl.got) listen(); }, 700); later(() => { if (!pl.got) listen(); }, 2500); });
+      };
+      const leaveWatch = () => { if (pl.id) { saveProg(true); pl.id = ""; } };
+      const seek = d => { if (!pl.id) return; const t = Math.max(0, Math.min(pl.d || 1e9, pl.t + d)); pl.t = t; cmd("seekTo", [t, true]); };
+      const seekTo = t => { if (!pl.id) return; pl.t = t; cmd("seekTo", [t, true]); };
+      const playPause = () => { if (pl.state === 1 || pl.state === 3) cmd("pauseVideo"); else cmd("playVideo"); };
+      const setSpeed = r => {
+        speed = Math.max(.25, Math.min(2, r));
+        store.set("ytSpeed", speed);
+        cmd("setPlaybackRate", [speed]);
+        const l = $(".yt2__spd", main);
+        if (l) l.textContent = speed === 1 ? "" : speed + "x";
+      };
+      const setTheater = on => {
+        theater = !!on;
+        store.set("ytTheater", theater);
+        const wEl = $(".yt2__watch", main);
+        if (wEl) wEl.classList.toggle("is-theater", theater);
+        const b = $("[data-theater]", main);
+        if (b) { b.classList.toggle("is-on", theater); b.setAttribute("aria-pressed", theater); b.title = theater ? "Default view (t)" : "Theater mode (t)"; }
+        sizeStage();
+        if (wEl) main.scrollTop = 0;
+      };
+      const sizeStage = () => root.style.setProperty("--ytmh", Math.max(240, main.clientHeight - 24) + "px");
+      const fullscreen = () => {
+        if (document.fullscreenElement) { document.exitFullscreen(); return; }
+        const t = $(".yt2__player iframe", main) || $(".yt2__player", main);
+        if (t && t.requestFullscreen) t.requestFullscreen().catch(() => {});
+      };
+      const nextOf = (s, force) => {
+        if (s.list) {
+          const ids = s.order || (plInfo(s.list) || { ids: [] }).ids, i = ids.indexOf(s.id);
+          return i >= 0 && ids[i + 1] ? { page: "watch", id: ids[i + 1], list: s.list, ...(s.order ? { order: s.order } : {}) } : null;
+        }
+        return (autoplay || force) && upnext[0] ? { page: "watch", id: upnext[0] } : null;
+      };
+
+      /* ---- popups (menus), modal dialogs, search suggestions ---- */
+      let pop = null;
+      const closePop = () => { if (pop) { pop.anchor.classList.remove("is-open"); pop.el.remove(); pop = null; } };
+      const openPop = (anchor, html, cls, op = {}) => {
+        if (pop && pop.anchor === anchor) { closePop(); return null; }
+        closePop();
+        const el = document.createElement("div");
+        el.className = "yt2__pop " + (cls || "");
+        el.setAttribute("role", "menu");
+        el.innerHTML = html;
+        root.appendChild(el);
+        const r = anchor.getBoundingClientRect(), b = root.getBoundingClientRect();
+        let x = (op.right ? r.right - el.offsetWidth : r.left) - b.left, y = r.bottom - b.top + 4;
+        x = Math.max(8, Math.min(x, b.width - el.offsetWidth - 8));
+        if (y + el.offsetHeight > b.height - 8) y = Math.max(8, r.top - b.top - el.offsetHeight - 4);
+        el.style.left = x + "px"; el.style.top = y + "px";
+        pop = { el, anchor, ...op };
+        anchor.classList.add("is-open");
+        const f = $("button, input", el);
+        if (f && op.focus !== false) f.focus({ preventScroll: true });
+        return el;
+      };
+      root.addEventListener("pointerdown", e => { if (pop && !pop.el.contains(e.target) && !pop.anchor.contains(e.target)) closePop(); }, true);
+      root.addEventListener("keydown", e => {
+        if (!pop || !pop.el.contains(document.activeElement)) return;
+        const items = $$("button, input[type=checkbox]", pop.el), i = items.indexOf(document.activeElement);
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus(); }
+        else if (e.key === "Escape") { const a = pop.anchor; closePop(); a.focus(); e.stopPropagation(); }
+      });
+      const modal = (inner, cls) => {
+        closePop();
+        const m = document.createElement("div");
+        m.className = "yt2__modal";
+        m.innerHTML = `<div class="yt2__dlg ${cls || ""}" role="dialog" aria-modal="true">${inner}</div>`;
+        root.appendChild(m);
+        const close = () => m.remove();
+        m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-dx]")) close(); });
+        m.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); close(); } });
+        const f = $("input, .yt2__dbtn--ok", m) || $("button", m);
+        if (f) f.focus();
+        return { m, close };
+      };
+      const askName = (title, value, okLabel, cb) => {
+        const d = modal(`<form><h3>${esc(title)}</h3><label>Name<input name="n" maxlength="150" value="${esc(value)}" placeholder="Choose a title" autocomplete="off"></label><div class="yt2__dact"><button type="button" class="yt2__dbtn" data-dx>Cancel</button><button type="submit" class="yt2__dbtn yt2__dbtn--ok">${esc(okLabel)}</button></div></form>`);
+        const inp = $("input", d.m);
+        inp.select();
+        $("form", d.m).addEventListener("submit", e => { e.preventDefault(); const n = inp.value.trim(); if (!n) return; d.close(); cb(n); });
+      };
+      const SHORTCUTS = [["k or Space", "Play / pause"], ["j / l", "Back / forward 10 seconds"], ["← / →", "Back / forward 5 seconds"], ["↑ / ↓", "Volume up / down"], ["m", "Mute"], ["0 - 9", "Jump to 0% - 90% of the video"], ["f", "Full screen"], ["t", "Theater mode"], ["< / >", "Slower / faster"], ["Shift + N", "Next video"], ["/", "Search"], ["?", "This list"]];
+      const showKeys = () => modal(`<h3>Keyboard shortcuts</h3><table class="yt2__keys"><tbody>${SHORTCUTS.map(([k, d]) => `<tr><td>${k.split(" ").map(x => /^(or|\/|-)$/.test(x) ? ` ${x} ` : `<kbd>${esc(x)}</kbd>`).join("")}</td><td>${esc(d)}</td></tr>`).join("")}</tbody></table><div class="yt2__dact"><button type="button" class="yt2__dbtn yt2__dbtn--ok" data-dx>Close</button></div>`, "yt2__dlg--keys");
+      const setDark = on => { dark = !!on; store.set("ytDark", dark); root.classList.toggle("yt2--dark", dark); };
+
+      // search suggestions: recent searches + completions built from the titles, channels and categories in the library
+      let sugItems = [], sugSel = -1;
+      const completions = q => {
+        const qs = q.toLowerCase(), qw = qs.split(/\s+/).length, freq = new Map();
+        const cands = [];
+        pool.forEach(v => { cands.push(v.title, v.channel, v.cat); });
+        cands.forEach(c => {
+          const ws = String(c).split(/\s+/);
+          for (let i = 0; i < ws.length; i++) {
+            if (!ws.slice(i).join(" ").toLowerCase().startsWith(qs)) continue;
+            const t = ws.slice(i, i + qw + 2).join(" ").replace(/^[\s,:;|\-–—()[\]]+|[\s,:;|\-–—()[\]]+$/g, "");
+            const k = t.toLowerCase();
+            if (k.startsWith(qs) && k.length > qs.length) freq.set(k, { t: t.toLowerCase(), n: ((freq.get(k) || {}).n || 0) + 1 });
+            break;
+          }
+        });
+        return Array.from(freq.values()).sort((a, b) => b.n - a.n || a.t.length - b.t.length).map(x => x.t);
+      };
+      const buildSug = q => {
+        const out = [], seen = new Set(), add = (t, kind) => { const k = t.toLowerCase(); if (t && !seen.has(k)) { seen.add(k); out.push({ t, kind }); } };
+        const sh = store.get("ytSearches", []), qs = q.trim().toLowerCase();
+        if (!qs) sh.slice(0, 8).forEach(t => add(t, "hist"));
+        else { sh.filter(t => t.toLowerCase().includes(qs)).slice(0, 4).forEach(t => add(t, "hist")); completions(q.trim()).slice(0, 10).forEach(t => add(t, "sug")); }
+        return out.slice(0, 10);
+      };
+      const hideSug = () => { sug.hidden = true; sugSel = -1; qInput.setAttribute("aria-expanded", "false"); };
+      const showSug = () => {
+        sugItems = buildSug(qInput.value);
+        sugSel = -1;
+        if (!sugItems.length) { hideSug(); return; }
+        const q = qInput.value.trim();
+        sug.innerHTML = sugItems.map((x, i) => {
+          const pre = x.kind === "sug" ? esc(x.t.slice(0, q.length)) + `<b>${esc(x.t.slice(q.length))}</b>` : esc(x.t);
+          return `<div class="yt2__si" role="option" id="ytSug${i}" data-si="${i}">${ytI(x.kind === "hist" ? "history" : "search", 20)}<span>${pre}</span>${x.kind === "hist" ? `<em class="yt2__sx" data-sx="${i}" title="Remove from search history">Remove</em>` : ""}</div>`;
+        }).join("");
+        sug.hidden = false;
+        qInput.setAttribute("aria-expanded", "true");
+      };
+      const markSug = () => { $$(".yt2__si", sug).forEach((el, i) => { el.classList.toggle("is-sel", i === sugSel); if (i === sugSel) qInput.setAttribute("aria-activedescendant", el.id); }); };
+      const runSearch = q => { q = q.trim(); if (!q) return; pushSearch(q); qInput.value = q; hideSug(); qInput.blur(); go({ page: "search", q }); };
+
+      /* ---- pages ---- */
       const views = {
         home(s) {
-          const cat = s.cat || "All";
-          const list = all.filter(i => cat === "All" || VIDEOS[i].cat === cat);
-          return `
-            <div class="yt2__chips">${cats().map(c => `<button type="button" class="yt2__chip${c === cat ? " is-on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>
-            ${grid(list)}`;
+          const cat = s.cat || "All", sl = subs(), seen = new Set(hist().map(h => h.id));
+          // light "recommendations": subscribed channels first, things you already watched last
+          const local = lib().filter(v => cat === "All" || v.cat === cat).map((v, i) => ({ v, k: (seen.has(v.id) ? 10 : 0) - (sl.includes(v.channel) ? 5 : 0) + i / 1000 })).sort((a, b) => a.k - b.k).map(x => x.v);
+          const page = list => `${chipsHtml([["All", "All"], ...cats().map(c => [c, c])], cat, "data-cat")}${list.length ? grid(list) : empty("Nothing here yet", "No videos in this category.")}`;
+          if (!ytApi.on || (cat !== "All" && !YT_CATID[cat])) return page(local);
+          return ytApi.popular(cat === "All" ? 0 : YT_CATID[cat]).then(api => page(blend(local, mergeList(api)))).catch(() => page(local));
+        },
+        trending(s) {
+          const k = s.k || "now", ex = YT_EXPLORE.find(x => x[0] === k) || YT_EXPLORE[0], present = new Set(lib().map(v => v.cat));
+          const head = `<h2 class="yt2__h">${ex[0] === "now" ? "Trending" : esc(ex[1])}</h2>${chipsHtml(YT_EXPLORE.filter(x => x[0] === "now" || ytApi.on || (x[4] || []).some(c => present.has(c))).map(x => [x[0], x[1]]), ex[0], "data-k")}`;
+          const rank = v => { const i = hist().findIndex(h => h.id === v.id); return i < 0 ? 1e6 : i; };
+          const local = (ex[0] === "now" ? lib().slice().sort((a, b) => rank(a) - rank(b)) : lib().filter(v => (ex[4] || []).includes(v.cat)));
+          const page = list => `${head}${list.length ? `<div class="yt2__rows yt2__rows--wide">${list.map(v => row(v, { desc: true })).join("")}</div>` : empty("Nothing here yet", "There are no videos in this category.")}`;
+          if (!ytApi.on) return page(local);
+          return ytApi.popular(ex[2]).then(api => page(mergeList(api))).catch(() => page(local));
         },
         subs() {
-          const s = subs(), list = all.filter(i => s.includes(VIDEOS[i].channel));
-          return `<h2 class="yt2__h">Subscriptions</h2>${list.length ? grid(list) : `<p class="yt2__empty">You haven't subscribed to anyone yet. Open a video and hit Subscribe.</p>`}`;
+          const sl = subs();
+          if (!sl.length) return `<h2 class="yt2__h">Subscriptions</h2>${empty("Don't miss new videos", "Subscribe to a channel and its latest videos show up here.")}<h3 class="yt2__h3">Suggested channels</h3><div class="yt2__chrows">${channels().filter(c => c !== NAME).slice(0, 6).map(chRow).join("")}</div>`;
+          const strip = `<div class="yt2__strip">${sl.map(c => `<button type="button" class="yt2__stripc" data-channel="${esc(c)}"${cidAttr(c)}>${avHtml(c, true)}<span>${esc(c)}</span></button>`).join("")}</div>`;
+          const local = lib().filter(v => sl.includes(v.channel));
+          const page = list => `<h2 class="yt2__h">Latest</h2>${strip}${list.length ? grid(list) : empty("No videos yet", "Nothing from your subscriptions yet.")}`;
+          const ids = sl.map(cid).filter(Boolean).slice(0, 6);
+          if (!ytApi.on || !ids.length) return page(local);
+          return Promise.all(ids.map(id => ytApi.channel(id).then(c => ytApi.uploads(c.uploads)).catch(() => []))).then(r => {
+            const seen = new Set(), all = mergeList([].concat(...r)).concat(local).filter(v => !seen.has(v.id) && seen.add(v.id));
+            return page(all.sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0)));
+          }).catch(() => page(local));
         },
-        liked() {
-          const l = likes(), list = all.filter(i => l.includes(VIDEOS[i].id));
-          return `<h2 class="yt2__h">Liked videos</h2>${list.length ? grid(list) : `<p class="yt2__empty">Videos you like will show up here.</p>`}`;
+        history(s) {
+          const off = store.get("ytHistOff", false);
+          return `<h2 class="yt2__h">Watch history</h2><div class="yt2__hist">
+            <div class="yt2__hmain"><div class="yt2__hlist">${histList((s.q || "").toLowerCase())}</div></div>
+            <aside class="yt2__hside">
+              <form class="yt2__hsearch" role="search"><input data-hq placeholder="Search watch history" value="${esc(s.q || "")}" aria-label="Search watch history" autocomplete="off">${ytI("search", 20)}</form>
+              <button type="button" class="yt2__lnk" data-clearhist>${ytI("trash", 20)}<span>Clear all watch history</span></button>
+              <button type="button" class="yt2__lnk" data-pausehist>${ytI("history", 20)}<span>${off ? "Turn on watch history" : "Pause watch history"}</span></button>
+            </aside></div>`;
+        },
+        playlists() {
+          const tile = (id, name, ids, sub) => {
+            const f = ids[0] && vidOf(ids[0]);
+            return `<div class="yt2__plc"><button type="button" class="yt2__tl" data-go="playlist" data-id="${esc(id)}" tabindex="-1" aria-hidden="true"><span class="yt2__thumb">${f ? `<img src="${esc(ytThumb(f.id))}" alt="" loading="lazy" draggable="false">` : ""}<span class="yt2__pcount">${ytI("list", 16)}${ids.length} video${ids.length === 1 ? "" : "s"}</span></span></button><button type="button" class="yt2__tt" data-go="playlist" data-id="${esc(id)}"><strong>${esc(name)}</strong></button><small>${sub}</small></div>`;
+          };
+          const mine = pls();
+          return `<div class="yt2__phead"><h2 class="yt2__h">Playlists</h2><button type="button" class="yt2__sub" data-newpl>${ytI("plus", 20)}<span>New playlist</span></button></div>
+            <div class="yt2__grid">
+              ${tile("WL", "Watch later", wl(), "Private")}${tile("LL", "Liked videos", likes().slice().reverse(), "Private")}
+              ${mine.map(p => tile(p.id, p.name, p.ids, `Updated ${esc(ytAgo(p.upd || p.ts))}`)).join("")}
+            </div>${mine.length ? "" : `<p class="yt2__hint2">Create a playlist to group videos. Use <b>Save</b> on any video to add it.</p>`}`;
+        },
+        playlist(s) {
+          const P = plInfo(s.id);
+          if (!P) return empty("This playlist doesn't exist", "It may have been deleted.");
+          const items = P.ids.map(vidOf), f = items[0];
+          return `<div class="yt2__plpage">
+            <aside class="yt2__plside">
+              <span class="yt2__plcover"><span class="yt2__thumb">${f ? `<img src="${esc(ytThumb(f.id))}" alt="" draggable="false">` : ""}</span></span>
+              <div class="yt2__pltitle"><h2>${esc(P.name)}</h2>${P.sys ? "" : `<button type="button" class="yt2__ibtn" data-plrename="${esc(P.id)}" aria-label="Rename playlist" title="Rename playlist">${ytI("edit", 18)}</button>`}</div>
+              <p class="yt2__plmeta"><b>${esc(NAME)}</b></p>
+              <p class="yt2__plmeta">${items.length} video${items.length === 1 ? "" : "s"}${P.upd ? ` &middot; Updated ${esc(ytAgo(P.upd))}` : ""}</p>
+              <div class="yt2__plbtns">
+                <button type="button" class="yt2__sub yt2__sub--w" data-playall="${esc(P.id)}"${items.length ? "" : " disabled"}>${ytI("play", 20)}<span>Play all</span></button>
+                <button type="button" class="yt2__pill" data-playall="${esc(P.id)}" data-shuffle="1"${items.length ? "" : " disabled"}>${ytI("shuffle", 18)}<span>Shuffle</span></button>
+                ${P.sys ? "" : `<button type="button" class="yt2__pill" data-pldel="${esc(P.id)}">${ytI("trash", 18)}<span>Delete</span></button>`}
+              </div>
+            </aside>
+            <div class="yt2__rows yt2__rows--pl" data-list="${esc(P.id)}">${items.length ? items.map((v, i) => row(v, { idx: i + 1, rm: "pl" })).join("") : empty("No videos yet", P.id === "LL" ? "Videos you like will show up here." : "Use Save on a video to add it to this playlist.")}</div>
+          </div>`;
         },
         search(s) {
           const q = s.q.toLowerCase().replace(/\bfnaf\b/g, "five nights").replace(/\bfnf\b/g, "friday night funkin").replace(/\brick ?roll\b/g, "rick astley").replace(/\bcory\b/g, "coryxkenshin").replace(/\bmark\b/g, "markiplier");
           const terms = q.split(/\s+/).filter(Boolean);
-          const list = all.filter(i => terms.every(t => (VIDEOS[i].title + " " + VIDEOS[i].channel + " " + VIDEOS[i].cat).toLowerCase().includes(t)));
-          return `<h2 class="yt2__h">Results for "${esc(s.q)}"</h2>${list.length ? `<div class="yt2__rows">${list.map(i => row(VIDEOS[i], i)).join("")}</div>` : `<p class="yt2__empty">No results. Try "fnaf", "music" or a channel name.</p>`}`;
+          const local = lib().filter(v => terms.every(t => (v.title + " " + v.channel + " " + v.cat).toLowerCase().includes(t)));
+          const chans = s.q.trim() ? channels().filter(c => terms.every(t => c.toLowerCase().includes(t))).slice(0, 2) : [];
+          const page = list => `<h2 class="yt2__h">Results for "${esc(s.q)}"</h2>${chans.length ? `<div class="yt2__chrows">${chans.map(chRow).join("")}</div>` : ""}${list.length ? `<div class="yt2__rows yt2__rows--wide">${list.map(v => row(v, { desc: true })).join("")}</div>` : empty("No results found", `Try "fnaf", "music" or a channel name.`)}`;
+          if (!ytApi.on) return page(local);
+          return ytApi.search(s.q).then(api => page(mergeList(api))).catch(() => page(local));
         },
         channel(s) {
-          const ch = s.name, list = all.filter(i => VIDEOS[i].channel === ch), mine = ch === NAME;
+          const ch = s.name, mine = ch === NAME, tab = s.tab || "videos";
+          const localList = lib().filter(v => v.channel === ch);
           if (mine && !store.get("ytJoined", 0)) store.set("ytJoined", Date.now());
-          const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
-          const handle = "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
-          return `
-            <div class="yt2__banner" style="background:${ytColor(ch)}"></div>
-            <div class="yt2__chan">
-              <i class="yt2__av yt2__av--big" style="background:${ytColor(ch)}">${esc(ch[0].toUpperCase())}</i>
-              <span><b>${esc(ch)}</b><small>${mine ? `${esc(handle)} &middot; ` : ""}${list.length} video${list.length === 1 ? "" : "s"}${mine ? ` &middot; Joined ${esc(joined)}` : " here"}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
-              ${mine ? `<button type="button" class="yt2__sub" data-go="upload">Upload video</button>` : subBtn(ch)}
-            </div>
-            ${mine ? `<div class="yt2__backup">${backupBar()}</div>` : ""}
-            ${list.length ? grid(list) : mine ? `<p class="yt2__empty">This is your channel. You haven't posted anything yet &mdash; hit <b>Upload video</b> and paste a YouTube link to publish it here.</p>` : ""}`;
+          const page = (info, list) => {
+            const joined = mine ? new Date(store.get("ytJoined", Date.now())).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : info && info.joined ? new Date(info.joined).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+            const handle = info && info.handle ? info.handle : "@" + ch.toLowerCase().replace(/[^a-z0-9]+/g, "");
+            const nv = info && info.count != null ? info.count : list.length;
+            const sub = [mine || (info && info.handle) ? handle : "", info && info.subs != null ? `${ytNum(info.subs)} subscribers` : "", `${ytNum(nv)} video${nv === 1 ? "" : "s"}${!mine && !info ? " here" : ""}`, mine ? `Joined ${joined}` : ""].filter(Boolean).join(" • ");
+            const tabs = [["videos", "Videos"], ...(mine ? [["playlists", "Playlists"]] : []), ["about", "About"]];
+            let content;
+            if (tab === "about") {
+              const links = mine ? CONTACTS.filter(x => x && x.href).map(x => `<a href="${esc(x.href)}" target="_blank" rel="noopener noreferrer">${esc(x.label || x.href)}</a>`).join("") : "";
+              content = `<div class="yt2__about"><h3>Description</h3><p>${ytLinkify(mine ? (C.tagline || ROLE || "") : info && info.desc ? info.desc : `${ch} is a channel in ${FIRST}'s library.`)}</p><h3>More info</h3><ul>${joined ? `<li>Joined ${esc(joined)}</li>` : ""}${info && info.views != null ? `<li>${ytNum(info.views)} total views</li>` : ""}${mine && LOCATION ? `<li>${esc(LOCATION)}</li>` : ""}<li>${nv} video${nv === 1 ? "" : "s"}</li></ul>${links ? `<h3>Links</h3><div class="yt2__links">${links}</div>` : ""}</div>`;
+            } else if (tab === "playlists") content = views.playlists();
+            else content = `${mine ? `<div class="yt2__backup">${backupBar()}</div>` : ""}${list.length ? grid(list) : mine ? `<p class="yt2__empty">This is your channel. You haven't posted anything yet &mdash; hit <b>Upload video</b> and paste a YouTube link to publish it here.</p>` : ""}`;
+            return `
+              <div class="yt2__banner" style="background:${ytColor(ch)}"></div>
+              <div class="yt2__chan">
+                ${avHtml(ch, true)}
+                <span><b>${esc(ch)}</b><small>${esc(sub)}</small>${mine ? `<small>${esc(C.tagline || ROLE || "")}</small>` : ""}</span>
+                ${mine ? `<button type="button" class="yt2__sub" data-go="upload">Upload video</button>` : subBtn(ch, (info && info.id) || s.cid || cid(ch))}
+              </div>
+              <div class="yt2__tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? "is-on" : ""}" data-tab="${k}">${l}</button>`).join("")}</div>
+              ${content}`;
+          };
+          if (mine || !ytApi.on || tab !== "videos" && tab !== "about") return page(null, localList);
+          const idp = s.cid ? Promise.resolve(s.cid) : cid(ch) ? Promise.resolve(cid(ch)) : ytApi.findChannel(ch);
+          return idp.then(id => {
+            if (!id) throw new Error("unknown channel");
+            return ytApi.channel(id).then(info => {
+              CHAN[ch] = { id, thumb: info.thumb }; store.set("ytChan", CHAN);
+              return ytApi.uploads(info.uploads).then(up => { const seen = new Set(localList.map(v => v.id)); return page(info, localList.concat(mergeList(up).filter(v => !seen.has(v.id)))); });
+            });
+          }).catch(() => page(null, localList));
         },
         upload(s) {
           const ed = s.edit ? VIDEOS.find(v => v.mine && v.id === s.edit) : null;
@@ -1530,148 +3080,375 @@ function openYouTube(o = {}) {
               <p class="yt2__hint">${ed ? "Changes are saved to your channel." : `Paste a YouTube link (or video ID). It will be posted to <b>${esc(NAME)}</b>'s channel.`}</p>
               <label>YouTube link<input name="url" placeholder="https://www.youtube.com/watch?v=..." value="${ed ? `https://youtu.be/${esc(ed.id)}` : ""}"${ed ? " readonly" : " required"}></label>
               <label>Title<input name="title" maxlength="100" value="${ed ? esc(ed.title) : ""}" placeholder="Filled in automatically when possible"></label>
-              <label>Category<input name="cat" list="ytCatList" value="${ed ? esc(ed.cat) : "Videos"}" maxlength="24"><datalist id="ytCatList">${cats().filter(c => c !== "All").map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
+              <label>Category<input name="cat" list="ytCatList" value="${ed ? esc(ed.cat) : "Videos"}" maxlength="24"><datalist id="ytCatList">${cats().map(c => `<option value="${esc(c)}">`).join("")}</datalist></label>
               <label>Description<textarea name="desc" rows="3" maxlength="500">${ed ? esc(ed.desc) : ""}</textarea></label>
-              <div class="yt2__prev">${ed ? `<img src="${ytThumb(ed.id)}" alt="">` : ""}</div>
+              <div class="yt2__prev">${ed ? `<img src="${esc(ytThumb(ed.id))}" alt="">` : ""}</div>
               <button type="submit" class="yt2__sub yt2__sub--red">${ed ? "Save changes" : "Publish"}</button>
             </form>`;
         },
         watch(s) {
-          const v = VIDEOS[s.i], liked = likes().includes(v.id);
-          const next = all.filter(i => i !== s.i).sort((a, b) => (VIDEOS[b].channel === v.channel) - (VIDEOS[a].channel === v.channel));
+          const v = vidOf(s.id), liked = likes().includes(v.id), ch = v.channel, mine = !!v.mine;
+          const dateStr = v.date || v.ts ? new Date(v.date || v.ts).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+          const stats = [v.views != null ? ytViews(v.views) : "", dateStr].filter(Boolean);
+          const text = v.desc || `Added to ${FIRST}'s favorites. Watching on Windows 98, as intended.`;
+          const n = lib().filter(x => x.channel === ch).length;
+          const P = s.list ? plInfo(s.list) : null, pids = P ? (s.order || P.ids) : [], pi = pids.indexOf(v.id);
           return `
-            <div class="yt2__watch">
+            <div class="yt2__watch${theater ? " is-theater" : ""}">
+              <div class="yt2__stage"><div class="yt2__player is-loading"></div></div>
               <div class="yt2__primary">
-                <div class="yt2__player"></div>
-                <h1 class="yt2__title">${esc(v.title)}</h1>
-                <div class="yt2__owner">
-                  <i class="yt2__av" style="background:${ytColor(v.channel)}">${esc(v.channel[0].toUpperCase())}</i>
-                  <span><b data-channel="${esc(v.channel)}">${esc(v.channel)}</b><small>${esc(v.cat)}</small></span>
-                  ${subBtn(v.channel)}
-                  <span class="yt2__actions">
-                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">${ui("like", 18)}<span>${liked ? "Liked" : "Like"}</span></button>
-                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">${ui("share", 18)}<span>Share</span></button>
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">${ui("edit", 18)}<span>Edit</span></button>` : ""}
-                    ${v.mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">${ui("trash", 18)}<span>Delete</span></button>` : ""}
-                    <a class="yt2__pill" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener">Open on YouTube</a>
+                <div class="yt2__trow">
+                  <h1 class="yt2__title">${esc(v.title)}</h1>
+                  <span class="yt2__tools">
+                    <button type="button" class="yt2__chipb" data-speed aria-haspopup="menu" aria-label="Playback speed" title="Playback speed (&lt; and &gt;)">${ytI("speed", 20)}<span class="yt2__spd">${speed === 1 ? "" : speed + "x"}</span></button>
+                    <button type="button" class="yt2__chipb${theater ? " is-on" : ""}" data-theater aria-pressed="${theater}" aria-label="Theater mode" title="Theater mode (t)">${ytI("theater", 20)}</button>
+                    <a class="yt2__chipb" href="https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}" target="_blank" rel="noopener" aria-label="Open on YouTube" title="Open on YouTube">${ytI("ext", 20)}</a>
                   </span>
                 </div>
-                <div class="yt2__desc">Uploaded by <b>${esc(v.channel)}</b> &middot; ${esc(v.cat)}<br>${v.desc ? esc(v.desc).replace(/\n/g, "<br>") : `Added to ${esc(FIRST)}'s favorites. Watching on Windows 98, as intended.`}</div>
+                <div class="yt2__owner">
+                  <button type="button" class="yt2__avb" data-channel="${esc(ch)}"${cidAttr(ch, v)} tabindex="-1" aria-hidden="true">${avHtml(ch)}</button>
+                  <span class="yt2__oname"><b data-channel="${esc(ch)}"${cidAttr(ch, v)}>${esc(ch)}</b><small class="yt2__subs">${mine ? `${n} video${n === 1 ? "" : "s"}` : esc(v.cat)}</small></span>
+                  ${mine ? "" : subBtn(ch, v.channelId || cid(ch))}
+                  <span class="yt2__actions">
+                    <button type="button" class="yt2__pill${liked ? " is-on" : ""}" data-like="${esc(v.id)}">${likeInner(v, liked)}</button>
+                    <button type="button" class="yt2__pill" data-share="${esc(v.id)}">${ytI("share", 18)}<span>Share</span></button>
+                    <button type="button" class="yt2__pill" data-save="${esc(v.id)}" aria-haspopup="menu">${ytI("listAdd", 18)}<span>Save</span></button>
+                    ${mine ? `<button type="button" class="yt2__pill" data-edit="${esc(v.id)}">${ytI("edit", 18)}<span>Edit</span></button>` : ""}
+                    ${mine ? `<button type="button" class="yt2__pill" data-del="${esc(v.id)}">${ytI("trash", 18)}<span>Delete</span></button>` : ""}
+                  </span>
+                </div>
+                <div class="yt2__desc">
+                  <div class="yt2__dstat">${stats.length ? stats.map(x => `<b>${esc(x)}</b>`).join("") : `<b>${esc(ch)}</b><b>${esc(v.cat)}</b>`}</div>
+                  <div class="yt2__dtext">${ytLinkify(text)}</div>
+                  <dl class="yt2__dx"><dt>Channel</dt><dd><button type="button" class="yt2__cn" data-channel="${esc(ch)}"${cidAttr(ch, v)}>${esc(ch)}</button></dd><dt>Category</dt><dd>${esc(v.cat)}</dd>${durOf(v) ? `<dt>Length</dt><dd>${ytDur(durOf(v))}</dd>` : ""}<dt>Video ID</dt><dd>${esc(v.id)}</dd></dl>
+                  <button type="button" class="yt2__dmore" data-desc aria-expanded="false">Show more</button>
+                </div>
                 <section class="yt2__comments">
-                  <h3>${cmts(v.id).length} comment${cmts(v.id).length === 1 ? "" : "s"}</h3>
-                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment"><button type="submit" class="yt2__sub">Comment</button></form>${cmts(v.id).length ? "" : `<p class="yt2__empty yt2__empty--cmt">No comments yet. Be the first to comment.</p>`}
-                  ${cmts(v.id).slice().reverse().map(c => `<div class="yt2__cmt"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span><b>${esc(NAME)}</b> <small>${esc(new Date(c.ts).toLocaleDateString())}</small><br>${esc(c.t)}<br><button type="button" class="yt2__cdel" data-cdel="${c.ts}" data-vid="${esc(v.id)}">Delete</button></span></div>`).join("")}
+                  <div class="yt2__chead"><h3 class="yt2__ccount"></h3><button type="button" class="yt2__csort" data-csort aria-haspopup="menu">${ytI("sort", 24)}<span>Sort by</span></button></div>
+                  <form class="yt2__cform"><i class="yt2__av" style="background:${ytColor(NAME)}">${esc(NAME[0].toUpperCase())}</i><span class="yt2__cin"><input name="c" maxlength="300" placeholder="Add a comment..." aria-label="Add a comment" autocomplete="off"><span class="yt2__cbtns"><button type="reset" class="yt2__sub yt2__sub--ghost">Cancel</button><button type="submit" class="yt2__sub">Comment</button></span></span></form>
+                  <div class="yt2__clist"></div>
                 </section>
               </div>
               <aside class="yt2__next">
-                <label class="yt2__auto"><span>Up next</span><span class="check"><input type="checkbox" class="yt2__autobox"${autoplay ? " checked" : ""}><span>Autoplay</span></span></label>
-                <div class="yt2__rows yt2__rows--small">${next.map(i => row(VIDEOS[i], i)).join("")}</div>
+                ${P ? `<div class="yt2__plpanel"><div class="yt2__plph"><b>${esc(P.name)}</b><small>${esc(NAME)} &bull; ${pi + 1} / ${pids.length}</small></div><div class="yt2__plbody" data-list="${esc(P.id)}">${pids.map((id, i) => row(vidOf(id), { idx: i + 1, cur: id === v.id, cls: "yt2__row--pl" + (id === v.id ? " is-cur" : "") })).join("")}</div></div>` : ""}
+                <div class="yt2__nhead"><span>Up next</span><label class="yt2__auto"><span>Autoplay</span><input type="checkbox" class="yt2__autobox" role="switch"${autoplay ? " checked" : ""}></label></div>
+                <div class="yt2__chips yt2__chips--s"><button type="button" class="yt2__chip is-on" data-nf="all">All</button><button type="button" class="yt2__chip" data-nf="ch">From ${esc(ch)}</button></div>
+                <div class="yt2__rows yt2__rows--small" data-nlist>${skRow.repeat(5)}</div>
               </aside>
             </div>`;
         },
       };
-      const mountPlayer = (src, title) => {
-        const box = $(".yt2__player", main);
-        box.innerHTML = `<iframe src="${src}&enablejsapi=1${origin}" title="${esc(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-        const ifr = $("iframe", box);
-        ifr.addEventListener("load", () => { try { ifr.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*"); } catch (e) {} });
+      const likeInner = (v, liked) => `${ytI(liked ? "like" : "likeO", 18)}<span>${v.likes != null ? ytNum(v.likes + (liked ? 1 : 0)) : liked ? "Liked" : "Like"}</span>`;
+      const histList = q => {
+        const all = hist(), items = all.map(h => ({ h, v: vidOf(h.id) })).filter(x => !q || (x.v.title + " " + x.v.channel).toLowerCase().includes(q));
+        if (!items.length) return empty(all.length ? "No matching videos" : store.get("ytHistOff", false) ? "Watch history is paused" : "Your watch history is empty", all.length ? "Try a different search." : "Videos you watch will show up here.");
+        let cur = "", html = "";
+        items.forEach(({ h, v }) => {
+          const d = dayLabel(h.ts);
+          if (d !== cur) { if (cur) html += "</div>"; cur = d; html += `<h3 class="yt2__day">${esc(d)}</h3><div class="yt2__rows">`; }
+          html += row(v, { rm: "hist", desc: true });
+        });
+        return html + "</div>";
       };
-      const render = () => {
-        const s = stack[stack.length - 1];
+
+      /* ---- comments ---- */
+      const commentItems = v => {
+        const sort = store.get("ytCSort", "top"), liked = new Set(store.get("ytCL", []));
+        const mineC = cmts(v.id).map(c => ({ key: `me:${v.id}:${c.ts}`, name: NAME, t: c.t, ts: c.ts, likes: 0, me: true, raw: c.ts })).sort((a, b) => b.ts - a.ts);
+        const api = apiComments[v.id + ":" + sort] || [];
+        if (sort === "new") return mineC.concat(api).sort((a, b) => b.ts - a.ts);
+        return mineC.filter(c => liked.has(c.key)).concat(api, mineC.filter(c => !liked.has(c.key)));
+      };
+      const commentHtml = (c, v, liked) => `
+        <div class="yt2__cmt">
+          ${c.avatar ? `<img class="yt2__av" src="${esc(c.avatar)}" alt="">` : `<i class="yt2__av" style="background:${ytColor(c.name)}">${esc((c.name || "?")[0].toUpperCase())}</i>`}
+          <span class="yt2__cbody"><span class="yt2__chd"><b>${esc(c.name)}</b> <small>${esc(ytAgo(c.ts))}</small></span><span class="yt2__ctx">${esc(c.t).replace(/\n/g, "<br>")}</span>
+          <span class="yt2__cact"><button type="button" class="yt2__clike${liked.has(c.key) ? " is-on" : ""}" data-clike="${esc(c.key)}" aria-label="Like" aria-pressed="${liked.has(c.key)}">${ytI(liked.has(c.key) ? "like" : "likeO", 16)}<span>${c.likes + (liked.has(c.key) ? 1 : 0) || ""}</span></button>${c.me ? `<button type="button" class="yt2__cdel" data-cdel="${c.raw}" data-vid="${esc(v.id)}">Delete</button>` : ""}</span></span>
+        </div>`;
+      const refreshComments = v => {
+        const list = $(".yt2__clist", main), head = $(".yt2__ccount", main);
+        if (!list || !head || !v) return;
+        const items = commentItems(v), liked = new Set(store.get("ytCL", [])), sort = store.get("ytCSort", "top");
+        const total = (ytApi.on && v.commentCount != null ? v.commentCount : 0) + items.filter(c => c.me).length;
+        head.textContent = ytApi.on && v.commentCount != null ? `${ytNum(total)} Comments` : `${items.length} Comment${items.length === 1 ? "" : "s"}`;
+        const loading = ytApi.on && apiComments[v.id + ":" + sort] === undefined;
+        list.innerHTML = (items.length ? items.map(c => commentHtml(c, v, liked)).join("") : loading ? "" : `<p class="yt2__empty yt2__empty--cmt">No comments yet. Be the first to comment.</p>`) + (loading ? `<div class="yt2__cmt is-skel" aria-hidden="true"><i class="yt2__av"></i><span class="yt2__cbody"><span class="yt2__sk" style="width:30%"></span><span class="yt2__sk" style="width:85%"></span></span></div>`.repeat(3) : "");
+      };
+      const loadApiComments = v => {
+        const sort = store.get("ytCSort", "top"), key = v.id + ":" + sort;
+        if (!ytApi.on || apiComments[key] !== undefined) return;
+        const my = tok;
+        ytApi.comments(v.id, sort === "new" ? "time" : "relevance").then(c => { apiComments[key] = c; }, () => { apiComments[key] = []; }).then(() => { if (my === tok) refreshComments(v); });
+      };
+
+      /* ---- "Up next" / related ---- */
+      const drawNext = (s, v) => {
+        const list = $("[data-nlist]", main);
+        if (!list) return;
+        const shown = nextAll.filter(x => nextFilter === "all" || x.channel === v.channel);
+        upnext = nextAll.map(x => x.id);
+        list.innerHTML = shown.length ? shown.map(x => row(x, { cls: "yt2__row--sm" })).join("") : empty("", `Nothing else from ${esc(v.channel)}.`);
+        settle();
+      };
+      const fillNext = (s, v) => {
+        const my = tok, local = lib().filter(x => x.id !== v.id).sort((a, b) => (b.channel === v.channel) - (a.channel === v.channel));
+        nextFilter = "all"; nextAll = []; upnext = [];
+        const done = items => { if (my !== tok) return; nextAll = items; drawNext(s, v); };
+        if (ytApi.on) ytApi.related(v).then(a => done(mergeList(a).slice(0, 16).concat(local.filter(x => x.channel === v.channel).slice(0, 3)).filter((x, i, arr) => arr.findIndex(y => y.id === x.id) === i)), () => done(local));
+        else done(local);
+      };
+      // real subscriber count and channel picture, when the API is on and the channel is known
+      const fillOwner = v => {
+        const id = v.channelId || cid(v.channel), my = tok;
+        if (!ytApi.on || !id || v.mine) return;
+        ytApi.channel(id).then(info => {
+          CHAN[v.channel] = { id, thumb: info.thumb }; store.set("ytChan", CHAN);
+          if (my !== tok) return;
+          const sb = $(".yt2__subs", main);
+          if (sb && info.subs != null) sb.textContent = `${ytNum(info.subs)} subscribers`;
+          const av = $(".yt2__owner .yt2__avb", main);
+          if (av && info.thumb) { av.innerHTML = avHtml(v.channel); settle(); }
+        }).catch(() => {});
+      };
+
+      /* ---- render ---- */
+      let drawer = false;
+      const render = (restoreY = 0) => {
+        const s = stack[stack.length - 1], my = ++tok;
+        leaveWatch();
+        closePop(); hideSug();
+        drawer = false; root.classList.remove("is-drawer");
         drawSide();
-        main.innerHTML = views[s.page](s);
-        main.scrollTop = 0;
         back.disabled = stack.length < 2;
-        $$(".yt2__side [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === s.page));
-        $$(".yt2__side [data-channel]", body).forEach(b => b.classList.toggle("is-on", s.page === "channel" && b.dataset.channel === s.name));
-        current = -1;
-        if (s.page === "watch") {
-          const v = VIDEOS[s.i];
-          current = s.i; endedFor = null;
-          mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0`, v.title);
-          win.setTitle(`${v.title} - YouTube`);
-        } else win.setTitle("YouTube");
+        win.setTitle("YouTube");
+        let out;
+        try { out = views[s.page](s); } catch (err) { console.error(err); out = empty("Something went wrong", "Please try again."); }
+        const put = html => {
+          if (my !== tok) return;
+          main.innerHTML = html;
+          main.scrollTop = restoreY;
+          settle();
+          if (s.page === "watch") {
+            const v = vidOf(s.id);
+            pushHist(v);
+            mountPlayer(v);
+            win.setTitle(`${v.title} - YouTube`);
+            sizeStage();
+            refreshComments(v); loadApiComments(v);
+            fillNext(s, v); fillOwner(v);
+          }
+        };
+        if (out && typeof out.then === "function") { main.innerHTML = skeleton(s.page); main.scrollTop = 0; out.then(put, err => { console.warn(err); put(empty("Couldn't load this page", "Check your connection and try again.")); }); }
+        else put(out);
       };
+      const sameState = (a, b) => JSON.stringify(a, (k, x) => k === "_y" ? undefined : x) === JSON.stringify(b, (k, x) => k === "_y" ? undefined : x);
       const go = s => {
         const top = stack[stack.length - 1];
-        if (top && JSON.stringify(top) === JSON.stringify(s)) return;
+        if (top && sameState(top, s)) return;
+        if (top) top._y = main.scrollTop;
         stack.push(s);
         if (stack.length > 40) stack.shift();
         render();
       };
       win.ytGo = go;
-
-      const onMsg = e => {
-        if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
-        const ifr = $(".yt2__player iframe", main);
-        if (!ifr || e.source !== ifr.contentWindow) return;
-        let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (err) { return; }
-        const state = d && (d.event === "onStateChange" ? d.info : d.event === "infoDelivery" && d.info ? d.info.playerState : undefined);
-        if (state === 0 && current >= 0 && autoplay && endedFor !== current) {
-          endedFor = current;
-          const nextBtn = $(".yt2__next [data-v]", main);
-          if (nextBtn) go({ page: "watch", i: +nextBtn.dataset.v });
-        }
+      const toast = text => {
+        $$(".yt2__toast", root).forEach(x => x.remove());
+        const t = document.createElement("div");
+        t.className = "yt2__toast"; t.setAttribute("role", "status"); t.textContent = text;
+        root.appendChild(t);
+        later(() => t.remove(), 2600);
       };
-      window.addEventListener("message", onMsg);
-      win.cleanup = () => window.removeEventListener("message", onMsg);
+
+      /* ---- actions ---- */
+      const top = () => stack[stack.length - 1] || {};
+      const share = id => {
+        const url = `https://www.youtube.com/watch?v=${id}`;
+        const done = () => msgBox({ title: "Share", icon: "info", text: `Link copied to the clipboard:\n${url}` });
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => msgBox({ title: "Share", icon: "info", text: url })); else msgBox({ title: "Share", icon: "info", text: url });
+      };
+      const toggleDesc = () => {
+        const d = $(".yt2__desc", main);
+        if (!d) return;
+        const open = d.classList.toggle("is-open"), b = $("[data-desc]", d);
+        b.textContent = open ? "Show less" : "Show more";
+        b.setAttribute("aria-expanded", open);
+      };
+      const saveHtml = id => `<h4>Save video to...</h4><div class="yt2__chks">
+        <label class="yt2__chk"><input type="checkbox" data-plchk="WL"${wl().includes(id) ? " checked" : ""}><span>Watch later</span></label>
+        ${pls().map(p => `<label class="yt2__chk"><input type="checkbox" data-plchk="${esc(p.id)}"${p.ids.includes(id) ? " checked" : ""}><span>${esc(p.name)}</span></label>`).join("")}</div>
+        <div class="yt2__pnew"><button type="button" data-pnew>${ytI("plus", 24)}<span>New playlist</span></button></div>`;
+      const openSave = (anchor, id) => openPop(anchor, saveHtml(id), "yt2__pop--save", { vid: id });
+      const openMenu = (btn, id) => {
+        const inWL = wl().includes(id);
+        openPop(btn, `<button type="button" data-pa="wl" data-id="${esc(id)}">${ytI("later", 24)}<span>${inWL ? "Remove from Watch later" : "Save to Watch later"}</span></button>
+          <button type="button" data-pa="save" data-id="${esc(id)}">${ytI("listAdd", 24)}<span>Save to playlist</span></button>
+          <button type="button" data-pa="share" data-id="${esc(id)}">${ytI("share", 24)}<span>Share</span></button>`, "yt2__pop--menu", { right: true });
+      };
+      const openMe = btn => {
+        const handle = "@" + NAME.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        openPop(btn, `<div class="yt2__pme">${avHtml(NAME, true)}<span><b>${esc(NAME)}</b><small>${esc(handle)}</small><button type="button" class="yt2__lnk2" data-channel="${esc(NAME)}">View your channel</button></span></div><hr>
+          <button type="button" role="menuitemcheckbox" aria-checked="${dark}" data-pa="theme">${ytI("moon", 24)}<span>Dark theme</span><span class="yt2__switch${dark ? " is-on" : ""}"></span></button>
+          <button type="button" data-pa="keys">${ytI("keys", 24)}<span>Keyboard shortcuts</span></button><hr>
+          <button type="button" data-export>${ytI("down", 24)}<span>Export backup</span></button>
+          <label class="yt2__pbtn">${ytI("up", 24)}<span>Import backup</span><input type="file" accept="application/json,.json" data-import hidden></label>`, "yt2__pop--me", { right: true });
+      };
+      const popAction = el => {
+        const a = el.dataset.pa, id = el.dataset.id, anchor = pop && pop.anchor;
+        if (a === "theme") { setDark(!dark); el.setAttribute("aria-checked", dark); $(".yt2__switch", el).classList.toggle("is-on", dark); return; }
+        closePop();
+        if (a === "keys") showKeys();
+        else if (a === "wl") {
+          const on = !wl().includes(id);
+          plAdd("WL", id, on);
+          toast(on ? "Saved to Watch later" : "Removed from Watch later");
+          if (top().page === "playlist" && top().id === "WL") render(main.scrollTop);
+        }
+        else if (a === "save" && anchor) openSave(anchor, id);
+        else if (a === "share") share(id);
+        else if (a === "sort") { const v = vidOf(top().id); store.set("ytCSort", el.dataset.val); refreshComments(v); loadApiComments(v); }
+        else if (a === "speed") setSpeed(+el.dataset.val);
+      };
+      const playAll = (id, shuffle) => {
+        const P = plInfo(id);
+        if (!P || !P.ids.length) return;
+        const order = shuffle ? shuffled(P.ids) : null;
+        go({ page: "watch", id: (order || P.ids)[0], list: id, ...(order ? { order } : {}) });
+      };
+      const confirmBox = (title, text, yes) => msgBox({ title, icon: "warning", text, buttons: [yes, "Cancel"], defaultIndex: 1 }).then(r => r === 0 || r === yes);
 
       body.addEventListener("click", e => {
-        const ch = e.target.closest("[data-channel]");
-        if (ch) { e.stopPropagation(); go({ page: "channel", name: ch.dataset.channel }); return; }
-        if (e.target.closest("[data-export]")) { exportBackup(); return; }
-        const edt = e.target.closest("[data-edit]");
-        if (edt) { go({ page: "upload", edit: edt.dataset.edit }); return; }
-        const cd = e.target.closest("[data-cdel]");
-        if (cd) {
-          const m = store.get("ytComments", {});
-          m[cd.dataset.vid] = (m[cd.dataset.vid] || []).filter(c => String(c.ts) !== cd.dataset.cdel);
-          store.set("ytComments", m);
-          const s = stack[stack.length - 1], y = main.scrollTop;
-          main.innerHTML = views.watch(s); mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(VIDEOS[s.i].id)}?autoplay=1&rel=0`, VIDEOS[s.i].title); main.scrollTop = y;
+        const t = e.target, c = sel => t.closest(sel);
+        let el;
+        if ((el = c("[data-pa]"))) { popAction(el); return; }
+        if (c("[data-scrim]")) { drawer = false; root.classList.remove("is-drawer"); return; }
+        if (c("[data-burger]")) {
+          if (root.classList.contains("is-narrow")) { drawer = !drawer; root.classList.toggle("is-drawer", drawer); }
+          else { sideMode = sideMode === "mini" ? "" : "mini"; store.set("ytSide", sideMode); drawSide(); }
           return;
         }
-        const del = e.target.closest("[data-del]");
-        if (del) {
+        if ((el = c("[data-me]"))) { openMe(el); return; }
+        if ((el = c("[data-more]"))) { openMenu(el, el.dataset.more); return; }
+        if ((el = c("[data-channel]"))) { e.stopPropagation(); go({ page: "channel", name: el.dataset.channel, ...(el.dataset.cid ? { cid: el.dataset.cid } : {}) }); return; }
+        if (c("[data-export]")) { closePop(); ytExport(); return; }
+        if ((el = c("[data-edit]"))) { go({ page: "upload", edit: el.dataset.edit }); return; }
+        if ((el = c("[data-cdel]"))) {
+          const m = store.get("ytComments", {});
+          m[el.dataset.vid] = (m[el.dataset.vid] || []).filter(x => String(x.ts) !== el.dataset.cdel);
+          store.set("ytComments", m);
+          refreshComments(vidOf(el.dataset.vid));
+          return;
+        }
+        if ((el = c("[data-del]"))) {
+          const id = el.dataset.del;
           msgBox({ title: "Delete video", icon: "warning", text: "Remove this video from your channel?", buttons: ["Delete", "Cancel"], defaultIndex: 1 }).then(r => {
             if (r !== 0 && r !== "Delete") return;
-            store.set("ytUploads", store.get("ytUploads", []).filter(u => u.id !== del.dataset.del));
-            const i = VIDEOS.findIndex(v => v.mine && v.id === del.dataset.del);
+            store.set("ytUploads", store.get("ytUploads", []).filter(u => u.id !== id));
+            const i = VIDEOS.findIndex(v => v.mine && v.id === id);
             if (i >= 0) VIDEOS.splice(i, 1);
-            all = VIDEOS.map((_, k) => k);
+            pool.delete(id); syncPool();
             stack.length = 0;
             go({ page: "channel", name: NAME });
           });
           return;
         }
-        const sb = e.target.closest("[data-sub]");
-        if (sb) {
-          const on = toggle("ytSubs", sb.dataset.sub);
-          $$(`[data-sub="${CSS.escape(sb.dataset.sub)}"]`, body).forEach(b => { b.classList.toggle("is-on", on); b.textContent = on ? "Subscribed" : "Subscribe"; });
+        if ((el = c("[data-sub]"))) {
+          const ch = el.dataset.sub, on = toggle("ytSubs", ch);
+          if (on && el.dataset.cid) { CHAN[ch] = Object.assign(CHAN[ch] || {}, { id: el.dataset.cid }); store.set("ytChan", CHAN); }
+          $$(`[data-sub="${CSS.escape(ch)}"]`, body).forEach(b => { b.classList.toggle("is-on", on); b.textContent = on ? "Subscribed" : "Subscribe"; });
+          drawSide();
           return;
         }
-        const lk = e.target.closest("[data-like]");
-        if (lk) { const on = toggle("ytLikes", lk.dataset.like); lk.classList.toggle("is-on", on); lk.innerHTML = `${ui("like", 18)}<span>${on ? "Liked" : "Like"}</span>`; return; }
-        const sh = e.target.closest("[data-share]");
-        if (sh) {
-          const url = `https://www.youtube.com/watch?v=${sh.dataset.share}`;
-          const done = () => msgBox({ title: "Share", icon: "info", text: `Link copied to the clipboard:\n${url}` });
-          if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => msgBox({ title: "Share", icon: "info", text: url })); else msgBox({ title: "Share", icon: "info", text: url });
+        if ((el = c("[data-like]"))) {
+          const v = vidOf(el.dataset.like), on = toggle("ytLikes", v.id);
+          if (on) remember(v);
+          el.classList.toggle("is-on", on);
+          el.innerHTML = likeInner(v, on);
           return;
         }
-        const cat = e.target.closest("[data-cat]");
-        if (cat) { stack[stack.length - 1] = { page: "home", cat: cat.dataset.cat }; render(); return; }
-        const v = e.target.closest("[data-v]");
-        if (v) { go({ page: "watch", i: +v.dataset.v }); return; }
-        const g = e.target.closest("[data-go]");
-        if (g) go({ page: g.dataset.go });
+        if ((el = c("[data-share]"))) { share(el.dataset.share); return; }
+        if ((el = c("[data-save]"))) { openSave(el, el.dataset.save); return; }
+        if ((el = c("[data-speed]"))) {
+          openPop(el, `<h4>Playback speed</h4>${[.25, .5, .75, 1, 1.25, 1.5, 1.75, 2].map(x => `<button type="button" data-pa="speed" data-val="${x}"><span class="yt2__ck">${x === speed ? ytI("check", 20) : ""}</span><span>${x === 1 ? "Normal" : x}</span></button>`).join("")}`, "yt2__pop--menu");
+          return;
+        }
+        if (c("[data-theater]")) { setTheater(!theater); return; }
+        if ((el = c("[data-seek]"))) { seekTo(+el.dataset.seek); return; }
+        if (c("a[href]")) return;
+        if (c("[data-desc]") || c(".yt2__desc:not(.is-open)")) { toggleDesc(); return; }
+        if ((el = c("[data-csort]"))) {
+          const cur = store.get("ytCSort", "top");
+          openPop(el, [["top", "Top comments"], ["new", "Newest first"]].map(([k, l]) => `<button type="button" data-pa="sort" data-val="${k}"><span class="yt2__ck">${k === cur ? ytI("check", 20) : ""}</span><span>${l}</span></button>`).join(""), "yt2__pop--menu");
+          return;
+        }
+        if ((el = c("[data-clike]"))) { toggle("ytCL", el.dataset.clike); refreshComments(vidOf(top().id)); return; }
+        if ((el = c("[data-nf]"))) {
+          nextFilter = el.dataset.nf;
+          $$("[data-nf]", main).forEach(b => b.classList.toggle("is-on", b === el));
+          drawNext(top(), vidOf(top().id));
+          return;
+        }
+        if (c("[data-newpl]")) { askName("New playlist", "", "Create", n => { plNew(n); if (top().page === "playlists" || top().tab === "playlists") render(main.scrollTop); toast("Playlist created"); }); return; }
+        if (c("[data-pnew]")) {
+          const box = $(".yt2__pnew", pop && pop.el);
+          if (!box) return;
+          box.innerHTML = `<form class="yt2__pform"><input name="n" maxlength="150" placeholder="Enter playlist name..." aria-label="Playlist name" autocomplete="off"><button type="submit">Create</button></form>`;
+          $("input", box).focus();
+          return;
+        }
+        if ((el = c("[data-plrename]"))) {
+          const P = plInfo(el.dataset.plrename);
+          if (P) askName("Rename playlist", P.name, "Save", n => { const a = pls(), p = a.find(x => x.id === P.id); if (p) { p.name = n.slice(0, 150); p.upd = Date.now(); store.set("ytPL", a); } render(main.scrollTop); });
+          return;
+        }
+        if ((el = c("[data-pldel]"))) {
+          const P = plInfo(el.dataset.pldel);
+          if (P) confirmBox("Delete playlist", `Delete "${P.name}"? This can't be undone.`, "Delete").then(ok => { if (!ok) return; store.set("ytPL", pls().filter(p => p.id !== P.id)); stack[stack.length - 1] = { page: "playlists" }; render(); });
+          return;
+        }
+        if ((el = c("[data-playall]"))) { playAll(el.dataset.playall, !!el.dataset.shuffle); return; }
+        if ((el = c("[data-plrm]"))) {
+          const list = (c("[data-list]") || {}).dataset && c("[data-list]").dataset.list, id = el.dataset.plrm;
+          if (list === "LL") toggle("ytLikes", id); else if (list) plAdd(list, id, false);
+          render(main.scrollTop);
+          return;
+        }
+        if ((el = c("[data-rmhist]"))) {
+          store.set("ytHist", hist().filter(x => x.id !== el.dataset.rmhist));
+          $(".yt2__hlist", main).innerHTML = histList((top().q || "").toLowerCase());
+          settle();
+          return;
+        }
+        if (c("[data-clearhist]")) {
+          confirmBox("Clear watch history", "Clear all of your watch history? This also forgets where you stopped in each video.", "Clear history").then(ok => {
+            if (!ok) return;
+            store.set("ytHist", []);
+            Object.keys(PROG).forEach(k => delete PROG[k]); store.set("ytProg", PROG);
+            render();
+          });
+          return;
+        }
+        if (c("[data-pausehist]")) { store.set("ytHistOff", !store.get("ytHistOff", false)); render(main.scrollTop); return; }
+        if ((el = c("[data-tab]"))) { stack[stack.length - 1] = { ...top(), tab: el.dataset.tab }; render(); return; }
+        if ((el = c("[data-cat]"))) { stack[stack.length - 1] = { page: "home", cat: el.dataset.cat }; render(); return; }
+        if ((el = c("[data-k]"))) { stack[stack.length - 1] = { page: "trending", k: el.dataset.k }; render(); return; }
+        if ((el = c("[data-v]"))) {
+          const lst = c("[data-list]"), cur = top(), st = { page: "watch", id: el.dataset.v };
+          if (lst) { st.list = lst.dataset.list; if (cur.page === "watch" && cur.list === st.list && cur.order) st.order = cur.order; }
+          go(st);
+          return;
+        }
+        if ((el = c("[data-go]"))) { const st = { page: el.dataset.go }; if (el.dataset.id) st.id = el.dataset.id; if (el.dataset.k) st.k = el.dataset.k; go(st); }
       });
       body.addEventListener("input", e => {
+        const hq = e.target.closest("[data-hq]");
+        if (hq) { top().q = hq.value; $(".yt2__hlist", main).innerHTML = histList(hq.value.toLowerCase()); settle(); return; }
+        const ci = e.target.closest(".yt2__cform input");
+        if (ci) { ci.parentElement.classList.toggle("has-text", !!ci.value); return; }
         const f = e.target.closest(".yt2__form");
         if (!f || e.target.name !== "url") return;
         const id = ytParseId(e.target.value), prev = $(".yt2__prev", f);
         if (!id) { prev.innerHTML = e.target.value ? `<small>That doesn't look like a YouTube link yet.</small>` : ""; return; }
-        prev.innerHTML = `<img src="${ytThumb(id)}" alt="">`;
+        prev.innerHTML = `<img src="${esc(ytThumb(id))}" alt="">`;
         const t = f.elements.title;
         if (t.value.trim() && !t.dataset.auto) return;
         fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent("https://www.youtube.com/watch?v=" + id)}`)
@@ -1679,20 +3456,31 @@ function openYouTube(o = {}) {
           .then(j => { if (j && j.title && ytParseId(f.elements.url.value) === id && (!t.value.trim() || t.dataset.auto)) { t.value = j.title; t.dataset.auto = "1"; } })
           .catch(() => {});
       });
+      body.addEventListener("reset", e => { const cin = e.target.closest(".yt2__cform"); if (cin) { $(".yt2__cin", cin).classList.remove("has-text"); document.activeElement && document.activeElement.blur(); } });
       body.addEventListener("submit", e => {
+        const f0 = e.target;
+        if (f0.matches(".yt2__search")) { e.preventDefault(); runSearch(qInput.value); return; }
+        if (f0.matches(".yt2__hsearch")) { e.preventDefault(); return; }
+        if (f0.matches(".yt2__pform")) {
+          e.preventDefault();
+          const n = f0.elements.n.value.trim();
+          if (!n || !pop) return;
+          const p = plNew(n, pop.vid);
+          pop.el.innerHTML = saveHtml(pop.vid);
+          toast(`Saved to ${p.name}`);
+          return;
+        }
         const cf = e.target.closest(".yt2__cform");
         if (cf) {
           e.preventDefault();
-          const t = cf.elements.c.value.trim(), s = stack[stack.length - 1];
-          if (!t) return;
-          const id = VIDEOS[s.i].id, m = store.get("ytComments", {});
+          const t = cf.elements.c.value.trim(), s = top();
+          if (!t || s.page !== "watch") return;
+          const id = s.id, m = store.get("ytComments", {});
           m[id] = (m[id] || []).concat({ t, ts: Date.now() });
           store.set("ytComments", m);
           Sound.play("notify");
-          const y = main.scrollTop;
-          main.innerHTML = views.watch(s);
-          mountPlayer(`https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0`, VIDEOS[s.i].title);
-          main.scrollTop = y;
+          cf.reset();
+          refreshComments(vidOf(id));
           return;
         }
         const f = e.target.closest(".yt2__form");
@@ -1702,7 +3490,7 @@ function openYouTube(o = {}) {
           const list = store.get("ytUploads", []), u = list.find(x => x.id === f.dataset.editing), v = VIDEOS.find(x => x.mine && x.id === f.dataset.editing);
           if (u && v) {
             Object.assign(u, { title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim() });
-            Object.assign(v, u);
+            Object.assign(v, { title: u.title, cat: u.cat, desc: u.desc });
             store.set("ytUploads", list);
           }
           stack.length = 0;
@@ -1712,32 +3500,151 @@ function openYouTube(o = {}) {
         const id = ytParseId(f.elements.url.value);
         if (!id) { msgBox({ title: "Upload", icon: "error", text: "Couldn't find a video in that link. Paste a youtube.com or youtu.be link, or the 11-character video ID." }); return; }
         if (VIDEOS.some(v => v.mine && v.id === id)) { msgBox({ title: "Upload", icon: "info", text: "That video is already on your channel." }); return; }
-        const u = { id, title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim() };
+        const u = { id, title: f.elements.title.value.trim() || "Untitled video", cat: f.elements.cat.value.trim() || "Videos", desc: f.elements.desc.value.trim(), ts: Date.now() };
         store.set("ytUploads", store.get("ytUploads", []).concat(u));
         VIDEOS.push({ ...u, channel: NAME, mine: true });
-        all = VIDEOS.map((_, k) => k);
+        syncPool();
         Sound.play("notify");
         go({ page: "channel", name: NAME });
       });
       body.addEventListener("change", e => {
-        if (e.target.matches("[data-import]") && e.target.files[0]) {
-          importBackup(e.target.files[0], ok => {
+        const imp = e.target.closest("[data-import]");
+        if (imp && imp.files[0]) {
+          const file = imp.files[0];
+          closePop();
+          importBackup(file, ok => {
             if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
-            msgBox({ title: "Import", icon: "info", text: "Backup imported. Reopen YouTube to see everything." }).then(() => win.close());
+            ytImportExtra(file).then(() => msgBox({ title: "Import", icon: "info", text: "Backup imported. Reopen YouTube to see everything." })).then(() => win.close());
           });
+          return;
+        }
+        if (e.target.classList.contains("yt2__autobox")) { autoplay = e.target.checked; store.set("ytAuto", autoplay); return; }
+        const chk = e.target.closest("[data-plchk]");
+        if (chk && pop && pop.vid) {
+          plAdd(chk.dataset.plchk, pop.vid, chk.checked);
+          const name = chk.dataset.plchk === "WL" ? "Watch later" : (plInfo(chk.dataset.plchk) || {}).name || "playlist";
+          toast(chk.checked ? `Saved to ${name}` : `Removed from ${name}`);
         }
       });
-      body.addEventListener("change", e => { if (e.target.classList.contains("yt2__autobox")) { autoplay = e.target.checked; store.set("ytAuto", autoplay); } });
-      back.addEventListener("click", () => { if (stack.length > 1) { stack.pop(); render(); } });
-      $(".yt2__search", body).addEventListener("submit", e => {
-        e.preventDefault();
-        const q = $("input", e.target).value.trim();
-        if (q) go({ page: "search", q });
+      back.addEventListener("click", () => { if (stack.length > 1) { stack.pop(); render(top()._y || 0); } });
+
+      /* ---- search box ---- */
+      let typed = "";
+      qInput.addEventListener("input", () => { typed = qInput.value; showSug(); });
+      qInput.addEventListener("focus", () => { typed = qInput.value; showSug(); });
+      qInput.addEventListener("blur", () => later(hideSug, 150));
+      qInput.addEventListener("keydown", e => {
+        if (e.key === "Escape") { if (!sug.hidden) { hideSug(); e.stopPropagation(); } else qInput.blur(); return; }
+        if ((e.key === "ArrowDown" || e.key === "ArrowUp") && sugItems.length) {
+          if (sug.hidden) { showSug(); return; }
+          e.preventDefault();
+          const n = sugItems.length;
+          sugSel = e.key === "ArrowDown" ? (sugSel + 1 >= n ? -1 : sugSel + 1) : (sugSel - 1 < -1 ? n - 1 : sugSel - 1);
+          qInput.value = sugSel >= 0 ? sugItems[sugSel].t : typed;
+          markSug();
+        }
       });
+      sug.addEventListener("pointerdown", e => e.preventDefault());
+      sug.addEventListener("click", e => {
+        e.stopPropagation();
+        const x = e.target.closest("[data-sx]");
+        if (x) { const it = sugItems[+x.dataset.sx]; if (it) store.set("ytSearches", store.get("ytSearches", []).filter(q => q !== it.t)); showSug(); return; }
+        const it = e.target.closest("[data-si]");
+        if (it && sugItems[+it.dataset.si]) runSearch(sugItems[+it.dataset.si].t);
+      });
+
+      /* ---- keyboard shortcuts (the iframe handles its own keys while it has focus) ---- */
+      const onKey = e => {
+        if (WM.active !== "youtube" || win.min || e.ctrlKey || e.metaKey || e.altKey) return;
+        const t = e.target, tag = t && t.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (t && t.isContentEditable)) return;
+        if ($(".yt2__modal", root)) return;
+        const s = top(), watching = s.page === "watch", k = e.key, onBtn = tag === "BUTTON" || tag === "A" || tag === "SUMMARY";
+        let used = true;
+        if (k === "/") { qInput.focus(); qInput.select(); }
+        else if (k === "?") showKeys();
+        else if (!watching) used = false;
+        else if (k === "k" || (k === " " && !onBtn)) playPause();
+        else if (k === "j") seek(-10);
+        else if (k === "l") seek(10);
+        else if (k === "ArrowLeft" && !onBtn) seek(-5);
+        else if (k === "ArrowRight" && !onBtn) seek(5);
+        else if (k === "m") cmd(pl.muted ? "unMute" : "mute");
+        else if (/^[0-9]$/.test(k)) { if (pl.d) seekTo(pl.d * +k / 10); }
+        else if (k === "f") fullscreen();
+        else if (k === "t") setTheater(!theater);
+        else if (k === "<" || k === ">") {
+          const steps = [.25, .5, .75, 1, 1.25, 1.5, 1.75, 2], i = Math.max(0, steps.indexOf(speed));
+          setSpeed(steps[Math.max(0, Math.min(steps.length - 1, i + (k === ">" ? 1 : -1)))]);
+          toast(`Playback speed: ${speed === 1 ? "Normal" : speed + "x"}`);
+        }
+        else if (k === "N") { const n = nextOf(s, true); if (n) go(n); }
+        else used = false;
+        if (used) e.preventDefault();
+      };
+      document.addEventListener("keydown", onKey);
+
+      /* ---- player messages (YouTube iframe API) ---- */
+      const onMsg = e => {
+        if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
+        const ifr = $(".yt2__player iframe", main);
+        if (!ifr || e.source !== ifr.contentWindow) return;
+        let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (err) { return; }
+        if (!d) return;
+        const info = d.event === "infoDelivery" || d.event === "initialDelivery" ? d.info : d.event === "onStateChange" ? { playerState: d.info } : null;
+        if (!info || typeof info !== "object") return;
+        const first = !pl.got;
+        pl.got = true;
+        if (typeof info.currentTime === "number") pl.t = info.currentTime;
+        if (info.duration > 0 && pl.d !== info.duration) {
+          pl.d = info.duration;
+          if (Math.abs((DUR[pl.id] || 0) - pl.d) > 1) { DUR[pl.id] = Math.round(pl.d); const k = Object.keys(DUR); if (k.length > 600) delete DUR[k[0]]; store.set("ytDur", DUR); }
+        }
+        if (typeof info.volume === "number") pl.vol = info.volume;
+        if (typeof info.muted === "boolean") pl.muted = info.muted;
+        if (typeof info.playbackRate === "number") pl.rate = info.playbackRate;
+        if (first && speed !== 1) cmd("setPlaybackRate", [speed]);
+        if (info.playerState !== undefined && info.playerState !== null) {
+          const st = info.playerState;
+          pl.state = st;
+          if (st === 2) saveProg(true);
+          if (st === 1 && !pl.spd) { pl.spd = true; if (speed !== 1) cmd("setPlaybackRate", [speed]); }
+          if (st === 0 && pl.endedFor !== pl.id) {
+            pl.endedFor = pl.id;
+            saveProg(true);
+            const s = top(), n = s.page === "watch" ? nextOf(s) : null;
+            if (n) go(n);
+            return;
+          }
+        }
+        saveProg(false);
+      };
+      window.addEventListener("message", onMsg);
+
+      // narrow windows get a slide-over guide instead of the side rail
+      const fit = () => {
+        const was = root.classList.contains("is-narrow"), narrow = root.clientWidth < 720;
+        root.classList.toggle("is-narrow", narrow);
+        root.classList.toggle("is-compact", main.clientWidth < 1000);
+        root.classList.toggle("is-tiny", root.clientWidth < 540);
+        if (was !== narrow) { drawer = false; root.classList.remove("is-drawer"); drawSide(); }
+        sizeStage();
+      };
+      const ro = typeof ResizeObserver === "function" ? new ResizeObserver(fit) : null;
+      if (ro) { ro.observe(root); ro.observe(main); }
+      fit();
+      win.cleanup = () => {
+        leaveWatch();
+        window.removeEventListener("message", onMsg);
+        document.removeEventListener("keydown", onKey);
+        if (ro) ro.disconnect();
+        timers.forEach(clearTimeout);
+      };
       go({ page: "home", cat: "All" });
     },
     onClose: w => w.cleanup && w.cleanup(),
   });
+  if (o.q && w && w.ytGo) w.ytGo({ page: "search", q: String(o.q) });
 }
 
 /* ---------- Spotify ---------- */
@@ -1786,102 +3693,341 @@ function importBackup(file, done) {
   r.readAsText(file);
 }
 const backupBar = () => `<span class="media-backup"><button type="button" data-export>Export backup</button><label class="media-backup__imp">Import backup<input type="file" accept="application/json,.json" data-import hidden></label></span>`;
+// ---- Spotify window helpers: glyphs, iFrame API loader, browse categories ----
+BACKUP_KEYS.push("spRecent", "spLikes", "spLists", "spHidden");
+const SP_ICONS = {
+  heart: "M12 21.35 10.55 20.03C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z",
+  heartO: "M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3m-4.4 15.55-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05",
+  pause: "M6 19h4V5H6zm8-14v14h4V5z",
+  prev: "M6 6h2v12H6zm3.5 6 8.5 6V6z",
+  next: "M6 18l8.5-6L6 6zM16 6v12h2V6z",
+  shuffle: "M10.59 9.17 5.41 4 4 5.41l5.17 5.17zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04z",
+  repeat: "M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z",
+  repeat1: "M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2zm-4-2V9h-1l-2 1v1h1.5v4z",
+  vol: "M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77",
+  volLow: "M18.5 12A4.5 4.5 0 0 0 16 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02M5 9v6h4l5 5V4L9 9z",
+  volMute: "M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63m2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71M4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9 9 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9zM12 4 9.91 6.09 12 8.18z",
+  more: "M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2",
+  check: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+  link: "M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5",
+  list: "M3 18h6v-2H3zM3 6v2h18V6zm0 7h12v-2H3z",
+  plusList: "M14 10H3v2h11zm0-4H3v2h11zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2zM3 16h7v-2H3z",
+  chev: "M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z",
+  open: "M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3zM19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z",
+  pin: "M16 9V4l1-1V2H7v1l1 1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3",
+};
+const spi = (name, size = 20) => SP_ICONS[name]
+  ? `<svg class="ui-i" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${SP_ICONS[name]}"/></svg>`
+  : ui(name, size);
+const spEq = '<em class="sp__eq" aria-hidden="true"><i></i><i></i><i></i></em>';
+const spFmt = ms => { const s = Math.max(0, Math.floor((+ms || 0) / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+// Spotify's iFrame API is loaded once for the whole page; resolves to null if it can't be reached.
+let SP_API = null, SP_API_P = null;
+function spLoadApi() {
+  if (SP_API) return Promise.resolve(SP_API);
+  if (SP_API_P) return SP_API_P;
+  SP_API_P = new Promise(resolve => {
+    let done = false;
+    const fin = api => { if (done) return; done = true; if (api) SP_API = api; else SP_API_P = null; resolve(api || null); };
+    try {
+      window.onSpotifyIframeApiReady = api => fin(api);
+      const s = document.createElement("script");
+      s.src = "https://open.spotify.com/embed/iframe-api/v1";
+      s.async = true;
+      s.onerror = () => fin(null);
+      (document.head || document.documentElement).appendChild(s);
+    } catch (e) { fin(null); }
+  });
+  return SP_API_P;
+}
+// "Browse all" tiles: flat colour + a filter over your library (by type, or by words in the title).
+const SP_BROWSE = [
+  { k: "songs", name: "Songs", color: "#8d67ab", types: ["track"] },
+  { k: "albums", name: "Albums", color: "#1e3264", types: ["album"] },
+  { k: "artists", name: "Artists", color: "#e8115b", types: ["artist"] },
+  { k: "podcasts", name: "Podcasts", color: "#148a08", types: ["show", "episode"] },
+  { k: "playlists", name: "Playlists", color: "#477d95", types: ["playlist"] },
+  { k: "mine", name: "Made by you", color: "#dc148c", own: true },
+  { k: "liked", name: "Liked", color: "#7358ff", liked: true },
+  { k: "pop", name: "Pop", color: "#ba5d07", words: ["pop", "hits", "top"] },
+  { k: "rock", name: "Rock", color: "#e13300", words: ["rock", "metal", "punk", "grunge", "classics"] },
+  { k: "chill", name: "Chill", color: "#0d73ec", words: ["chill", "lofi", "lo-fi", "piano", "peaceful", "ambient", "sleep", "relax", "calm"] },
+  { k: "focus", name: "Focus", color: "#006450", words: ["focus", "study", "work", "lofi", "piano", "beats"] },
+  { k: "90s", name: "90s", color: "#509bf5", words: ["90s", "1990", "nineties"] },
+  { k: "2000s", name: "2000s", color: "#503750", words: ["2000s", "00s", "2000"] },
+  { k: "party", name: "Party", color: "#8c1932", words: ["party", "dance", "all out", "club"] },
+];
 function openSpotify(o = {}) {
   WM.open("spotify", {
-    title: "Spotify", icon: "spotify", w: 980, h: 600, from: o.from,
+    title: "Spotify", icon: "spotify", w: 1000, h: 660, from: o.from,
+    onResize: w => w.sync && w.sync(),
     render(body, win) {
       body.classList.add("body--flush");
-      const mine = () => store.get("spLib", []);
-      const lib = () => mine().map(x => ({ ...x, mine: true })).concat(SP_DEFAULTS);
+      const arr = x => Array.isArray(x) ? x : [];
+      const str = x => typeof x === "string";
+      const mine = () => arr(store.get("spLib", []));
+      let recents = [], likeSet = new Set(), lists = [], hidden = new Set();
+      const loadState = () => {
+        recents = arr(store.get("spRecent", [])).filter(str);
+        likeSet = new Set(arr(store.get("spLikes", [])).filter(str));
+        hidden = new Set(arr(store.get("spHidden", [])).filter(str));
+        lists = arr(store.get("spLists", [])).filter(l => l && str(l.id) && Array.isArray(l.items)).map(l => ({ id: l.id, name: String(l.name || "Playlist"), items: l.items.filter(str), ts: +l.ts || 0 }));
+      };
+      loadState();
+      const saveRecents = () => store.set("spRecent", recents);
+      const saveLikes = () => store.set("spLikes", Array.from(likeSet));
+      const saveLists = () => store.set("spLists", lists);
+      const saveHidden = () => store.set("spHidden", Array.from(hidden));
+      const lastMode = store.get("spMode", {}) || {};
+      const mode = { shuffle: !!lastMode.shuffle, repeat: ["off", "all", "one"].includes(lastMode.repeat) ? lastMode.repeat : "off" };
+      let vol = +store.get("spVol", 0.8); if (!(vol >= 0 && vol <= 1)) vol = 0.8;
+      let muted = false;
+      let sortBy = store.get("spSort", "recent") === "alpha" ? "alpha" : "recent";
+      let chip = "", filter = "";
+
+      const customOf = l => ({ type: "playlist", id: l.id, title: l.name, custom: true, mine: true, items: l.items });
+      const lib = () => lists.slice().reverse().map(customOf).concat(mine().map(x => ({ ...x, mine: true })), SP_DEFAULTS.filter(x => !hidden.has(x.id)));
       const find = id => lib().find(x => x.id === id);
+      const isList = id => lists.some(l => l.id === id);
+      const SINGLE = /^(track|episode)$/;
       const artCache = () => store.get("spArt", {});
       const artOf = it => it.thumb || artCache()[it.id] || "";
       const KIND = { track: "Song", album: "Album", playlist: "Playlist", artist: "Artist", episode: "Episode", show: "Podcast" };
       const hue = name => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+      const urlOf = it => `https://open.spotify.com/${it.type}/${it.id}`;
+      const uriOf = it => `spotify:${it.type}:${it.id}`;
       const local = [];   // audio files picked from this computer; they only last until the window closes
-      let localIdx = -1, filter = "";
+      let localIdx = -1;
       const hist = [{ page: "home" }]; let pos = 0;
       const tried = new Set();
-      win.cleanup = () => local.forEach(f => URL.revokeObjectURL(f.url));
+      let destroyed = false;
 
       body.innerHTML = `
         <div class="sp">
-          <aside class="sp__side">
-            <nav class="sp__panel sp__nav">
-              <button type="button" data-go="home">${ui("home", 24)}<span>Home</span></button>
-              <button type="button" data-go="add">${ui("search", 24)}<span>Add music</span></button>
-              <button type="button" data-go="local">${ui("folder", 24)}<span>Your files</span></button>
-            </nav>
-            <section class="sp__panel sp__libpanel">
-              <header><span>${ui("library", 22)}Your Library</span><button type="button" data-go="add" title="Add music" aria-label="Add music">${ui("plus", 18)}</button></header>
-              <input class="sp__filter" type="search" placeholder="Search in Your Library" aria-label="Search in Your Library">
-              <div class="sp__lib"></div>
-            </section>
-          </aside>
-          <main class="sp__panel sp__main">
-            <div class="sp__top"><button type="button" class="sp__nav-btn" data-hist="-1" aria-label="Back">${ui("back", 22)}</button><button type="button" class="sp__nav-btn" data-hist="1" aria-label="Forward">${ui("fwd", 22)}</button></div>
-            <div class="sp__view"></div>
-          </main>
+          <div class="sp__cols">
+            <aside class="sp__side">
+              <nav class="sp__panel sp__nav">
+                <button type="button" data-go="home">${ui("home", 24)}<span>Home</span></button>
+                <button type="button" data-go="search">${ui("search", 24)}<span>Search</span></button>
+              </nav>
+              <section class="sp__panel sp__libpanel">
+                <header><span>${ui("library", 22)}Your Library</span><button type="button" data-create title="Create" aria-label="Create" aria-haspopup="menu">${ui("plus", 18)}</button></header>
+                <div class="sp__chips" role="group" aria-label="Filter your library">${[["playlist", "Playlists"], ["track", "Songs"], ["album", "Albums"], ["artist", "Artists"], ["podcast", "Podcasts"]].map(([k, l]) => `<button type="button" class="sp__chip" data-chip="${k}" aria-pressed="false">${l}</button>`).join("")}</div>
+                <div class="sp__lbar">
+                  <input class="sp__filter" type="search" placeholder="Search in Your Library" aria-label="Search in Your Library">
+                  <button type="button" class="sp__sort" data-sort aria-haspopup="menu"><span>Recents</span>${spi("list", 16)}</button>
+                </div>
+                <div class="sp__lib"></div>
+              </section>
+            </aside>
+            <main class="sp__panel sp__main">
+              <div class="sp__top">
+                <button type="button" class="sp__nav-btn" data-hist="-1" aria-label="Back">${ui("back", 22)}</button>
+                <button type="button" class="sp__nav-btn" data-hist="1" aria-label="Forward">${ui("fwd", 22)}</button>
+                <label class="sp__sbox" hidden>${ui("search", 22)}<input class="sp__sinput" type="search" placeholder="What do you want to play?" aria-label="Search" autocomplete="off"></label>
+              </div>
+              <div class="sp__view"></div>
+            </main>
+          </div>
+          <footer class="sp__bar" aria-label="Now playing">
+            <div class="sp__np">
+              <span class="sp__np-art"></span>
+              <span class="sp__np-txt"><button type="button" class="sp__np-title" data-np-open></button><small class="sp__np-sub"></small></span>
+              <button type="button" class="sp__ibtn sp__heart" data-like-now data-size="20" aria-pressed="false" aria-label="Save to Liked Songs" disabled>${spi("heartO", 20)}</button>
+            </div>
+            <div class="sp__ctl">
+              <div class="sp__btns">
+                <button type="button" class="sp__ibtn" data-act="shuffle" aria-label="Shuffle" aria-pressed="false">${spi("shuffle", 20)}</button>
+                <button type="button" class="sp__ibtn" data-act="prev" aria-label="Previous">${spi("prev", 22)}</button>
+                <button type="button" class="sp__pp" data-act="toggle" aria-label="Play">${spi("play", 20)}</button>
+                <button type="button" class="sp__ibtn" data-act="next" aria-label="Next">${spi("next", 22)}</button>
+                <button type="button" class="sp__ibtn" data-act="repeat" aria-label="Repeat" aria-pressed="false">${spi("repeat", 20)}</button>
+              </div>
+              <div class="sp__prog">
+                <span class="sp__t" data-t="pos">0:00</span>
+                <div class="sp__seek sp__seek--pos is-off" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><i></i><b></b></div>
+                <span class="sp__t" data-t="dur">0:00</span>
+              </div>
+            </div>
+            <div class="sp__vol">
+              <button type="button" class="sp__ibtn" data-act="mute" aria-label="Mute">${spi("vol", 20)}</button>
+              <div class="sp__seek sp__seek--vol" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><i></i><b></b></div>
+            </div>
+          </footer>
+          <div class="sp__clip"><div class="sp__host is-parked"></div></div>
+          <div class="sp__ctx" role="menu" hidden></div>
+          <div class="sp__toast" role="status" aria-live="polite" hidden></div>
         </div>`;
-      const mainEl = $(".sp__main", body), view = $(".sp__view", body), libEl = $(".sp__lib", body);
+      const root = $(".sp", body), mainEl = $(".sp__main", body), view = $(".sp__view", body), libEl = $(".sp__lib", body);
+      const filterEl = $(".sp__filter", body), topEl = $(".sp__top", body), sbox = $(".sp__sbox", body), sinput = $(".sp__sinput", body);
+      const clip = $(".sp__clip", body), host = $(".sp__host", body), ctxEl = $(".sp__ctx", body), toastEl = $(".sp__toast", body);
+      const npArt = $(".sp__np-art", body), npTitle = $(".sp__np-title", body), npSub = $(".sp__np-sub", body);
+      const ppBtn = $('[data-act="toggle"]', body), seekEl = $(".sp__seek--pos", body), volEl = $(".sp__seek--vol", body);
+      const tPos = $('[data-t="pos"]', body), tDur = $('[data-t="dur"]', body), sortLabel = $(".sp__sort span", body);
 
+      /* ---------------------------------------------------------- covers, rows, cards */
       const cover = (it, cls = "") => {
+        if (it.custom) {
+          const kids = it.items.map(find).filter(Boolean);
+          if (kids.length >= 4) return `<span class="sp__cover sp__cover--mosaic ${cls}">${kids.slice(0, 4).map(k => cover(k, "sp__cover--cell")).join("")}</span>`;
+          if (kids.length) return cover(kids[0], cls);
+          return `<span class="sp__cover ${cls}">${ui("note", 24)}</span>`;
+        }
         const a = artOf(it);
         return `<span class="sp__cover ${cls}" data-art="${esc(it.id)}"${a ? ` style="background-image:url('${esc(a)}')"` : ""}>${a ? "" : ui("note", 24)}</span>`;
       };
+      const likedCover = (cls = "") => `<span class="sp__cover sp__cover--liked ${cls}">${spi("heart", cls ? 64 : 22)}</span>`;
       const setArt = (id, url) => $$(`[data-art="${CSS.escape(id)}"]`, body).forEach(el => { el.style.backgroundImage = `url('${url.replace(/'/g, "%27")}')`; el.innerHTML = ""; });
       // real cover art comes from Spotify's oEmbed endpoint when online; cached so it only loads once
       const fetchArt = it => {
         if (artOf(it) || tried.has(it.id)) return;
         tried.add(it.id);
-        fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${it.type}/${it.id}`)}`)
+        fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(urlOf(it))}`)
           .then(r => r.ok ? r.json() : null)
-          .then(j => { if (j && j.thumbnail_url) { const c = artCache(); c[it.id] = j.thumbnail_url; store.set("spArt", c); setArt(it.id, j.thumbnail_url); } })
+          .then(j => { if (j && j.thumbnail_url) { const c = artCache(); c[it.id] = j.thumbnail_url; store.set("spArt", c); if (!destroyed) setArt(it.id, j.thumbnail_url); } })
           .catch(() => {});
       };
-      const sub = it => `${KIND[it.type] || "Music"}${it.mine ? " &bull; You" : it.type === "playlist" ? " &bull; Spotify" : ""}`;
-
-      const drawLib = () => {
-        const q = filter.toLowerCase(), cur = hist[pos];
-        const list = lib().filter(it => !q || it.title.toLowerCase().includes(q));
-        libEl.innerHTML = list.length ? list.map(it => `
-          <button type="button" class="sp__lrow${cur.page === "item" && cur.id === it.id ? " is-on" : ""}" data-open="${esc(it.id)}">
-            ${cover(it)}<span><b>${esc(it.title)}</b><small>${sub(it)}</small></span>
-          </button>`).join("") : `<p class="sp__empty">Nothing matches "${esc(filter)}".</p>`;
-        $$(".sp__nav [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === cur.page));
-        $$(".sp__nav-btn", body).forEach(b => { const t = pos + +b.dataset.hist; b.disabled = t < 0 || t >= hist.length; });
-      };
+      const artScan = () => { const seen = new Set(); $$("[data-art]", root).forEach(el => { const id = el.dataset.art; if (seen.has(id)) return; seen.add(id); const it = find(id); if (it && !it.custom) fetchArt(it); }); };
+      const sub = it => it.custom ? `Playlist &bull; You` : `${KIND[it.type] || "Music"}${it.mine ? " &bull; You" : it.type === "playlist" ? " &bull; Spotify" : ""}`;
+      const subText = it => sub(it).replace(/&bull;/g, "•");
+      const likeBtn = (id, cls = "") => { const on = likeSet.has(id); return `<button type="button" class="sp__ibtn sp__heart${on ? " is-on" : ""} ${cls}" data-like="${esc(id)}" data-size="${cls ? 32 : 20}" aria-pressed="${on}" aria-label="${on ? "Remove from Liked Songs" : "Save to Liked Songs"}" title="${on ? "Remove from Liked Songs" : "Save to Liked Songs"}">${spi(on ? "heart" : "heartO", cls ? 32 : 20)}</button>`; };
+      const moreBtn = (id, cls = "") => `<button type="button" class="sp__ibtn ${cls}" data-more="${esc(id)}" aria-haspopup="menu" aria-label="More options" title="More options">${spi("more", cls ? 32 : 20)}</button>`;
       const card = it => `
         <button type="button" class="sp__card" data-open="${esc(it.id)}">
-          <span class="sp__cardart">${cover(it)}<i class="sp__go">${ui("play", 22)}</i></span>
+          <span class="sp__cardart">${cover(it)}<i class="sp__go" data-play="${esc(it.id)}" title="Play">${ui("play", 22)}</i></span>
           <b>${esc(it.title)}</b><small>${sub(it)}</small>
         </button>`;
+      const row = (it, o = {}) => {
+        const isCur = cur.kind === "spotify" && cur.id === it.id;
+        return `
+        <div class="sp__row${isCur ? " is-playing" : ""}${o.n ? " sp__row--n" : ""}" data-open="${esc(it.id)}"${o.pl ? ` data-inpl="${esc(o.pl)}"` : ""} role="button" tabindex="0">
+          ${o.n ? `<span class="sp__idx"><i>${o.n}</i>${spEq}</span>` : ""}
+          <span class="sp__rmain"><span class="sp__rcov">${cover(it)}<button type="button" class="sp__rplay" data-play="${esc(it.id)}" aria-label="Play ${esc(it.title)}">${spi("play", 18)}</button></span><span class="sp__rtxt"><b>${esc(it.title)}</b><small>${sub(it)}</small></span></span>
+          ${likeBtn(it.id)}${moreBtn(it.id)}
+        </div>`;
+      };
+      const heroPlay = id => {
+        const on = playing() && cur.kind === "spotify" && (cur.id === id || queue.from === id);
+        return `<button type="button" class="sp__bigplay" data-hero-play="${esc(id)}" aria-label="${on ? "Pause" : "Play"}">${spi(on ? "pause" : "play", 28)}</button>`;
+      };
       const hello = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
+      const likedIds = () => Array.from(likeSet).reverse().filter(find);
+      const listIds = id => id === "liked" ? likedIds() : arr((lists.find(l => l.id === id) || {}).items).filter(find);
 
+      /* ---------------------------------------------------------- search */
+      const runSearch = q => {
+        const terms = q.toLowerCase().split(/\s+/).filter(Boolean), full = terms.join(" ");
+        if (!terms.length) return [];
+        return lib().map(it => {
+          const t = it.title.toLowerCase(), hay = `${t} ${(KIND[it.type] || "").toLowerCase()} ${it.mine ? NAME.toLowerCase() + " you" : "spotify"}`;
+          if (!terms.every(w => hay.includes(w))) return null;
+          const s = t === full ? 100 : t.startsWith(full) ? 80 : t.split(/\s+/).some(w => w.startsWith(terms[0])) ? 60 : t.includes(full) ? 50 : t.includes(terms[0]) ? 40 : 10;
+          return { it, s };
+        }).filter(Boolean).sort((a, b) => b.s - a.s).map(x => x.it);
+      };
+      const catItems = c => lib().filter(it => {
+        if (c.types) return c.types.includes(it.type);
+        if (c.own) return !!it.mine;
+        if (c.liked) return likeSet.has(it.id);
+        const t = it.title.toLowerCase();
+        return c.words.some(w => t.includes(w));
+      });
+      const GROUPS = [["playlist", "Playlists"], ["album", "Albums"], ["artist", "Artists"], ["show", "Podcasts"]];
+      const groups = (list, bare) => {
+        const songs = list.filter(x => SINGLE.test(x.type)), head = l => bare ? "" : `<h2 class="sp__h">${l}</h2>`;
+        return (songs.length ? `${head("Songs")}<div class="sp__rows">${songs.map(x => row(x)).join("")}</div>` : "")
+          + GROUPS.map(([t, label]) => { const g = list.filter(x => x.type === t); return g.length ? `${head(label)}<div class="sp__shelf">${g.map(card).join("")}</div>` : ""; }).join("");
+      };
+      const emptyHint = text => `<p class="sp__empty">${text}</p><p class="sp__empty"><button type="button" class="sp__link" data-go="add">Add music from a Spotify link</button></p>`;
+
+      /* ---------------------------------------------------------- pages */
       const pages = {
         home() {
-          const items = lib(), mineList = items.filter(i => i.mine), pop = items.filter(i => !i.mine);
+          const items = lib(), cust = items.filter(i => i.custom), mineList = items.filter(i => i.mine && !i.custom), pop = items.filter(i => !i.mine);
+          const rec = recents.map(find).filter(Boolean);
+          const quick = [];
+          rec.concat(items).forEach(x => { if (quick.length < 5 && !quick.some(y => y.id === x.id)) quick.push(x); });
           mainEl.style.setProperty("--c", "hsl(220,18%,24%)");
           return `
             <h1 class="sp__hello">${hello()}</h1>
-            <div class="sp__quick">${items.slice(0, 6).map(it => `<button type="button" data-open="${esc(it.id)}">${cover(it)}<b>${esc(it.title)}</b></button>`).join("")}</div>
+            <div class="sp__quick">
+              <button type="button" data-go="liked">${likedCover()}<b>Liked Songs</b></button>
+              ${quick.map(it => `<button type="button" data-open="${esc(it.id)}">${cover(it)}<b>${esc(it.title)}</b></button>`).join("")}
+            </div>
+            ${rec.length ? `<h2 class="sp__h">Recently played</h2><div class="sp__shelf">${rec.slice(0, 6).map(card).join("")}</div>` : ""}
+            ${cust.length ? `<h2 class="sp__h">Your playlists</h2><div class="sp__shelf">${cust.map(card).join("")}</div>` : ""}
             ${mineList.length ? `<h2 class="sp__h">Your music</h2><div class="sp__shelf">${mineList.map(card).join("")}</div>` : ""}
             <h2 class="sp__h">Popular playlists</h2>
             <div class="sp__shelf">${pop.map(card).join("")}</div>
-            <p class="sp__note">Music plays through Spotify's own player. Log in to Spotify in this browser for full songs; otherwise you get 30-second previews.</p>`;
+            <p class="sp__note">Music plays through Spotify's own player. Log in to Spotify in this browser for full songs; otherwise you get 30-second previews.</p>
+            <p class="sp__note"><button type="button" class="sp__link" data-go="add">Add a song, album, playlist or podcast from a Spotify link</button></p>`;
         },
         item(s) {
           const it = find(s.id);
           if (!it) return pages.home();
-          const small = /^(track|episode)$/.test(it.type);
+          if (it.custom) return pages.playlist(it);
+          const small = SINGLE.test(it.type), live = apiState !== "fail";
           mainEl.style.setProperty("--c", `hsl(${hue(it.title)},38%,30%)`);
           return `
             <div class="sp__hero">
               ${cover(it, "sp__cover--hero")}
               <div><small>${KIND[it.type] || "Music"}</small><h1>${esc(it.title)}</h1><p>${it.mine ? esc(NAME) : "Spotify"}</p></div>
             </div>
-            <iframe class="sp__embed${small ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?utm_source=generator&theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            <div class="sp__acts">${live ? heroPlay(it.id) : ""}${likeBtn(it.id, "sp__ibtn--lg")}${moreBtn(it.id, "sp__ibtn--lg")}</div>
+            ${live
+              ? `<div class="sp__slot${small ? " sp__slot--small" : ""}" data-slot="${esc(it.id)}"><p>Press play and Spotify's own player appears here${small ? "" : ", with the full track list"}.</p></div>`
+              : `<iframe class="sp__embed${small ? " sp__embed--small" : ""}" src="https://open.spotify.com/embed/${it.type}/${it.id}?utm_source=generator&theme=0" title="${esc(it.title)}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`}
             ${it.mine ? `<button type="button" class="sp__link" data-rm="${esc(it.id)}">Remove from Your Library</button>` : ""}`;
+        },
+        playlist(it) {
+          const items = it.items.map(find).filter(Boolean), live = apiState !== "fail";
+          const sugg = lib().filter(x => !x.custom && !it.items.includes(x.id)).slice(0, 6);
+          mainEl.style.setProperty("--c", `hsl(${hue(it.title)},30%,28%)`);
+          return `
+            <div class="sp__hero">
+              ${cover(it, "sp__cover--hero")}
+              <div><small>Playlist</small><h1 data-rename="${esc(it.id)}" role="button" tabindex="0" title="Rename playlist">${esc(it.title)}</h1><p>${esc(NAME)} &bull; ${items.length} item${items.length === 1 ? "" : "s"}</p></div>
+            </div>
+            <div class="sp__acts">${items.length && live ? heroPlay(it.id) : ""}${moreBtn(it.id, "sp__ibtn--lg")}</div>
+            ${items.length ? `<div class="sp__rows" data-ctx="${esc(it.id)}">${items.map((x, i) => row(x, { n: i + 1, pl: it.id })).join("")}</div>` : `<p class="sp__empty sp__empty--left">This playlist is empty. Add something from the suggestions below, or use <b>Add to playlist</b> in the menu of any song, album or podcast.</p>`}
+            ${sugg.length ? `<h2 class="sp__h">Let's find something for your playlist</h2>
+            <div class="sp__sugg">${sugg.map(x => `<div class="sp__srow">${cover(x)}<span><b>${esc(x.title)}</b><small>${sub(x)}</small></span><button type="button" class="sp__pill-btn" data-pladd="${esc(x.id)}" data-pl="${esc(it.id)}">Add</button></div>`).join("")}</div>` : ""}`;
+        },
+        liked() {
+          const items = likedIds().map(find).filter(Boolean), live = apiState !== "fail";
+          mainEl.style.setProperty("--c", "hsl(255,45%,34%)");
+          return `
+            <div class="sp__hero">
+              ${likedCover("sp__cover--hero")}
+              <div><small>Playlist</small><h1>Liked Songs</h1><p>${esc(NAME)} &bull; ${items.length} liked item${items.length === 1 ? "" : "s"}</p></div>
+            </div>
+            <div class="sp__acts">${items.length && live ? heroPlay("liked") : ""}</div>
+            ${items.length ? `<div class="sp__rows" data-ctx="liked">${items.map((x, i) => row(x, { n: i + 1 })).join("")}</div>` : `<p class="sp__empty sp__empty--left">Songs you like will appear here. Tap the heart on anything you play to save it.</p>`}`;
+        },
+        search(s) {
+          const q = (s.q || "").trim();
+          mainEl.style.setProperty("--c", "#121212");
+          if (!q) return `<h2 class="sp__h sp__h--first">Browse all</h2><div class="sp__tiles">${SP_BROWSE.map(c => `<button type="button" class="sp__tile" data-cat="${c.k}" style="--tc:${c.color}"><span>${c.name}</span><i>${ui("note", 36)}</i></button>`).join("")}</div>`;
+          const link = spParse(q), known = link && find(link.id), list = known ? [known] : runSearch(q);
+          const linkCard = link && !find(link.id) ? `<div class="sp__linkcard">${ui("search", 22)}<span><b>That looks like a Spotify ${KIND[link.type].toLowerCase()} link</b><small>Add it to Your Library to play it here.</small></span><button type="button" class="sp__pill-btn" data-addlink="${link.type}:${link.id}">Add to Your Library</button></div>` : "";
+          if (!list.length && linkCard) return linkCard;
+          if (!list.length) return `<div class="sp__none"><h2>No results found for "${esc(q)}"</h2><p>Please make sure your words are spelled correctly, or use fewer or different keywords. Search covers everything in Your Library.</p></div>`;
+          const top = list[0], songs = list.filter(x => SINGLE.test(x.type)).slice(0, 4), rest = list.filter(x => !SINGLE.test(x.type));
+          return `${linkCard}
+            <div class="sp__sgrid">
+              <section><h2 class="sp__h sp__h--first">Top result</h2>
+                <div class="sp__top1" data-open="${esc(top.id)}" role="button" tabindex="0">${cover(top)}<b>${esc(top.title)}</b><span class="sp__pill">${KIND[top.type] || "Music"}</span><button type="button" class="sp__go sp__go--btn" data-play="${esc(top.id)}" aria-label="Play ${esc(top.title)}">${ui("play", 22)}</button></div>
+              </section>
+              ${songs.length ? `<section><h2 class="sp__h sp__h--first">Songs</h2><div class="sp__rows">${songs.map(x => row(x)).join("")}</div></section>` : `<section></section>`}
+            </div>
+            ${GROUPS.map(([t, label]) => { const g = rest.filter(x => x.type === t); return g.length ? `<h2 class="sp__h">${label}</h2><div class="sp__shelf">${g.map(card).join("")}</div>` : ""; }).join("")}`;
+        },
+        cat(s) {
+          const c = SP_BROWSE.find(x => x.k === s.k);
+          if (!c) return pages.search({ q: "" });
+          mainEl.style.setProperty("--c", c.color);
+          const list = catItems(c);
+          return `<h1 class="sp__title sp__title--big">${c.name}</h1>${list.length ? groups(list, !!c.types) : emptyHint(`Nothing in ${c.name.toLowerCase()} yet. Everything you add or like shows up here.`)}`;
         },
         add() {
           mainEl.style.setProperty("--c", "hsl(150,30%,22%)");
@@ -1903,76 +4049,642 @@ function openSpotify(o = {}) {
               <div><small>Local files</small><h1>Your files</h1><p>${local.length} song${local.length === 1 ? "" : "s"} &bull; this session only</p></div>
             </div>
             <label class="sp__btn sp__pick">Choose audio files<input type="file" accept="audio/*" multiple hidden data-files></label>
-            <audio class="sp__audio" controls></audio>
-            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${i === localIdx ? " is-on" : ""}" data-track="${i}"><i>${i + 1}</i><span>${esc(f.name)}</span></button>`).join("")}</div>
+            <div class="sp__tracks">${local.map((f, i) => `<button type="button" class="sp__track${cur.kind === "local" && i === localIdx ? " is-on" : ""}" data-track="${i}"><i>${i + 1}</i><span>${esc(f.name)}</span></button>`).join("")}</div>
             <p class="sp__note">Files stay on this computer. They aren't uploaded and disappear when you close Spotify.</p>`;
         },
       };
-      const playLocal = i => {
-        localIdx = i;
-        const a = $(".sp__audio", view);
-        if (!a) return;
-        a.src = local[i].url; a.play().catch(() => {});
-        $$(".sp__track", view).forEach((b, k) => b.classList.toggle("is-on", k === i));
-      };
-      const draw = () => {
-        const s = hist[pos];
-        view.innerHTML = pages[s.page](s);
-        mainEl.scrollTop = 0;
-        if (s.page === "local") {
-          const a = $(".sp__audio", view);
-          if (localIdx >= 0 && local[localIdx]) a.src = local[localIdx].url;
-          a.addEventListener("ended", () => { if (localIdx + 1 < local.length) playLocal(localIdx + 1); });
-        }
-        drawLib();
-        lib().forEach(it => { if (view.querySelector(`[data-art="${CSS.escape(it.id)}"]`) || libEl.querySelector(`[data-art="${CSS.escape(it.id)}"]`)) fetchArt(it); });
-      };
-      const go = s => { hist.length = pos + 1; hist.push(s); pos++; draw(); };
 
-      $(".sp__filter", body).addEventListener("input", e => { filter = e.target.value.trim(); drawLib(); });
+      /* ---------------------------------------------------------- history / drawing */
+      const syncNav = () => {
+        const p = hist[pos].page;
+        $$(".sp__nav [data-go]", body).forEach(b => b.classList.toggle("is-on", b.dataset.go === p || (b.dataset.go === "search" && p === "cat")));
+        $$(".sp__nav-btn", body).forEach(b => { const t = pos + +b.dataset.hist; b.disabled = t < 0 || t >= hist.length; });
+      };
+      const libList = () => {
+        const q = filter.toLowerCase();
+        const types = { playlist: ["playlist"], track: ["track"], album: ["album"], artist: ["artist"], podcast: ["show", "episode"] };
+        let list = lib().filter(it => (!chip || types[chip].includes(it.type)) && (!q || it.title.toLowerCase().includes(q)));
+        if (sortBy === "alpha") list.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+        else { const rank = it => { const k = recents.indexOf(it.id); return k < 0 ? 1e6 : k; }; list = list.map((it, i) => [it, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]); }
+        return list;
+      };
+      const drawLib = () => {
+        const q = filter.toLowerCase(), c = hist[pos], y = libEl.scrollTop;
+        const list = libList(), n = likeSet.size;
+        const pins = [];
+        if ((!chip || chip === "playlist") && (!q || "liked songs".includes(q)))
+          pins.push(`<button type="button" class="sp__lrow${c.page === "liked" ? " is-on" : ""}" data-go="liked">${likedCover()}<span><b>Liked Songs</b><small>Playlist &bull; ${n} liked item${n === 1 ? "" : "s"}</small></span></button>`);
+        if (!chip && (!q || "your files local files".includes(q)))
+          pins.push(`<button type="button" class="sp__lrow${c.page === "local" ? " is-on" : ""}" data-go="local"><span class="sp__cover">${ui("folder", 24)}</span><span><b>Your files</b><small>${local.length} local song${local.length === 1 ? "" : "s"}</small></span></button>`);
+        const rows = list.map(it => `
+          <button type="button" class="sp__lrow${c.page === "item" && c.id === it.id ? " is-on" : ""}${cur.kind === "spotify" && cur.id === it.id ? " is-playing" : ""}" data-open="${esc(it.id)}">
+            ${cover(it)}<span><b>${esc(it.title)}</b><small>${sub(it)}</small></span>${spEq}
+          </button>`);
+        libEl.innerHTML = pins.concat(rows).join("") || `<p class="sp__empty">${q ? `Nothing matches "${esc(filter)}".` : "Nothing here yet."}</p>`;
+        libEl.scrollTop = y;
+        $$(".sp__chip", body).forEach(b => { const on = b.dataset.chip === chip; b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", on); });
+        sortLabel.textContent = sortBy === "alpha" ? "A to Z" : "Recents";
+      };
+      const touchRecent = id => { recents = [id].concat(recents.filter(x => x !== id)).slice(0, 40); saveRecents(); };
+      const paint = () => { drawLib(); syncNav(); syncPlay(); artScan(); placeHost(); requestAnimationFrame(() => { if (!destroyed) placeHost(); }); };
+      const draw = keep => {
+        const s = hist[pos], y = mainEl.scrollTop;
+        closeCtx();
+        view.innerHTML = (pages[s.page] || pages.home)(s);
+        mainEl.scrollTop = keep ? y : 0;
+        const onSearch = s.page === "search" || s.page === "cat";
+        sbox.hidden = !onSearch;
+        if (onSearch && sinput.value !== (s.q || "")) sinput.value = s.q || "";
+        paint();
+      };
+      const go = s => { hist.length = pos + 1; hist.push(s); pos++; if (s.page === "item") touchRecent(s.id); draw(); };
+      const goItem = id => go({ page: "item", id });
+
+      /* ---------------------------------------------------------- toast + context menu */
+      let toastT = 0;
+      const toast = msg => { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 2600); };
+      let ctxPos = { x: 0, y: 0 };
+      function closeCtx() { if (ctxEl.hidden) return; ctxEl.hidden = true; ctxEl.innerHTML = ""; ctxEl._items = null; }
+      const showCtx = (items, x, y) => {
+        ctxPos = { x, y };
+        ctxEl._items = items;
+        ctxEl.innerHTML = items.map((it, i) => it.sep ? `<hr>` : `<button type="button" role="menuitem" data-ci="${i}"${it.disabled ? " disabled" : ""}><span class="sp__ci">${it.icon ? spi(it.icon, 18) : ""}</span><span class="sp__cl">${esc(it.label)}</span>${it.checked ? `<span class="sp__cc">${spi("check", 18)}</span>` : it.more ? `<span class="sp__cc sp__cc--more">${ui("fwd", 16)}</span>` : ""}</button>`).join("");
+        ctxEl.hidden = false;
+        const rr = root.getBoundingClientRect(), w = ctxEl.offsetWidth, h = ctxEl.offsetHeight;
+        ctxEl.style.left = Math.max(4, Math.min(x - rr.left, rr.width - w - 4)) + "px";
+        ctxEl.style.top = Math.max(4, Math.min(y - rr.top, rr.height - h - 4)) + "px";
+        const first = $("button:not(:disabled)", ctxEl); if (first) first.focus({ preventScroll: true });
+      };
+      ctxEl.addEventListener("click", e => {
+        const b = e.target.closest("[data-ci]");
+        if (!b || !ctxEl._items) return;
+        const it = ctxEl._items[+b.dataset.ci];
+        if (!it || !it.act) return;
+        e.stopPropagation();
+        const keep = it.act();
+        if (keep !== "keep") closeCtx();
+      });
+      ctxEl.addEventListener("keydown", e => {
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+        e.preventDefault();
+        const bs = $$("button:not(:disabled)", ctxEl), i = bs.indexOf(document.activeElement);
+        (bs[(i + (e.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length] || bs[0]).focus();
+      });
+      const copyLink = it => {
+        const url = urlOf(it), done = () => toast("Link copied to clipboard");
+        const legacy = () => { const ta = document.createElement("textarea"); ta.value = url; ta.style.cssText = "position:fixed;left:-99px;top:0;opacity:0"; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} ta.remove(); ok ? done() : toast(url); };
+        try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, legacy); return; } } catch (e) {}
+        legacy();
+      };
+
+      /* ---------------------------------------------------------- playlists, likes, library edits */
+      const newList = name => {
+        let n = lists.length + 1; while (lists.some(l => l.name === `My Playlist #${n}`)) n++;
+        const l = { id: "my_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name || `My Playlist #${n}`, items: [], ts: Date.now() };
+        lists.push(l); saveLists();
+        return l;
+      };
+      const createPlaylist = () => { const l = newList(); goItem(l.id); startRename(l.id); };
+      const addToList = (lid, id) => {
+        const l = lists.find(x => x.id === lid), it = find(id);
+        if (!l || !it || it.custom) return;
+        if (l.items.includes(id)) { toast(`Already in ${l.name}`); return; }
+        l.items.push(id); saveLists();
+        toast(`Added to ${l.name}`);
+        drawLib();
+        const c = hist[pos];
+        if (c.page === "item" && c.id === lid) draw(true);
+      };
+      const removeFromList = (lid, id) => {
+        const l = lists.find(x => x.id === lid); if (!l) return;
+        l.items = l.items.filter(x => x !== id); saveLists();
+        toast(`Removed from ${l.name}`);
+        draw(true);
+      };
+      const deleteList = id => {
+        const l = lists.find(x => x.id === id); if (!l) return;
+        msgBox({ title: "Spotify", icon: "warning", text: `Delete "${l.name}" from Your Library?`, buttons: ["Delete", "Cancel"], defaultIndex: 1 }).then(r => {
+          if (r !== "Delete" || destroyed) return;
+          lists = lists.filter(x => x.id !== id); saveLists();
+          recents = recents.filter(x => x !== id); saveRecents();
+          if (queue.from === id) queue.from = "";
+          go({ page: "home" });
+        });
+      };
+      const removeMine = id => {
+        if (mine().some(x => x.id === id)) store.set("spLib", mine().filter(x => x.id !== id));
+        else { hidden.add(id); saveHidden(); }
+        lists.forEach(l => { l.items = l.items.filter(x => x !== id); }); saveLists();
+        likeSet.delete(id); saveLikes();
+        recents = recents.filter(x => x !== id); saveRecents();
+        if (cur.kind === "spotify" && cur.id === id) stopAll();
+        go({ page: "home" });
+      };
+      const toggleLike = id => {
+        if (!id) return;
+        const on = !likeSet.has(id);
+        if (on) likeSet.add(id); else likeSet.delete(id);
+        saveLikes();
+        toast(on ? "Added to Liked Songs" : "Removed from Liked Songs");
+        syncLikes();
+        drawLib();
+        if (hist[pos].page === "liked") draw(true);
+      };
+      const syncLikes = () => $$("[data-like], [data-like-now]", root).forEach(b => {
+        const id = b.hasAttribute("data-like-now") ? (cur.kind === "spotify" ? cur.id : "") : b.dataset.like;
+        const on = !!id && likeSet.has(id), label = on ? "Remove from Liked Songs" : "Save to Liked Songs";
+        b.disabled = !id;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", on); b.setAttribute("aria-label", label); b.title = label;
+        b.innerHTML = spi(on ? "heart" : "heartO", +b.dataset.size || 20);
+      });
+      function startRename(id) {
+        const h = $(`[data-rename="${CSS.escape(id)}"]`, view), l = lists.find(x => x.id === id);
+        if (!h || !l || $("input", h)) return;
+        h.innerHTML = `<input class="sp__rename" maxlength="60" value="${esc(l.name)}" aria-label="Playlist name">`;
+        const inp = $("input", h); inp.focus(); inp.select();
+        let done = false;
+        const fin = ok => { if (done) return; done = true; if (ok) { const v = inp.value.trim(); if (v) l.name = v.slice(0, 60); saveLists(); } draw(true); };
+        inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); fin(true); } else if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); fin(false); } });
+        inp.addEventListener("blur", () => fin(true));
+      }
+      const pickerFor = (id, x, y) => {
+        const items = [{ label: "New playlist", icon: "plus", act: () => { const l = newList(); addToList(l.id, id); } }];
+        if (lists.length) items.push({ sep: true });
+        lists.slice().reverse().forEach(l => items.push({ label: l.name, icon: "note", checked: l.items.includes(id), act: () => addToList(l.id, id) }));
+        showCtx(items, x, y);
+        return "keep";
+      };
+      const itemMenu = (id, pl, x, y) => {
+        if (id === "liked") return [{ label: "Play", icon: "play", act: () => play("liked") }, { label: "Open", icon: "open", act: () => go({ page: "liked" }) }];
+        const it = find(id); if (!it) return [];
+        const on = playing() && cur.kind === "spotify" && cur.id === id, liked = likeSet.has(id);
+        const m = [{ label: on ? "Pause" : "Play", icon: on ? "pause" : "play", act: () => play(id) }, { label: "Open", icon: "open", act: () => goItem(id) }];
+        if (it.custom) return m.concat([{ sep: true }, { label: "Rename", icon: "edit", act: () => { goItem(id); startRename(id); } }, { label: "Delete", icon: "trash", act: () => deleteList(id) }]);
+        m.push({ sep: true }, { label: "Add to playlist", icon: "plusList", more: true, act: () => pickerFor(id, ctxPos.x, ctxPos.y) }, { label: liked ? "Remove from Liked Songs" : "Save to Liked Songs", icon: liked ? "heart" : "heartO", act: () => toggleLike(id) });
+        if (pl) m.push({ label: "Remove from this playlist", icon: "close", act: () => removeFromList(pl, id) });
+        m.push({ label: "Remove from Your Library", icon: "trash", act: () => removeMine(id) });
+        m.push({ sep: true }, { label: "Copy Spotify link", icon: "link", act: () => copyLink(it) });
+        return m;
+      };
+
+      /* ---------------------------------------------------------- player: Spotify iFrame API + local files */
+      let apiState = SP_API ? "ok" : "loading";   // loading | ok | fail
+      let lastTitle = "Spotify", ctl = null, creating = false, wantPlay = false, endedFlag = false, lastUpdate = 0, lastPos = 0, pendingPlay = null, seeking = false, volNote = false, createdAt = 0;
+      const cur = { kind: "", id: "" };           // kind: "spotify" | "local" | ""
+      const P = { paused: true, pos: 0, dur: 0, base: 0, stamp: 0, buffering: false };
+      let queue = { ids: [], i: -1, from: "" };
+      const la = new Audio();
+      la.preload = "auto";
+      const applyVol = () => { try { la.volume = muted ? 0 : vol; } catch (e) {} };
+      applyVol();
+      function playing() { return !!cur.kind && !P.paused; }
+      const stampNow = ms => { P.base = ms; P.pos = ms; P.stamp = performance.now(); };
+
+      const nowInfo = () => {
+        if (cur.kind === "local" && local[localIdx]) return { title: local[localIdx].name, sub: "Local file", art: `<span class="sp__cover">${ui("folder", 24)}</span>`, id: "" };
+        if (cur.kind === "spotify") { const it = find(cur.id); if (it) return { title: it.title, sub: subText(it), art: cover(it), id: it.id }; }
+        return null;
+      };
+      const tickUI = () => {
+        const dur = P.dur, p = Math.min(P.pos, dur || P.pos), f = dur > 0 ? Math.min(1, p / dur) : 0;
+        if (!seeking) { seekEl.style.setProperty("--p", (f * 100).toFixed(2) + "%"); tPos.textContent = spFmt(p); }
+        tDur.textContent = dur > 0 ? spFmt(dur) : "0:00";
+        seekEl.classList.toggle("is-off", !(dur > 0));
+        seekEl.setAttribute("aria-valuemax", Math.round(dur / 1000)); seekEl.setAttribute("aria-valuenow", Math.round(p / 1000));
+        seekEl.setAttribute("aria-valuetext", `${spFmt(p)} of ${spFmt(dur)}`);
+      };
+      const canSkip = () => (cur.kind === "local" && local.length > 1) || (cur.kind === "spotify" && queue.ids.length > 1);
+      const renderBar = () => {
+        const n = nowInfo();
+        npArt.innerHTML = n ? n.art : "";
+        npTitle.textContent = n ? n.title : "";
+        npTitle.disabled = !n || !n.id;
+        npSub.textContent = n ? n.sub : (apiState === "fail" ? "Spotify's player isn't available" : "");
+        root.classList.toggle("has-np", !!n);
+        const sk = canSkip();
+        $('[data-act="prev"]', body).disabled = !cur.kind;
+        $('[data-act="next"]', body).disabled = !sk;
+        ppBtn.disabled = apiState === "fail" && cur.kind !== "local";
+        $('[data-act="shuffle"]', body).classList.toggle("is-on", mode.shuffle);
+        $('[data-act="shuffle"]', body).setAttribute("aria-pressed", mode.shuffle);
+        const rp = $('[data-act="repeat"]', body);
+        rp.classList.toggle("is-on", mode.repeat !== "off"); rp.setAttribute("aria-pressed", mode.repeat !== "off");
+        rp.innerHTML = spi(mode.repeat === "one" ? "repeat1" : "repeat", 20);
+        const rl = mode.repeat === "off" ? "Enable repeat" : mode.repeat === "all" ? "Enable repeat one" : "Disable repeat";
+        rp.title = rl; rp.setAttribute("aria-label", rl);
+        volEl.classList.toggle("is-na", cur.kind === "spotify");
+        volEl.title = cur.kind === "spotify" ? "Spotify's embedded player has its own volume; this slider controls your local files" : "Volume";
+        syncLikes();
+        paintVol();
+        tickUI();
+      };
+      function syncPlay() {
+        const on = playing();
+        ppBtn.innerHTML = spi(on ? "pause" : "play", 20);
+        ppBtn.setAttribute("aria-label", on ? "Pause" : "Play");
+        root.classList.toggle("is-playing", on);
+        $$("[data-hero-play]", view).forEach(b => {
+          const id = b.dataset.heroPlay, p = on && cur.kind === "spotify" && (cur.id === id || queue.from === id);
+          b.innerHTML = spi(p ? "pause" : "play", 28); b.setAttribute("aria-label", p ? "Pause" : "Play");
+        });
+        $$(".sp__row", view).forEach(r => r.classList.toggle("is-playing", cur.kind === "spotify" && r.dataset.open === cur.id));
+        $$(".sp__lrow[data-open]", libEl).forEach(r => r.classList.toggle("is-playing", cur.kind === "spotify" && r.dataset.open === cur.id));
+        $$(".sp__track", view).forEach((b, k) => b.classList.toggle("is-on", cur.kind === "local" && k === localIdx));
+        const n = nowInfo();
+        const ttl = n && on ? `${n.title} • Spotify` : "Spotify";
+        if (ttl !== lastTitle) { lastTitle = ttl; win.setTitle(ttl); }
+      }
+      const paintVol = () => {
+        const v = muted ? 0 : vol;
+        volEl.style.setProperty("--p", (v * 100).toFixed(1) + "%");
+        volEl.setAttribute("aria-valuenow", Math.round(v * 100));
+        const mb = $('[data-act="mute"]', body);
+        mb.innerHTML = spi(v === 0 ? "volMute" : v < 0.5 ? "volLow" : "vol", 20);
+        mb.setAttribute("aria-label", v === 0 ? "Unmute" : "Mute");
+      };
+      const syncAll = () => { renderBar(); syncPlay(); placeHost(); };
+
+      /* the one persistent Spotify controller lives in .sp__host and is moved over the player slot of whichever page shows the playing item */
+      function placeHost() {
+        if (destroyed || !(ctl || creating)) return;
+        try {
+          const rr = root.getBoundingClientRect(), mr = mainEl.getBoundingClientRect(), tb = topEl.offsetHeight;
+          clip.style.cssText = `left:${mr.left - rr.left}px;top:${mr.top - rr.top + tb}px;width:${mainEl.clientWidth}px;height:${Math.max(0, mainEl.clientHeight - tb)}px`;
+          const s = hist[pos], slot = cur.kind === "spotify" && s.page === "item" && s.id === cur.id ? $(".sp__slot", view) : null;
+          if (!slot) { host.classList.add("is-parked"); host.style.cssText = ""; return; }
+          const sr = slot.getBoundingClientRect();
+          host.classList.remove("is-parked");
+          host.style.cssText = `left:${sr.left - mr.left}px;top:${sr.top - mr.top - tb}px;width:${sr.width}px;height:${sr.height}px`;
+        } catch (e) {}
+      }
+      win.sync = placeHost;
+
+      function apiFail(announce) {
+        if (destroyed) return;
+        apiState = "fail"; creating = false; pendingPlay = null; wantPlay = false;
+        if (ctl) { try { ctl.destroy(); } catch (e) {} ctl = null; }
+        host.innerHTML = ""; host.classList.add("is-parked");
+        if (cur.kind === "spotify") { cur.kind = ""; cur.id = ""; P.paused = true; P.pos = P.dur = 0; }
+        if (announce) toast("Couldn't reach Spotify's player, so the player on the page is shown instead.");
+        draw(true); renderBar();
+      }
+      const onUpdate = ev => {
+        if (cur.kind !== "spotify") return;
+        const d = (ev && ev.data) || ev || {};
+        lastUpdate = performance.now();
+        if (typeof d.isPaused === "boolean") P.paused = d.isPaused;
+        if (typeof d.duration === "number" && d.duration > 0) P.dur = d.duration;
+        if (typeof d.position === "number") stampNow(d.position);
+        P.buffering = !!d.isBuffering;
+        if (!P.paused) { wantPlay = false; endedFlag = false; }
+        const single = (find(cur.id) || {}).type;
+        if (P.paused && P.dur > 0 && SINGLE.test(single || "") && !endedFlag && (P.pos >= P.dur - 600 || (P.pos === 0 && lastPos > P.dur - 3000))) { endedFlag = true; lastPos = 0; onEnded(); return; }
+        lastPos = P.pos;
+        tickUI(); syncPlay();
+      };
+      const hookCtl = c => {
+        const on = (n, fn) => { try { c.addListener(n, fn); } catch (e) {} };
+        on("playback_update", onUpdate);
+        on("ready", () => { if (wantPlay && !destroyed) { try { c.play(); } catch (e) {} } });
+      };
+      // the embed drops play() until it has loaded, so ask again shortly after if it still hasn't started
+      const nudge = c => setTimeout(() => { if (!destroyed && wantPlay && ctl === c) { try { c.play(); } catch (e) {} } }, 1800);
+      const startSpotify = it => {
+        const uri = uriOf(it);
+        wantPlay = true; endedFlag = false; lastPos = 0;
+        if (ctl) { try { ctl.loadUri(uri); ctl.play(); nudge(ctl); } catch (e) { apiFail(true); } return; }
+        if (creating) { pendingPlay = it; return; }
+        if (!SP_API) { apiFail(true); return; }
+        creating = true; createdAt = performance.now();
+        try {
+          const mount = document.createElement("div");
+          host.innerHTML = ""; host.appendChild(mount);
+          SP_API.createController(mount, { uri, width: "100%", height: SINGLE.test(it.type) ? 152 : 352 }, c => {
+            if (destroyed) { try { c.destroy(); } catch (e) {} return; }
+            creating = false; ctl = c; hookCtl(c); nudge(c);
+            if (pendingPlay && pendingPlay.id !== it.id) { const p = pendingPlay; pendingPlay = null; try { c.loadUri(uriOf(p)); } catch (e) {} } else pendingPlay = null;
+            placeHost();
+          });
+          setTimeout(() => { if (!destroyed && creating && !ctl) apiFail(true); }, 8000);
+        } catch (e) { apiFail(true); }
+        placeHost();
+      };
+      const stopSpotify = () => { wantPlay = false; if (ctl) { try { ctl.pause(); } catch (e) {} } };
+      function stopAll() {
+        stopSpotify(); try { la.pause(); } catch (e) {}
+        cur.kind = ""; cur.id = ""; P.paused = true; P.pos = P.dur = 0; queue = { ids: [], i: -1, from: "" };
+        syncAll();
+      }
+      const defaultQueue = it => { if (!SINGLE.test(it.type)) return [it.id]; const ids = lib().filter(x => SINGLE.test(x.type)).map(x => x.id); return ids.length > 1 ? ids : [it.id]; };
+      // play(id): an item, a user playlist, or "liked". Same item again = pause / resume.
+      function play(id, ids, from) {
+        if (id === "liked" || isList(id)) {
+          if (cur.kind === "spotify" && queue.from === id) return toggle();
+          const list = listIds(id);
+          if (!list.length) { toast(id === "liked" ? "Like something and it will show up here." : "This playlist is empty. Add something first."); return; }
+          return play(list[0], list, id);
+        }
+        const it = find(id); if (!it) return;
+        if (apiState === "fail") { goItem(id); return; }
+        if (cur.kind === "spotify" && cur.id === id) return toggle();
+        touchRecent(id);
+        try { la.pause(); } catch (e) {}
+        const q = ids && ids.includes(id) ? ids : defaultQueue(it);
+        queue = { ids: q, i: q.indexOf(id), from: from || "" };
+        cur.kind = "spotify"; cur.id = id;
+        P.paused = false; P.buffering = true; P.dur = 0; stampNow(0);
+        if (apiState === "loading") { pendingPlay = it; syncAll(); drawLib(); return; }
+        startSpotify(it);
+        syncAll(); drawLib();
+      }
+      function toggle() {
+        if (cur.kind === "local") { if (la.paused) la.play().catch(() => {}); else la.pause(); return; }
+        if (cur.kind === "spotify") {
+          if (apiState === "loading") return;
+          const wasPaused = P.paused, t0 = performance.now();
+          if (ctl) { try { ctl.togglePlay(); } catch (e) {} }
+          P.paused = !wasPaused; wantPlay = !P.paused; stampNow(P.pos);
+          syncPlay();
+          // if the embed never answers (autoplay blocked, offline), fall back to what it last told us
+          if (wasPaused) setTimeout(() => { if (!destroyed && lastUpdate < t0 && cur.kind === "spotify") { P.paused = true; wantPlay = false; syncPlay(); } }, 2800);
+          return;
+        }
+        const first = lib().find(x => !x.custom) || lib()[0];
+        if (first) play(first.id);
+      }
+      function seekMs(ms) {
+        ms = Math.max(0, Math.min(ms, P.dur || ms));
+        if (cur.kind === "local") { try { la.currentTime = ms / 1000; } catch (e) {} P.pos = ms; }
+        else if (cur.kind === "spotify" && ctl) { try { ctl.seek(Math.round(ms / 1000)); } catch (e) {} endedFlag = false; stampNow(ms); }
+        tickUI();
+      }
+      function advance(dir, auto) {
+        const n = queue.ids.length;
+        if (cur.kind === "local") {
+          if (!local.length) return false;
+          let j = mode.shuffle && local.length > 1 ? (() => { let r; do { r = Math.floor(Math.random() * local.length); } while (r === localIdx); return r; })() : localIdx + dir;
+          if (j >= local.length) { if (mode.repeat === "all" || !auto) j = 0; else return false; }
+          if (j < 0) j = local.length - 1;
+          playLocal(j); return true;
+        }
+        if (!n) return false;
+        let j = queue.i;
+        for (let tries = 0; tries < n; tries++) {
+          if (mode.shuffle && n > 1) { do { j = Math.floor(Math.random() * n); } while (j === queue.i); }
+          else { j += dir; if (j >= n) { if (mode.repeat === "all" || !auto) j = 0; else return false; } if (j < 0) j = n - 1; }
+          const it = find(queue.ids[j]);
+          if (it) { wantPlay = false; const from = queue.from, ids = queue.ids; cur.id = ""; play(it.id, ids, from); return true; }
+        }
+        return false;
+      }
+      function onEnded() {
+        if (mode.repeat === "one") { seekMs(0); if (cur.kind === "local") la.play().catch(() => {}); else if (ctl) { try { ctl.play(); } catch (e) {} P.paused = false; wantPlay = true; } syncPlay(); return; }
+        if (!advance(1, true)) { P.paused = true; syncPlay(); }
+      }
+      function prev() {
+        if (P.pos > 3000 || !canSkip()) { seekMs(0); return; }
+        advance(-1, false);
+      }
+      function playLocal(i) {
+        if (!local[i]) return;
+        stopSpotify();
+        cur.kind = "local"; cur.id = ""; localIdx = i;
+        queue = { ids: [], i, from: "" };
+        la.src = local[i].url; applyVol();
+        P.paused = false; P.dur = 0; stampNow(0);
+        la.play().catch(() => {});
+        syncAll(); drawLib();
+      }
+      la.addEventListener("play", () => { if (cur.kind === "local") { P.paused = false; syncPlay(); } });
+      la.addEventListener("pause", () => { if (cur.kind === "local" && !la.ended) { P.paused = true; syncPlay(); } });
+      la.addEventListener("ended", () => { if (cur.kind === "local") onEnded(); });
+      la.addEventListener("loadedmetadata", () => { if (cur.kind === "local") { P.dur = isFinite(la.duration) ? la.duration * 1000 : 0; tickUI(); } });
+      la.addEventListener("error", () => { if (cur.kind === "local") { P.paused = true; syncPlay(); toast("Couldn't play that file."); } });
+      const timer = setInterval(() => {
+        if (destroyed) return;
+        if (cur.kind === "local") { P.pos = la.currentTime * 1000; if (isFinite(la.duration)) P.dur = la.duration * 1000; }
+        else if (cur.kind === "spotify" && !P.paused && !P.buffering) P.pos = Math.min(P.dur || Infinity, P.base + (performance.now() - P.stamp));
+        else return;
+        tickUI();
+      }, 250);
+
+      /* ---------------------------------------------------------- sliders */
+      const slider = (el, h) => {
+        const frac = ev => { const r = el.getBoundingClientRect(); return r.width ? Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)) : 0; };
+        let down = false;
+        el.addEventListener("pointerdown", ev => {
+          if (ev.button !== 0 || el.classList.contains("is-off")) return;
+          down = true; el.classList.add("is-drag");
+          try { el.setPointerCapture(ev.pointerId); } catch (e) {}
+          h.drag(frac(ev), false);
+        });
+        el.addEventListener("pointermove", ev => { if (down) h.drag(frac(ev), false); });
+        el.addEventListener("pointerup", ev => { if (!down) return; down = false; el.classList.remove("is-drag"); h.drag(frac(ev), true); });
+        el.addEventListener("pointercancel", () => { if (!down) return; down = false; el.classList.remove("is-drag"); if (h.cancel) h.cancel(); });
+        el.addEventListener("keydown", ev => {
+          const d = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, Home: -Infinity, End: Infinity }[ev.key];
+          if (d === undefined || el.classList.contains("is-off")) return;
+          ev.preventDefault(); h.key(d);
+        });
+      };
+      slider(seekEl, {
+        drag(f, final) { seeking = !final; if (P.dur > 0) { seekEl.style.setProperty("--p", (f * 100).toFixed(2) + "%"); tPos.textContent = spFmt(f * P.dur); if (final) seekMs(f * P.dur); } },
+        cancel() { seeking = false; tickUI(); },
+        key(d) { seekMs(d === Infinity ? P.dur : d === -Infinity ? 0 : P.pos + d * 5000); },
+      });
+      const setVol = v => {
+        vol = Math.max(0, Math.min(1, v)); muted = false; applyVol(); store.set("spVol", vol); paintVol();
+        if (cur.kind === "spotify" && !volNote) { volNote = true; toast("Spotify's embedded player has its own volume. This slider controls your local files."); }
+      };
+      slider(volEl, { drag: f => setVol(f), key: d => setVol(d === Infinity ? 1 : d === -Infinity ? 0 : vol + d * 0.05) });
+
+      /* ---------------------------------------------------------- events */
+      const saveMode = () => store.set("spMode", mode);
+      const doBar = a => {
+        if (a === "toggle") toggle();
+        else if (a === "next") advance(1, false);
+        else if (a === "prev") prev();
+        else if (a === "shuffle") { mode.shuffle = !mode.shuffle; saveMode(); renderBar(); }
+        else if (a === "repeat") { mode.repeat = mode.repeat === "off" ? "all" : mode.repeat === "all" ? "one" : "off"; saveMode(); renderBar(); }
+        else if (a === "mute") { muted = !muted && vol > 0 ? true : false; if (!muted && vol === 0) vol = 0.5; applyVol(); paintVol(); }
+      };
+      const addMusic = async (p, titleIn) => {
+        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your library." }); return; }
+        let title = titleIn, thumb = "";
+        try {
+          const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
+          if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
+        } catch (err) {}
+        if (destroyed) return;
+        store.set("spLib", [{ ...p, title: title || `Spotify ${KIND[p.type] || p.type}`, thumb }].concat(mine()));
+        Sound.play("notify");
+        goItem(p.id);
+      };
+      // backups also carry the playlists, likes and recents this window keeps
+      const importExtra = (file, done) => {
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            const d = JSON.parse(r.result);
+            store.set("spLikes", Array.from(new Set(arr(store.get("spLikes", [])).concat(arr(d.spLikes).filter(str)))));
+            store.set("spRecent", arr(store.get("spRecent", [])).concat(arr(d.spRecent).filter(str)).filter((x, i, a) => a.indexOf(x) === i).slice(0, 40));
+            const have = arr(store.get("spLists", [])), seen = new Set(have.map(l => l && l.id));
+            store.set("spLists", have.concat(arr(d.spLists).filter(l => l && str(l.id) && Array.isArray(l.items) && !seen.has(l.id))));
+            store.set("spHidden", Array.from(new Set(arr(store.get("spHidden", [])).concat(arr(d.spHidden).filter(str)))));
+          } catch (e) {}
+          done();
+        };
+        r.onerror = () => done();
+        r.readAsText(file);
+      };
+
       body.addEventListener("change", e => {
         if (e.target.matches("[data-files]")) {
           Array.from(e.target.files).forEach(f => local.push({ name: f.name.replace(/\.[^.]+$/, ""), url: URL.createObjectURL(f) }));
           const first = localIdx < 0;
-          draw();
+          draw(true);
           if (first && local.length) playLocal(0);
         } else if (e.target.matches("[data-import]") && e.target.files[0]) {
-          importBackup(e.target.files[0], ok => {
+          const file = e.target.files[0];
+          importBackup(file, ok => {
             if (!ok) { msgBox({ title: "Import", icon: "error", text: "That file isn't a backup made by this site." }); return; }
-            go({ page: "home" });
+            importExtra(file, () => { if (destroyed) return; loadState(); go({ page: "home" }); });
           });
         }
       });
-      body.addEventListener("click", e => {
-        if (e.target.closest("[data-export]")) { exportBackup(); return; }
-        const h = e.target.closest("[data-hist]");
-        if (h) { const t = pos + +h.dataset.hist; if (t >= 0 && t < hist.length) { pos = t; draw(); } return; }
-        const tr = e.target.closest("[data-track]");
+      root.addEventListener("click", e => {
+        const t = e.target;
+        if (t.closest(".sp__ctx")) return;
+        closeCtx();
+        if (t.closest("[data-export]")) { exportBackup(); return; }
+        const h = t.closest("[data-hist]");
+        if (h) { const n = pos + +h.dataset.hist; if (n >= 0 && n < hist.length) { pos = n; draw(); } return; }
+        const act = t.closest("[data-act]");
+        if (act) { doBar(act.dataset.act); return; }
+        if (t.closest("[data-np-open]")) { if (cur.kind === "spotify") goItem(cur.id); return; }
+        const lk = t.closest("[data-like], [data-like-now]");
+        if (lk) { e.stopPropagation(); toggleLike(lk.hasAttribute("data-like-now") ? (cur.kind === "spotify" ? cur.id : "") : lk.dataset.like); return; }
+        const more = t.closest("[data-more]");
+        if (more) {
+          const r = more.getBoundingClientRect(), rowEl = more.closest("[data-inpl]");
+          ctxPos = { x: r.left, y: r.bottom };
+          showCtx(itemMenu(more.dataset.more, rowEl ? rowEl.dataset.inpl : "", r.left, r.bottom), r.left, r.bottom);
+          return;
+        }
+        const hp = t.closest("[data-hero-play]");
+        if (hp) { play(hp.dataset.heroPlay); return; }
+        const pl = t.closest("[data-play]");
+        if (pl) { const c = pl.closest("[data-ctx]"), lid = c ? c.dataset.ctx : ""; play(pl.dataset.play, lid ? listIds(lid) : undefined, lid); return; }
+        const cr = t.closest("[data-create]");
+        if (cr) { const r = cr.getBoundingClientRect(); showCtx([{ label: "Create a new playlist", icon: "plusList", act: createPlaylist }, { label: "Add a Spotify link", icon: "link", act: () => go({ page: "add" }) }, { label: "Play files from this computer", icon: "folder", act: () => go({ page: "local" }) }].concat(hidden.size ? [{ sep: true }, { label: "Restore Spotify playlists", icon: "plusList", act: () => { hidden.clear(); saveHidden(); toast("Spotify playlists restored"); draw(true); } }] : []), r.left, r.bottom + 4); return; }
+        const so = t.closest("[data-sort]");
+        if (so) { const r = so.getBoundingClientRect(); const pick1 = k => () => { sortBy = k; store.set("spSort", k); drawLib(); }; showCtx([{ label: "Sort by" , disabled: true }, { label: "Recents", checked: sortBy === "recent", act: pick1("recent") }, { label: "Alphabetical", checked: sortBy === "alpha", act: pick1("alpha") }], r.left - 60, r.bottom + 4); return; }
+        const ch = t.closest("[data-chip]");
+        if (ch) { chip = chip === ch.dataset.chip ? "" : ch.dataset.chip; drawLib(); return; }
+        const ct = t.closest("[data-cat]");
+        if (ct) { go({ page: "cat", k: ct.dataset.cat }); return; }
+        const al = t.closest("[data-addlink]");
+        if (al) { const [type, id] = al.dataset.addlink.split(":"); addMusic({ type, id }, ""); return; }
+        const pa = t.closest("[data-pladd]");
+        if (pa) { addToList(pa.dataset.pl, pa.dataset.pladd); return; }
+        const rn = t.closest("[data-rename]");
+        if (rn) { if (!t.closest("input")) startRename(rn.dataset.rename); return; }
+        const tr = t.closest("[data-track]");
         if (tr) { playLocal(+tr.dataset.track); return; }
-        const rm = e.target.closest("[data-rm]");
-        if (rm) { store.set("spLib", mine().filter(x => x.id !== rm.dataset.rm)); go({ page: "home" }); return; }
-        const op = e.target.closest("[data-open]");
-        if (op) { go({ page: "item", id: op.dataset.open }); return; }
-        const g = e.target.closest("[data-go]");
-        if (g && !(hist[pos].page === g.dataset.go)) go({ page: g.dataset.go });
+        const rm = t.closest("[data-rm]");
+        if (rm) { removeMine(rm.dataset.rm); return; }
+        const q = t.closest(".sp__quick button");
+        if (q && e.clientX > q.getBoundingClientRect().right - 60 && apiState !== "fail") { play(q.dataset.open || "liked"); return; }
+        const op = t.closest("[data-open]");
+        if (op) { goItem(op.dataset.open); return; }
+        const g = t.closest("[data-go]");
+        if (g) {
+          if (hist[pos].page !== g.dataset.go) go({ page: g.dataset.go, q: "" });
+          if (g.dataset.go === "search") { sinput.focus(); }
+        }
       });
-      body.addEventListener("submit", async e => {
+      root.addEventListener("keydown", e => {
+        const r = e.target.closest && e.target.closest(".sp__row, .sp__top1, [data-rename]");
+        if (r && e.target === r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); r.click(); }
+      });
+      root.addEventListener("contextmenu", e => {
+        const t = e.target;
+        if (t.closest("input, textarea, .sp__ctx")) return;
+        const el = t.closest("[data-open], [data-go='liked']");
+        if (!el) return;
+        e.preventDefault();
+        const id = el.dataset.open || "liked", rowEl = el.closest("[data-inpl]");
+        const items = itemMenu(id, rowEl ? rowEl.dataset.inpl : "");
+        if (items.length) showCtx(items, e.clientX, e.clientY);
+      });
+      body.addEventListener("submit", e => {
         const f = e.target.closest(".sp__form");
         if (!f) return;
         e.preventDefault();
         const p = spParse(f.elements.url.value);
         if (!p) { msgBox({ title: "Add music", icon: "error", text: "That doesn't look like a Spotify link. It should start with https://open.spotify.com/ and point to a song, album, playlist, artist or podcast." }); return; }
-        if (lib().some(x => x.id === p.id)) { msgBox({ title: "Add music", icon: "info", text: "That's already in your library." }); return; }
-        let title = f.elements.title.value.trim(), thumb = "";
-        try {
-          const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/${p.type}/${p.id}`)}`);
-          if (r.ok) { const j = await r.json(); if (!title) title = j.title || ""; thumb = j.thumbnail_url || ""; }
-        } catch (err) {}
-        store.set("spLib", [{ ...p, title: title || `Spotify ${KIND[p.type] || p.type}`, thumb }].concat(mine()));
-        Sound.play("notify");
-        go({ page: "item", id: p.id });
+        addMusic(p, f.elements.title.value.trim());
       });
+      filterEl.addEventListener("input", e => { filter = e.target.value.trim(); drawLib(); });
+      sinput.addEventListener("input", () => {
+        const q = sinput.value;
+        hist[pos] = { page: "search", q };
+        view.innerHTML = pages.search(hist[pos]);
+        syncNav(); artScan();
+      });
+      sinput.addEventListener("keydown", e => { if (e.key === "Escape" && sinput.value) { e.stopPropagation(); sinput.value = ""; sinput.dispatchEvent(new Event("input")); } });
+      const onKey = e => {
+        if (destroyed || WM.active !== "spotify") return;
+        const t = e.target, tag = t && t.tagName;
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === "f" || e.key === "F")) { e.preventDefault(); filterEl.focus(); filterEl.select(); return; }
+        if (e.key === "Escape" && !ctxEl.hidden) { e.preventDefault(); closeCtx(); return; }
+        const typing = t && (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable);
+        if (e.code === "Space" && !e.ctrlKey && !e.metaKey && !e.altKey && !typing && !(t && t.closest && t.closest("button, a, [role=slider], [role=button], [role=menuitem]"))) { e.preventDefault(); toggle(); }
+      };
+      const onDocDown = e => { if (!ctxEl.hidden && !ctxEl.contains(e.target)) closeCtx(); };
+      document.addEventListener("keydown", onKey);
+      document.addEventListener("pointerdown", onDocDown, true);
+      mainEl.addEventListener("scroll", placeHost, { passive: true });
+      // scrolling by hand dismisses an open menu (programmatic scrolls don't)
+      [mainEl, libEl].forEach(el => ["wheel", "touchmove"].forEach(n => el.addEventListener(n, () => { if (!ctxEl.hidden) closeCtx(); }, { passive: true })));
+      // the chips row scrolls sideways with the mouse wheel
+      $(".sp__chips", body).addEventListener("wheel", e => { if (e.deltaY && !e.deltaX) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+      let ro = null;
+      try { ro = new ResizeObserver(() => placeHost()); ro.observe(mainEl); ro.observe(view); } catch (e) {}
+
+      win.cleanup = () => {
+        destroyed = true;
+        clearInterval(timer); clearTimeout(toastT);
+        document.removeEventListener("keydown", onKey);
+        document.removeEventListener("pointerdown", onDocDown, true);
+        if (ro) ro.disconnect();
+        try { la.pause(); la.removeAttribute("src"); la.load(); } catch (e) {}
+        local.forEach(f => URL.revokeObjectURL(f.url));
+        if (ctl) { try { ctl.pause(); } catch (e) {} try { ctl.destroy(); } catch (e) {} ctl = null; }
+        host.remove();
+      };
+
+      /* ---------------------------------------------------------- start */
       draw();
+      renderBar();
+      if (!SP_API) {
+        // fall back to the plain embedded player if Spotify's iFrame API doesn't load within 4 seconds
+        Promise.race([spLoadApi(), new Promise(r => setTimeout(() => r(null), 4000))]).then(api => {
+          if (destroyed) return;
+          if (api) {
+            apiState = "ok";
+            if (pendingPlay) { const it = pendingPlay; pendingPlay = null; if (cur.kind === "spotify" && cur.id === it.id) startSpotify(it); }
+            draw(true); renderBar();
+          } else {
+            const wanted = pendingPlay; pendingPlay = null;
+            apiFail(false);
+            if (wanted) goItem(wanted.id);
+          }
+        });
+        // if it arrives late, upgrade quietly
+        spLoadApi().then(api => { if (api && !destroyed && apiState === "fail") { apiState = "ok"; draw(true); renderBar(); } });
+      }
     },
     onClose: w => w.cleanup && w.cleanup(),
   });
@@ -4412,6 +7124,15 @@ const ALIASES = {
   sol: "solitaire", cards: "solitaire", klondike: "solitaire", nibbles: "snake",
   clock: "datetime", time: "datetime", date: "datetime", timedate: "datetime", calendar: "datetime",
 };
+// Extension point: files in apps/ register themselves (window.W98_APPS) before this script runs.
+// Each entry: { key, label, group: "games" | "programs", aliases: [], open(opts, W98) }.
+// The icon is images/<key>.svg. W98 is the small toolkit apps may use.
+const W98 = window.W98 = { WM, store, Sound, msgBox, icon, ui, esc, $, $$, sleep, pick, NAME, FIRST, ROLE, C };
+const EXT_APPS = (window.W98_APPS || []).filter(a => a && a.key && typeof a.open === "function" && !APPS[a.key]);
+EXT_APPS.forEach(a => {
+  APPS[a.key] = { label: a.label || a.key, icon: a.icon, open: o => a.open(o || {}, W98) };
+  (a.aliases || []).forEach(al => { ALIASES[String(al).toLowerCase()] = a.key; });
+});
 function resolveApp(name) {
   const n = String(name || "").trim().toLowerCase().replace(/\.(exe|com|bat|txt|cpl|lnk)$/, "");
   if (APPS[n] && !(n === "resume" && !RESUME)) return n;
@@ -4436,7 +7157,7 @@ function openApp(key, opts = {}) {
 /* ==========================================================================
    DESKTOP (draggable icons, rubber-band select, right-click menu)
    ========================================================================== */
-const DESKTOP_ORDER = ["about", "projects", "skills", "contact", "resume", "bin", "terminal", "chrome", "youtube", "spotify", "discord", "github", "minesweeper", "solitaire", "snake", "paint"].filter(k => !APPS[k].hidden);
+const DESKTOP_ORDER = ["about", "projects", "skills", "contact", "resume", "bin", "terminal", "chrome", "youtube", "spotify", "discord", "github", "minesweeper", "solitaire", "snake", "paint"].concat(EXT_APPS.map(a => a.key)).filter(k => !APPS[k].hidden);
 const CELL = { w: 80, h: 76 };
 let iconOrder = DESKTOP_ORDER.slice();
 
@@ -4633,8 +7354,8 @@ function initDesktop() {
 const StartMenu = {
   el: null, btn: null, fly: null,
   SUBS: {
-    programs: ["chrome", "youtube", "spotify", "discord", "github", "terminal", "notepad", "paint"],
-    games: ["minesweeper", "solitaire", "snake"],
+    programs: ["chrome", "youtube", "spotify", "discord", "github", "terminal", "notepad", "paint"].concat(EXT_APPS.filter(a => a.group !== "games").map(a => a.key)),
+    games: ["minesweeper", "solitaire", "snake"].concat(EXT_APPS.filter(a => a.group === "games").map(a => a.key)),
     settings: ["display", "datetime", "welcome"],
   },
   init() {
