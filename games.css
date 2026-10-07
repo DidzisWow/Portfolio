@@ -1,1 +1,95 @@
-/* games polish (loaded after style.css) */
+/* games polish (loaded after style.css): Minesweeper, Solitaire, Snake, Paint */
+
+/* ---------------------------------------------------------------- Minesweeper */
+/* window hugs the board like the real program instead of padding out to 200px */
+.window[data-id="minesweeper"]{ min-width:0; }
+.ms{
+  width:max-content; padding:3px; background:#c0c0c0;
+  box-shadow:inset 3px 3px #fff, inset -3px -3px #808080;
+  border:3px solid transparent;
+}
+.ms__top{
+  height:37px; box-sizing:border-box; padding:5px 6px; margin:0 0 6px;
+  box-shadow:inset 2px 2px #808080, inset -2px -2px #fff;
+}
+.ms__led{
+  display:flex; width:41px; height:25px; min-width:0; box-sizing:border-box; padding:0;
+  border:1px solid; border-color:#808080 #fff #fff #808080; background:#000; box-shadow:none; text-shadow:none;
+  font:0/0 sans-serif; fill:#f00; overflow:hidden;
+}
+.ms__led svg{ display:block; flex:none; }
+.ms__face{
+  width:26px; height:26px; box-sizing:border-box; border:1px solid #808080; background:#c0c0c0;
+  box-shadow:inset 1px 1px #fff, inset 2px 2px #fff, inset -1px -1px #808080;
+}
+.ms__face:active{ box-shadow:none; padding:1px 0 0 1px; }
+.ms__face svg{ width:18px; height:auto; }
+.ms__grid{ padding:0; border:3px solid; border-color:#808080 #fff #fff #808080; box-shadow:none; }
+.ms__c{
+  width:16px; height:16px; background:#c0c0c0; box-shadow:inset 2px 2px #fff, inset -2px -2px #808080;
+  font:bold 13px/1 Arial,Helvetica,sans-serif; cursor:default;
+}
+.ms__c.is-open{ box-shadow:inset 1px 1px #808080; }
+.ms__c:not(.is-open):not(:has(svg)):active{ box-shadow:inset 1px 1px #808080; }
+.ms__c.is-boom{ background:#f00; }
+.ms__c svg{ width:10px; height:auto; }
+.ms__c.is-wrong{ position:relative; }
+.ms__c.is-wrong::after{
+  content:""; position:absolute; inset:1px; font:0/0 sans-serif;
+  background:
+    linear-gradient(45deg, transparent 42%, #f00 42% 58%, transparent 58%),
+    linear-gradient(-45deg, transparent 42%, #f00 42% 58%, transparent 58%);
+}
+
+/* ---------------------------------------------------------------- Solitaire */
+.sol{ background:#008000; background-image:none; }
+.sol__slot{ border:1px solid #005a00; border-radius:3px; box-shadow:none; }
+.sol__slot--found::after{ content:none; }
+.sol__slot--stock::after{ width:40%; border:3px solid #00a800; }
+.sol__card.is-drag{ filter:none; }
+.sol__face, .sol__back{ border-radius:3px; }
+.sol__face{ background:#fff; }
+.sol__face.is-red{ color:#f00; }
+.sol__corner{ left:3px; top:2px; font-size:calc(var(--cw) * .21); line-height:1; }
+.sol__corner--b{ left:auto; top:auto; right:3px; bottom:2px; }
+.sol__pips{ position:absolute; inset:14% 31%; }
+.sol__pips i{
+  position:absolute; transform:translate(-50%,-50%); font:normal calc(var(--cw) * .24)/1 Arial,Helvetica,sans-serif;
+}
+.sol__pips--a i{ font-size:calc(var(--cw) * .62); }
+.sol__pip--face{ inset:14% 20%; border:1px solid currentColor; background:#fff; box-shadow:inset 0 0 0 2px #fff, inset 0 0 0 3px currentColor; }
+.sol__back{
+  border:1px solid #000;
+  background:
+    repeating-linear-gradient(45deg, #5a5aff 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(-45deg, #5a5aff 0 1px, transparent 1px 4px),
+    #0000a8;
+  box-shadow:inset 0 0 0 3px #fff, inset 0 0 0 4px #000080;
+}
+
+/* ---------------------------------------------------------------- Snake */
+.snk{ padding:8px 8px 10px; gap:8px; }
+.snk__lcd{ padding:4px; background:#2c2f2a; border-radius:0; box-shadow:var(--sunken); }
+.snk__bar{ padding:2px 4px 5px; }
+.snk__screen{ box-shadow:none; }
+.snk__pad button{ position:relative; font-size:0; padding:0; box-shadow:var(--raised); cursor:default; }
+.snk__pad button:active{ box-shadow:var(--pressed); }
+.snk__pad button::before{ content:""; position:absolute; left:50%; top:50%; width:0; height:0; border:0 solid transparent; transform:translate(-50%,-50%); }
+.snk__pad button:active::before{ transform:translate(-50%,-50%) translate(1px,1px); }
+.snk__pad [data-d="up"]::before{ border-width:0 5px 6px; border-bottom-color:#000; }
+.snk__pad [data-d="down"]::before{ border-width:6px 5px 0; border-top-color:#000; }
+.snk__pad [data-d="left"]::before{ border-width:5px 6px 5px 0; border-right-color:#000; }
+.snk__pad [data-d="right"]::before{ border-width:5px 0 5px 6px; border-left-color:#000; }
+
+/* ---------------------------------------------------------------- Paint */
+.paint{ padding:3px 3px 0; }
+.paint__tool svg{ height:12px; }
+.paint__sizes{ margin-top:3px; padding:3px 2px; box-shadow:var(--thin-in); }
+.paint__sizes button{ width:46px; cursor:default; }
+.paint__stage{ padding:4px; }
+.paint__stage canvas{ box-shadow:none; margin:0; }
+.paint__bottom{ padding:4px 3px 3px; }
+.paint__colors{ grid-template-columns:repeat(14,16px); grid-template-rows:16px 16px; }
+@media (max-width:700px){
+  .paint__colors{ grid-template-columns:repeat(7,16px); grid-template-rows:repeat(4,16px); }
+}
